@@ -1,0 +1,483 @@
+<?php
+
+namespace App\Http\Controllers\Trabajador;
+
+use App\Http\Controllers\Controller;
+use App\Models\Pedido;
+use App\Models\Producto;
+use App\Models\Empleado;
+use App\Models\Cliente;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use Exception;
+
+class PedidoController extends Controller
+{
+    /**
+     * Mostrar listado de pedidos con filtros y estadísticas
+     */
+    public function index(Request $request)
+    {
+        $estadisticas = [
+            'total_pedidos' => Pedido::count(),
+            'pendientes' => Pedido::where('estado', 'pendiente')->count(),
+            'completados' => Pedido::where('estado', 'completado')->count(),
+            'ventas_hoy' => Pedido::whereDate('created_at', today())
+                ->where('estado', 'completado')
+                ->sum('total'),
+            'ventas_mes' => Pedido::whereMonth('created_at', now()->month)
+                ->whereYear('created_at', now()->year)
+                ->where('estado', 'completado')
+                ->sum('total'),
+        ];
+
+        // ✅ SIN 'email'
+        $query = Pedido::query()->with(['empleado:id,name,role', 'cliente:id,nombre,apellido']);
+
+        if ($request->filled('search')) {
+            $search = $request->get('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('numero_pedido', 'like', "%{$search}%")
+                    ->orWhereHas('cliente', function ($q2) use ($search) {
+                        $q2->where('nombre', 'like', "%{$search}%")
+                            ->orWhere('apellido', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->get('estado'));
+        }
+
+        if ($request->filled('fecha_desde')) {
+            $query->whereDate('created_at', '>=', $request->get('fecha_desde'));
+        }
+        if ($request->filled('fecha_hasta')) {
+            $query->whereDate('created_at', '<=', $request->get('fecha_hasta'));
+        }
+
+        if ($request->filled('empleado_id')) {
+            $query->where('empleado_id', $request->get('empleado_id'));
+        }
+
+        $pedidos = $query->orderBy('created_at', 'desc')
+            ->paginate(15)
+            ->withQueryString();
+
+        $empleados = \App\Models\Empleado::where('estado', 'activo')
+            ->orderBy('name')
+            ->get(['id', 'name', 'role']);
+
+        return view('trabajador.pedidos.index', compact('pedidos', 'estadisticas', 'empleados'));
+    }
+
+    /**
+     * Mostrar formulario de creación
+     */
+    public function create(Request $request)
+    {
+        $productos = Producto::where('estado', 'activo')
+            ->where('stock', '>', 0)
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'precio', 'stock', 'imagen']);
+
+        // ✅ CORREGIDO: Cambié 'nombre' por 'name'
+        $empleados = Empleado::where('estado', 'activo')
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        $clientes = Cliente::where('estado', 'activo')
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'apellido', 'email']);
+
+        $cliente_seleccionado = null;
+        if ($request->filled('cliente_id')) {
+            $cliente_seleccionado = Cliente::find($request->get('cliente_id'));
+        }
+
+        return view('trabajador.pedidos.create', compact('productos', 'empleados', 'clientes', 'cliente_seleccionado'));
+    }
+
+    /**
+     * Guardar nuevo pedido
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'cliente_id' => 'required|exists:clientes,id',
+            'empleado_id' => 'required|exists:empleados,id',
+            'productos' => 'required|array|min:1',
+            'productos.*.id' => 'required|exists:productos,id',
+            'productos.*.cantidad' => 'required|integer|min:1',
+            'productos.*.precio' => 'required|numeric|min:0.01',
+            'metodo_pago' => 'nullable|in:efectivo,tarjeta,transferencia,otro',
+            'observaciones' => 'nullable|string|max:500',
+        ], [
+            'cliente_id.required' => 'Debes seleccionar un cliente',
+            'productos.required' => 'Debes agregar al menos un producto',
+            'productos.min' => 'Debes agregar al menos un producto',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            // Generar número de pedido único
+            $numero_pedido = $this->generarNumeroPedido();
+
+            // Calcular total
+            $total = 0;
+            foreach ($validated['productos'] as $prod) {
+                $total += $prod['cantidad'] * $prod['precio'];
+            }
+
+            // Crear el pedido
+            $pedido = Pedido::create([
+                'cliente_id' => $validated['cliente_id'],
+                'empleado_id' => $validated['empleado_id'],
+                'numero_pedido' => $numero_pedido,
+                'fecha' => now()->toDateString(),
+                'hora' => now()->format('H:i:s'),
+                'total' => $total,
+                'estado' => 'pendiente',
+                'metodo_pago' => $validated['metodo_pago'] ?? null,
+                'observaciones' => $validated['observaciones'] ?? null,
+            ]);
+
+            // Agregar productos al pedido
+            foreach ($validated['productos'] as $prod) {
+                $producto = Producto::findOrFail($prod['id']);
+
+                // Verificar stock
+                if ($producto->stock < $prod['cantidad']) {
+                    throw new Exception("Stock insuficiente para {$producto->nombre}. Disponible: {$producto->stock}");
+                }
+
+                // Adjuntar producto al pedido
+                $pedido->productos()->attach($prod['id'], [
+                    'cantidad' => $prod['cantidad'],
+                    'precio_unitario' => $prod['precio'],
+                    'subtotal' => $prod['cantidad'] * $prod['precio'],
+                ]);
+
+                // Reducir stock
+                $producto->decrement('stock', $prod['cantidad']);
+            }
+
+            DB::commit();
+
+            Log::info('Pedido creado', [
+                'pedido_id' => $pedido->id,
+                'numero_pedido' => $pedido->numero_pedido,
+                'total' => $pedido->total,
+                'productos_count' => count($validated['productos']),
+                'usuario' => auth()->id() ?? 'Sistema'
+            ]);
+
+            return redirect()->route('trabajador.pedidos.show', $pedido)
+                ->with('success', "✅ Pedido {$pedido->numero_pedido} creado correctamente");
+        } catch (Exception $e) {
+            DB::rollback();
+
+            Log::error('Error al crear pedido', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return redirect()->back()
+                ->withInput()
+                ->with('error', '❌ Error: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Mostrar detalles del pedido
+     */
+    public function show(Pedido $pedido)
+    {
+        // ✅ CORREGIDO: Solo columnas que existen en la tabla
+        $pedido->load([
+            'cliente',
+            'empleado:id,name,role,estado',
+            'productos' => function ($query) {
+                $query->select('productos.id', 'productos.nombre', 'productos.imagen')
+                    ->withPivot('cantidad', 'precio_unitario', 'subtotal');
+            }
+        ]);
+
+        return view('trabajador.pedidos.show', compact('pedido'));
+    }
+
+    /**
+     * Mostrar formulario de edición
+     */
+    public function edit(Pedido $pedido)
+    {
+        // ✅ Cargar relaciones con validación
+        $pedido->load(['cliente', 'empleado', 'productos']);
+
+        // Obtener listas completas
+        $clientes = Cliente::orderBy('nombre')->get();
+        $empleados = Empleado::where('estado', 'activo')->orderBy('name')->get();
+        $productos = Producto::where('stock', '>', 0)->orderBy('nombre')->get();
+
+        return view('trabajador.pedidos.edit', compact('pedido', 'clientes', 'empleados', 'productos'));
+    }
+
+    /**
+     * Actualizar pedido
+     */
+    public function update(Request $request, Pedido $pedido)
+    {
+        $validated = $request->validate([
+            'estado' => 'required|in:pendiente,procesando,completado,cancelado',
+            'observaciones' => 'nullable|string|max:500'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $estadoAnterior = $pedido->estado;
+
+            // Si se cancela, restaurar stock
+            if ($validated['estado'] === 'cancelado' && $estadoAnterior !== 'cancelado') {
+                foreach ($pedido->productos as $producto) {
+                    $producto->increment('stock', $producto->pivot->cantidad);
+                }
+            }
+
+            // Si se descancela, reducir stock nuevamente
+            if ($estadoAnterior === 'cancelado' && $validated['estado'] !== 'cancelado') {
+                foreach ($pedido->productos as $producto) {
+                    if ($producto->stock < $producto->pivot->cantidad) {
+                        throw new Exception("Stock insuficiente para {$producto->nombre}");
+                    }
+                    $producto->decrement('stock', $producto->pivot->cantidad);
+                }
+            }
+
+            $pedido->update($validated);
+
+            DB::commit();
+
+            Log::info('Pedido actualizado', [
+                'pedido_id' => $pedido->id,
+                'estado_anterior' => $estadoAnterior,
+                'estado_nuevo' => $validated['estado'],
+                'usuario' => auth()->id() ?? 'Sistema'
+            ]);
+
+            return redirect()->route('trabajador.pedidos.show', $pedido)
+                ->with('success', "✅ Pedido actualizado exitosamente");
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::error('Error al actualizar pedido', [
+                'pedido_id' => $pedido->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()
+                ->with('error', '❌ ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Eliminar pedido
+     */
+    public function destroy(Pedido $pedido)
+    {
+        if ($pedido->estado === 'completado') {
+            return redirect()->back()
+                ->with('error', '❌ No se puede eliminar un pedido completado');
+        }
+
+        DB::beginTransaction();
+        try {
+            $numero_pedido = $pedido->numero_pedido;
+
+            // Restaurar stock si no estaba cancelado
+            if ($pedido->estado !== 'cancelado') {
+                foreach ($pedido->productos as $producto) {
+                    $producto->increment('stock', $producto->pivot->cantidad);
+                }
+            }
+
+            $pedido->delete();
+
+            DB::commit();
+
+            Log::warning('Pedido eliminado', [
+                'numero_pedido' => $numero_pedido,
+                'usuario' => auth()->id() ?? 'Sistema'
+            ]);
+
+            return redirect()->route('trabajador.pedidos.index')
+                ->with('success', "🗑️ Pedido {$numero_pedido} eliminado exitosamente");
+        } catch (Exception $e) {
+            DB::rollBack();
+
+            Log::error('Error al eliminar pedido', [
+                'pedido_id' => $pedido->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return redirect()->back()
+                ->with('error', '❌ Error al eliminar el pedido');
+        }
+    }
+
+    /**
+     * Cambiar estado del pedido (AJAX)
+     */
+    public function cambiarEstado(Request $request, Pedido $pedido)
+    {
+        $request->validate([
+            'estado' => 'required|in:pendiente,procesando,completado,cancelado'
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $estadoAnterior = $pedido->estado;
+            $nuevoEstado = $request->estado;
+
+            if ($nuevoEstado === 'cancelado' && $estadoAnterior !== 'cancelado') {
+                foreach ($pedido->productos as $producto) {
+                    $producto->increment('stock', $producto->pivot->cantidad);
+                }
+            }
+
+            if ($estadoAnterior === 'cancelado' && $nuevoEstado !== 'cancelado') {
+                foreach ($pedido->productos as $producto) {
+                    if ($producto->stock < $producto->pivot->cantidad) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => "Stock insuficiente para {$producto->nombre}"
+                        ], 400);
+                    }
+                    $producto->decrement('stock', $producto->pivot->cantidad);
+                }
+            }
+
+            $pedido->update(['estado' => $nuevoEstado]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => "Estado cambiado a: " . ucfirst($nuevoEstado),
+                'nuevo_estado' => $nuevoEstado
+            ]);
+        } catch (Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Error al cambiar estado'
+            ], 500);
+        }
+    }
+
+    /**
+     * Imprimir pedido
+     */
+    public function imprimir(Pedido $pedido)
+    {
+        $pedido->load(['cliente', 'empleado', 'productos']);
+        return view('pedidos.ticket', compact('pedido'));
+    }
+
+    /**
+     * Exportar pedidos
+     */
+    public function exportar(Request $request)
+    {
+        // ✅ SIN 'email'
+        $query = Pedido::with(['cliente:id,nombre,apellido', 'empleado:id,name,role']);
+
+        if ($request->filled('estado')) {
+            $query->where('estado', $request->estado);
+        }
+
+        $pedidos = $query->orderBy('created_at', 'desc')->get();
+
+        $filename = 'pedidos_' . now()->format('Y-m-d_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($pedidos) {
+            $file = fopen('php://output', 'w');
+            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            fputcsv($file, ['Número', 'Cliente', 'Empleado', 'Rol', 'Fecha', 'Total', 'Estado']);
+
+            foreach ($pedidos as $pedido) {
+                fputcsv($file, [
+                    $pedido->numero_pedido,
+                    $pedido->cliente->nombre ?? 'Sin cliente',
+                    $pedido->empleado->name ?? 'Sin empleado',
+                    $pedido->empleado->role ?? 'N/A',  // ✅ Agregado role
+                    $pedido->created_at->format('d/m/Y H:i'),
+                    number_format($pedido->total, 2),
+                    ucfirst($pedido->estado)
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    /**
+     * Duplicar pedido
+     */
+    public function duplicar(Pedido $pedido)
+    {
+        DB::beginTransaction();
+        try {
+            $nuevoPedido = $pedido->replicate();
+            $nuevoPedido->numero_pedido = $this->generarNumeroPedido();
+            $nuevoPedido->estado = 'pendiente';
+            $nuevoPedido->save();
+
+            foreach ($pedido->productos as $producto) {
+                if ($producto->stock < $producto->pivot->cantidad) {
+                    throw new Exception("Stock insuficiente para {$producto->nombre}");
+                }
+
+                $nuevoPedido->productos()->attach($producto->id, [
+                    'cantidad' => $producto->pivot->cantidad,
+                    'precio_unitario' => $producto->pivot->precio_unitario,
+                    'subtotal' => $producto->pivot->subtotal,
+                ]);
+
+                $producto->decrement('stock', $producto->pivot->cantidad);
+            }
+
+            DB::commit();
+
+            return redirect()->route('trabajador.pedidos.show', $nuevoPedido)
+                ->with('success', "✅ Pedido duplicado: {$nuevoPedido->numero_pedido}");
+        } catch (Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', '❌ ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Generar número de pedido único
+     */
+    private function generarNumeroPedido(): string
+    {
+        do {
+            $year = date('Y');
+            $month = date('m');
+            $random = strtoupper(Str::random(6));
+            $numero_pedido = "PED-{$year}{$month}-{$random}";
+        } while (Pedido::where('numero_pedido', $numero_pedido)->exists());
+
+        return $numero_pedido;
+    }
+}

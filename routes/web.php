@@ -1,46 +1,212 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ProductoController;
-use App\Http\Controllers\EmpleadoController;
-use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\PedidoController;
-use App\Http\Controllers\ClienteController;
 
+/*
+|--------------------------------------------------------------------------
+| ⚠️ IMPORTS DE CONTROLADORES - OBLIGATORIOS
+|--------------------------------------------------------------------------
+*/
 
-Route::get('/', fn () => to_route('login'));
+// Autenticación
+use App\Http\Controllers\AuthController;
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+// Controladores de ADMINISTRADOR (con alias "Admin" para evitar conflictos)
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\ProductoController as AdminProductoController;
+use App\Http\Controllers\Admin\ClienteController as AdminClienteController;
+use App\Http\Controllers\Admin\PedidoController as AdminPedidoController;
+use App\Http\Controllers\Admin\EmpleadoController as AdminEmpleadoController;
+use App\Http\Controllers\Admin\ReporteController as AdminReporteController;
 
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    Route::resource('empleados', EmpleadoController::class)->except(['show']);
+// Controladores de TRABAJADOR (con alias "Trabajador" para evitar conflictos)
+use App\Http\Controllers\Trabajador\DashboardController as TrabajadorDashboardController;
+use App\Http\Controllers\Trabajador\ProductoController as TrabajadorProductoController;
+use App\Http\Controllers\Trabajador\ClienteController as TrabajadorClienteController;
+use App\Http\Controllers\Trabajador\PedidoController as TrabajadorPedidoController;
+
+/*
+|--------------------------------------------------------------------------
+| Rutas Públicas (Sin autenticación)
+|--------------------------------------------------------------------------
+*/
+
+// Redirigir la raíz al login
+Route::get('/', function () {
+    return redirect()->route('login');
 });
 
-require __DIR__.'/auth.php';
+// Rutas de autenticación
+Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
+// Registro de usuarios (si aplica)
+Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
+Route::post('/register', [AuthController::class, 'register'])->name('register.post');
 
+/*
+| Rutas de ADMINISTRADOR (Requieren autenticación + rol admin)
+|--------------------------------------------------------------------------
+*/
 
-Route::resource('productos', ProductoController::class);
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function() {
 
-Route::get('/productos', [ProductoController::class, 'index'])->name('productos.index');
-Route::get('/productos/create', [ProductoController::class, 'create'])->name('productos.create');
-Route::post('/productos', [ProductoController::class, 'store'])->name('productos.store');
-Route::get('/productos/{producto}/edit', [ProductoController::class, 'edit'])->name('productos.edit');
-Route::put('/productos/{producto}', [ProductoController::class, 'update'])->name('productos.update');
-Route::delete('/productos/{producto}', [ProductoController::class, 'destroy'])->name('productos.destroy');
+    // ══════════════════════════════════════════════════════════════════
+    // DASHBOARD
+    // ══════════════════════════════════════════════════════════════════
+    Route::get('/dashboard', [AdminDashboardController::class, 'index'])
+         ->name('dashboard');
 
+    // ══════════════════════════════════════════════════════════════════
+    // PRODUCTOS - CRUD COMPLETO
+    // ══════════════════════════════════════════════════════════════════
 
-/*Route::get('/dashboard/pdf', [DashboardController::class, 'exportarPDF'])->name('dashboard.pdf');*/
+    // Rutas especiales ANTES del resource
+    Route::get('productos/buscar', [AdminProductoController::class, 'buscar'])
+         ->name('productos.buscar');
 
-    // Rutas para pedidos
-    Route::resource('pedidos', PedidoController::class);
-    Route::get('/pedidos/{pedido}/imprimir', [PedidoController::class, 'imprimir'])->name('pedidos.imprimir');
+    Route::get('productos/exportar', [AdminProductoController::class, 'exportar'])
+         ->name('productos.exportar');
 
-    // Rutas para clientes
-    Route::resource('clientes', ClienteController::class);
+    Route::get('productos/estadisticas', [AdminProductoController::class, 'estadisticas'])
+         ->name('productos.estadisticas');
+
+    // Resource: index, create, store, show, edit, update, destroy
+    Route::resource('productos', AdminProductoController::class);
+
+    // Rutas adicionales
+    Route::patch('productos/{producto}/actualizar-stock', [AdminProductoController::class, 'actualizarStock'])
+         ->name('productos.actualizar-stock');
+
+    Route::patch('productos/{producto}/toggle-estado', [AdminProductoController::class, 'toggleEstado'])
+         ->name('productos.toggle-estado');
+
+    Route::post('productos/{producto}/duplicar', [AdminProductoController::class, 'duplicar'])
+         ->name('productos.duplicar');
+
+    // ══════════════════════════════════════════════════════════════════
+    // CLIENTES - CRUD COMPLETO
+    // ══════════════════════════════════════════════════════════════════
+
+    // Rutas especiales ANTES del resource
+    Route::get('clientes/buscar', [AdminClienteController::class, 'buscar'])
+         ->name('clientes.buscar');
+
+    Route::get('clientes/exportar', [AdminClienteController::class, 'exportar'])
+         ->name('clientes.exportar');
+
+    Route::get('clientes/estadisticas', [AdminClienteController::class, 'estadisticas'])
+         ->name('clientes.estadisticas');
+
+    // Resource
+    Route::resource('clientes', AdminClienteController::class);
+
+    // Rutas adicionales
+    Route::patch('clientes/{cliente}/toggle-estado', [AdminClienteController::class, 'toggleEstado'])
+         ->name('clientes.toggle-estado');
+
+    Route::post('clientes/{cliente}/duplicar', [AdminClienteController::class, 'duplicar'])
+         ->name('clientes.duplicar');
+
+    // ══════════════════════════════════════════════════════════════════
+    // PEDIDOS - CRUD COMPLETO
+    // ══════════════════════════════════════════════════════════════════
+
+    // Rutas especiales ANTES del resource
+    Route::get('pedidos/exportar', [AdminPedidoController::class, 'exportar'])
+         ->name('pedidos.exportar');
+
+    // Resource
+    Route::resource('pedidos', AdminPedidoController::class);
+
+    // Rutas adicionales
+    Route::patch('pedidos/{pedido}/cambiar-estado', [AdminPedidoController::class, 'cambiarEstado'])
+         ->name('pedidos.cambiar-estado');
+
+    Route::get('pedidos/{pedido}/imprimir', [AdminPedidoController::class, 'imprimir'])
+         ->name('pedidos.imprimir');
+
+    Route::post('pedidos/{pedido}/duplicar', [AdminPedidoController::class, 'duplicar'])
+         ->name('pedidos.duplicar');
+
+    // ══════════════════════════════════════════════════════════════════
+    // EMPLEADOS - CRUD COMPLETO (Solo Admin)
+    // ══════════════════════════════════════════════════════════════════
+    Route::resource('empleados', AdminEmpleadoController::class);
+
+    // ══════════════════════════════════════════════════════════════════
+    // REPORTES (Solo Admin)
+    // ══════════════════════════════════════════════════════════════════
+    Route::prefix('reportes')->name('reportes.')->group(function () {
+        // Vista principal de reportes
+        Route::get('/', [AdminReporteController::class, 'index'])
+             ->name('index');
+
+        // Reporte de inventario completo
+        Route::get('/inventario', [AdminReporteController::class, 'inventario'])
+             ->name('inventario');
+
+        // Reporte de stock bajo
+        Route::get('/stock-bajo', [AdminReporteController::class, 'stockBajo'])
+             ->name('stock-bajo');
+
+        // Reporte de ventas
+        Route::get('/ventas', [AdminReporteController::class, 'ventas'])
+             ->name('ventas');
+
+        // Reporte de ventas por cliente
+        Route::get('/ventas-por-cliente', [AdminReporteController::class, 'ventasPorCliente'])
+             ->name('ventas-por-cliente');
+    });
+
+});
+
+/*
+|--------------------------------------------------------------------------
+| Rutas de TRABAJADOR (Requieren autenticación + rol trabajador)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('trabajador')->name('trabajador.')->middleware(['auth'])->group(function() {
+
+    // ══════════════════════════════════════════════════════════════════
+    // DASHBOARD
+    // ══════════════════════════════════════════════════════════════════
+    Route::get('/dashboard', [TrabajadorDashboardController::class, 'index'])
+         ->name('dashboard');
+
+    // ══════════════════════════════════════════════════════════════════
+    // PRODUCTOS - SOLO LECTURA
+    // ══════════════════════════════════════════════════════════════════
+    Route::get('productos', [TrabajadorProductoController::class, 'index'])
+         ->name('productos.index');
+
+    Route::get('productos/{producto}', [TrabajadorProductoController::class, 'show'])
+         ->name('productos.show');
+
+    // ══════════════════════════════════════════════════════════════════
+    // CLIENTES - SOLO LECTURA
+    // ══════════════════════════════════════════════════════════════════
+    Route::get('clientes', [TrabajadorClienteController::class, 'index'])
+         ->name('clientes.index');
+
+    Route::get('clientes/{cliente}', [TrabajadorClienteController::class, 'show'])
+         ->name('clientes.show');
+
+    // ══════════════════════════════════════════════════════════════════
+    // PEDIDOS - LECTURA Y CREACIÓN
+    // ══════════════════════════════════════════════════════════════════
+    Route::get('pedidos', [TrabajadorPedidoController::class, 'index'])
+         ->name('pedidos.index');
+
+    Route::get('pedidos/create', [TrabajadorPedidoController::class, 'create'])
+         ->name('pedidos.create');
+
+    Route::post('pedidos', [TrabajadorPedidoController::class, 'store'])
+         ->name('pedidos.store');
+
+    Route::get('pedidos/{pedido}', [TrabajadorPedidoController::class, 'show'])
+         ->name('pedidos.show');
+
+});

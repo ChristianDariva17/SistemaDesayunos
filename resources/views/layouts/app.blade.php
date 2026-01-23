@@ -1,142 +1,891 @@
-<!DOCTYPE html>
-<html lang="es" class="h-full">
+<!doctype html>
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ isset($title) ? $title . ' - ' : '' }}Caldos & Desayunos</title>
-
-    <!-- Fonts & Icons -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
-    <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700" rel="stylesheet" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
-    <!-- Styles -->
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- CSRF Token --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
+    {{-- SEO Meta Tags --}}
+    <meta name="description" content="Sistema de Gestión de Inventario y Ventas - Caldos & Desayunos">
+    <meta name="keywords" content="inventario, ventas, productos, pedidos, clientes">
+    <meta name="author" content="Caldos & Desayunos">
+    
+    {{-- Favicon --}}
+    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
+
+    {{-- Title --}}
+    <title>{{ config('app.name', 'Laravel') }} - @yield('title', 'Panel de Control')</title>
+
+    {{-- Google Fonts --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    {{-- Bootstrap 5.3 CSS --}}
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" 
+          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    
+    {{-- Font Awesome 6.5 --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" 
+          integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    {{-- Animate.css --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+    {{-- SweetAlert2 --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.3/dist/sweetalert2.min.css">
+
+    {{-- Custom Styles --}}
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --sidebar-collapsed-width: 80px;
+            --header-height: 70px;
+            --primary-color: #FF6B35;
+            --primary-dark: #E85A2A;
+            --secondary-color: #004E89;
+            --success-color: #1cc88a;
+            --danger-color: #e74a3b;
+            --warning-color: #f6c23e;
+            --info-color: #36b9cc;
+            --light-color: #f8f9fc;
+            --dark-color: #1a1d20;
+            --text-color: #2c3e50;
+            --border-color: #e3e6f0;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.08);
+            --shadow-lg: 0 10px 20px rgba(0,0,0,0.12);
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            font-size: 15px;
+            color: var(--text-color);
+            background: var(--light-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* ==========================================
+           LAYOUT WRAPPER
+           ========================================== */
+        #wrapper {
+            display: flex;
+            min-height: 100vh;
+            transition: all var(--transition-speed) ease;
+        }
+
+        #wrapper.toggled #sidebar-wrapper {
+            margin-left: calc(-1 * var(--sidebar-width));
+        }
+
+        /* ==========================================
+           SIDEBAR
+           ========================================== */
+        #sidebar-wrapper {
+            min-height: 100vh;
+            width: var(--sidebar-width);
+            background: linear-gradient(180deg, #1a1d20 0%, #2c3e50 100%);
+            color: white;
+            transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 1000;
+            box-shadow: var(--shadow-lg);
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* Scrollbar personalizado */
+        #sidebar-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #sidebar-wrapper::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+        }
+
+        #sidebar-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.3);
+            border-radius: 10px;
+        }
+
+        #sidebar-wrapper::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.5);
+        }
+
+        /* Logo / Brand */
+        .sidebar-brand {
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.2);
+        }
+
+        .sidebar-brand-icon {
+            width: 50px;
+            height: 50px;
+            background: var(--primary-color);
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+        }
+
+        .sidebar-brand-text {
+            display: block;
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        .sidebar-brand-subtext {
+            display: block;
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            margin-top: 2px;
+            font-weight: 400;
+        }
+
+        /* Menú de navegación */
+        .sidebar-nav {
+            padding: 20px 0;
+            list-style: none;
+        }
+
+        .nav-heading {
+            padding: 15px 20px 8px 20px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255,255,255,0.4);
+        }
+
+        .sidebar-nav li {
+            margin: 0;
+        }
+
+        .sidebar-nav a {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .sidebar-nav a::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background: var(--primary-color);
+            transform: scaleY(0);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-nav a:hover {
+            background: rgba(255,255,255,0.08);
+            color: white;
+            padding-left: 28px;
+        }
+
+        .sidebar-nav a:hover::before {
+            transform: scaleY(1);
+        }
+
+        .sidebar-nav a.active {
+            background: rgba(255, 107, 53, 0.15);
+            color: white;
+            border-left: 4px solid var(--primary-color);
+            padding-left: 24px;
+            font-weight: 600;
+        }
+
+        .sidebar-nav a i {
+            width: 24px;
+            font-size: 18px;
+            margin-right: 12px;
+            text-align: center;
+        }
+
+        .sidebar-nav a span {
+            flex: 1;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .badge-sidebar {
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* Footer del Sidebar */
+        .sidebar-footer {
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            background: rgba(0,0,0,0.2);
+            margin-top: auto;
+        }
+
+        .sidebar-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .sidebar-user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .sidebar-user-info h6 {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .sidebar-user-info small {
+            font-size: 12px;
+            color: rgba(255,255,255,0.6);
+        }
+
+        /* ==========================================
+           CONTENIDO PRINCIPAL
+           ========================================== */
+        #page-content-wrapper {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            transition: all var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #wrapper.toggled #page-content-wrapper {
+            margin-left: 0;
+        }
+
+        /* ==========================================
+           HEADER / NAVBAR
+           ========================================== */
+        .navbar-custom {
+            height: var(--header-height);
+            background: white;
+            box-shadow: var(--shadow-sm);
+            border-bottom: 1px solid var(--border-color);
+            padding: 0 30px;
+            position: sticky;
+            top: 0;
+            z-index: 999;
+        }
+
+        .navbar-custom .navbar-brand {
+            font-weight: 700;
+            color: var(--dark-color);
+            font-size: 20px;
+        }
+
+        #sidebarToggle {
+            background: var(--light-color);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            color: var(--text-color);
+            font-size: 18px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        #sidebarToggle:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        /* Breadcrumb */
+        .breadcrumb-custom {
+            background: transparent;
+            padding: 0;
+            margin: 0;
+            font-size: 14px;
+        }
+
+        .breadcrumb-custom .breadcrumb-item {
+            color: #6c757d;
+        }
+
+        .breadcrumb-custom .breadcrumb-item.active {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .breadcrumb-custom .breadcrumb-item + .breadcrumb-item::before {
+            content: "›";
+            font-size: 18px;
+            color: #dee2e6;
+        }
+
+        /* User Dropdown */
+        .user-dropdown {
+            position: relative;
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 2px solid white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .user-avatar:hover {
+            transform: scale(1.08);
+            box-shadow: var(--shadow-md);
+        }
+
+        /* ==========================================
+           CONTENIDO
+           ========================================== */
+        .content-wrapper {
+            flex: 1;
+            padding: 30px;
+        }
+
+        /* Page Title */
+        .page-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--dark-color);
+            margin: 0;
+        }
+
+        .page-subtitle {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        /* ==========================================
+           CARDS Y COMPONENTES
+           ========================================== */
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            background: white;
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 24px;
+            font-weight: 600;
+            font-size: 16px;
+            border-radius: 12px 12px 0 0 !important;
+        }
+
+        .card-body {
+            padding: 24px;
+        }
+
+        /* Botones personalizados */
+        .btn {
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            border: none;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        /* ==========================================
+           RESPONSIVE
+           ========================================== */
+        @media (max-width: 768px) {
+            #sidebar-wrapper {
+                margin-left: calc(-1 * var(--sidebar-width));
+            }
+
+            #wrapper.toggled #sidebar-wrapper {
+                margin-left: 0;
+            }
+
+            #page-content-wrapper {
+                margin-left: 0;
+            }
+
+            .navbar-custom {
+                padding: 0 15px;
+            }
+
+            .content-wrapper {
+                padding: 15px;
+            }
+
+            .page-title {
+                font-size: 22px;
+            }
+
+            /* Overlay cuando sidebar está abierto en mobile */
+            #wrapper.toggled::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(0,0,0,0.5);
+                z-index: 999;
+                animation: fadeIn 0.3s ease;
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* ==========================================
+           ANIMACIONES Y EFECTOS
+           ========================================== */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        .slide-in-right {
+            animation: slideInRight 0.4s ease-out;
+        }
+
+        @keyframes slideInRight {
+            from {
+                transform: translateX(20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* Loading Spinner */
+        .spinner-border-custom {
+            width: 20px;
+            height: 20px;
+            border-width: 2px;
+        }
+
+        /* Tooltip personalizado */
+        .tooltip {
+            font-size: 12px;
+        }
+
+        /* Toast personalizado */
+        .toast-container {
+            position: fixed;
+            top: 90px;
+            right: 20px;
+            z-index: 9999;
+        }
+    </style>
+
+    {{-- Custom Page Styles --}}
+    @stack('styles')
 </head>
-<body class="h-full font-inter bg-gray-50">
-    <div class="flex h-full">
-        <!-- Sidebar -->
-        <div class="w-64 bg-white shadow-xl border-r border-gray-200 flex flex-col">
-            <!-- Logo -->
-            <div class="flex items-center h-16 px-6 bg-gradient-to-r from-orange-500 to-red-500 flex-shrink-0">
-                <div class="flex items-center">
-                    <div class="h-8 w-8 bg-white rounded-lg flex items-center justify-center mr-3">
-                        <span class="text-orange-500 text-lg font-bold">🥣</span>
-                    </div>
-                    <h1 class="text-white font-bold text-lg">Caldos & Desayunos</h1>
+<body>
+    <div id="wrapper">
+
+        {{-- ==========================================
+            SIDEBAR
+            ========================================== --}}
+        <div id="sidebar-wrapper">
+            {{-- Brand / Logo --}}
+            <div class="sidebar-brand">
+                <div class="sidebar-brand-icon">
+                    <i class="fas fa-utensils"></i>
                 </div>
+                <a href="{{ url('/') }}" class="sidebar-brand-text">
+                    Caldos & Desayunos
+                </a>
+                <span class="sidebar-brand-subtext">Sistema de Gestión</span>
             </div>
 
-            <!-- Navigation -->
-            <nav class="flex-1 mt-8 px-4 overflow-y-auto">
-                <div class="space-y-2">
-                    <a href="{{ route('dashboard') }}" 
-                       class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 hover:text-orange-600 transition-all duration-200 {{ request()->routeIs('dashboard') ? 'bg-gradient-to-r from-orange-50 to-red-50 text-orange-600 border-r-3 border-orange-500' : '' }}">
-                        <i class="fas fa-chart-pie w-5 h-5 mr-3"></i>
-                        <span class="font-medium">Dashboard</span>
-                    </a>
+            {{-- Navegación --}}
+            <ul class="sidebar-nav">
+                <li class="nav-heading">Menú Principal</li>
 
-                    <a href="{{ route('productos.index') }}" 
-                       class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 hover:text-orange-600 transition-all duration-200 {{ request()->routeIs('productos.*') ? 'bg-gradient-to-r from-orange-50 to-red-50 text-orange-600 border-r-3 border-orange-500' : '' }}">
-                        <i class="fas fa-utensils w-5 h-5 mr-3"></i>
-                        <span class="font-medium">Productos</span>
+                {{-- Dashboard/Home --}}
+                <li>
+                    <a href="{{ url('dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Panel de Control</span>
                     </a>
+                </li>
 
-                    <a href="{{ route('clientes.index') }}" 
-                       class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 hover:text-orange-600 transition-all duration-200 {{ request()->routeIs('clientes.*') ? 'bg-gradient-to-r from-orange-50 to-red-50 text-orange-600 border-r-3 border-orange-500' : '' }}">
-                        <i class="fas fa-users w-5 h-5 mr-3"></i>
-                        <span class="font-medium">Clientes</span>
-                    </a>
+                <li class="nav-heading">Gestión</li>
 
-                    <a href="{{ route('pedidos.index') }}" 
-                       class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 hover:text-orange-600 transition-all duration-200 {{ request()->routeIs('pedidos.*') ? 'bg-gradient-to-r from-orange-50 to-red-50 text-orange-600 border-r-3 border-orange-500' : '' }}">
-                        <i class="fas fa-shopping-cart w-5 h-5 mr-3"></i>
-                        <span class="font-medium">Pedidos</span>
+                {{-- Productos --}}
+                <li>
+                    <a href="{{ route('admin.productos.index') }}" class="{{ request()->is('productos*') ? 'active' : '' }}">
+                        <i class="fas fa-box"></i>
+                        <span>Productos</span>
+                        @php
+                            $stockBajo = \App\Models\Producto::where('stock', '<', 10)->count();
+                        @endphp
+                        @if($stockBajo > 0)
+                            <span class="badge badge-sidebar bg-warning">{{ $stockBajo }}</span>
+                        @endif
                     </a>
+                </li>
 
-                    <a href="{{ route('empleados.index') }}" 
-                       class="flex items-center px-4 py-3 text-gray-700 rounded-lg hover:bg-gradient-to-r hover:from-orange-50 hover:to-red-50 hover:text-orange-600 transition-all duration-200 {{ request()->routeIs('empleados.*') ? 'bg-gradient-to-r from-orange-50 to-red-50 text-orange-600 border-r-3 border-orange-500' : '' }}">
-                        <i class="fas fa-user-tie w-5 h-5 mr-3"></i>
-                        <span class="font-medium">Empleados</span>
+                {{-- Clientes --}}
+                <li>
+                    <a href="{{ route('admin.clientes.index') }}" class="{{ request()->is('clientes*') ? 'active' : '' }}">
+                        <i class="fas fa-users"></i>
+                        <span>Clientes</span>
                     </a>
-                </div>
+                </li>
 
-                <!-- Acciones Rápidas -->
-                <div class="my-6">
-                    <div class="border-t border-gray-200"></div>
-                </div>
-                <div class="space-y-2">
-                    <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider px-4">Acciones Rápidas</p>
-                    <a href="{{ route('productos.create') }}" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-blue-50 hover:text-blue-600 transition-all duration-200">
-                        <i class="fas fa-plus w-4 h-4 mr-3"></i>Nuevo Producto
+                {{-- Pedidos --}}
+                <li>
+                    <a href="{{ route('admin.pedidos.index') }}" class="{{ request()->is('pedidos*') ? 'active' : '' }}">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span>Pedidos</span>
+                        @php
+                            $pedidosPendientes = \App\Models\Pedido::where('estado', 'pendiente')->count();
+                        @endphp
+                        @if($pedidosPendientes > 0)
+                            <span class="badge badge-sidebar bg-danger">{{ $pedidosPendientes }}</span>
+                        @endif
                     </a>
-                    <a href="{{ route('pedidos.create') }}" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-green-50 hover:text-green-600 transition-all duration-200">
-                        <i class="fas fa-shopping-bag w-4 h-4 mr-3"></i>Nuevo Pedido
-                    </a>
-                    <a href="{{ route('clientes.create') }}" class="flex items-center px-4 py-2 text-sm text-gray-600 rounded-lg hover:bg-purple-50 hover:text-purple-600 transition-all duration-200">
-                        <i class="fas fa-user-plus w-4 h-4 mr-3"></i>Nuevo Cliente
-                    </a>
-                </div>
-            </nav>
-        </div>
+                </li>
 
-        <!-- Main Content -->
-        <div class="flex-1 flex flex-col overflow-hidden">
-            <!-- Header -->
-            <header class="bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
-                <div class="px-4 sm:px-6 lg:px-8">
-                    <div class="flex justify-between items-center h-16">
-                        <div>
-                            <h1 class="text-2xl font-bold text-gray-900">@yield('page-title', 'Dashboard')</h1>
-                        </div>
-                        <div class="flex items-center space-x-4">
-                            <div class="text-sm text-gray-500">
-                                <span>{{ now()->format('l, d M Y') }}</span>
-                            </div>
-                            @yield('header-actions')
-                        </div>
+                {{-- Empleados --}}
+                <li>
+                    <a href="{{ route('admin.empleados.index') }}" class="{{ request()->is('empleados*') ? 'active' : '' }}">
+                        <i class="fas fa-user-tie"></i>
+                        <span>Empleados</span>
+                    </a>
+                </li>
+
+                <li class="nav-heading">Reportes</li>
+
+                {{-- Reportes --}}
+                <li>
+                    <a href="{{ route('admin.reportes.index') }}" class="{{ request()->is('reportes*') ? 'active' : '' }}">
+                        <i class="fas fa-chart-line"></i>
+                        <span>Reportes</span>
+                    </a>
+                </li>
+
+                <li class="nav-heading">Sistema</li>
+
+                {{-- Configuración --}}
+                @auth
+                <li>
+                    <a href="{{ route('logout') }}" 
+                       onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Cerrar Sesión</span>
+                    </a>
+                    <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+                        @csrf
+                    </form>
+                </li>
+                @endauth
+            </ul>
+
+            {{-- User Info Footer --}}
+            @auth
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="sidebar-user-avatar">
+                        {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
+                    </div>
+                    <div class="sidebar-user-info">
+                        <h6>{{ Auth::user()->name }}</h6>
+                        <small>{{ Auth::user()->email }}</small>
                     </div>
                 </div>
-            </header>
+            </div>
+            @endauth
+        </div>
 
-            <!-- Page Content -->
-            <main class="flex-1 overflow-y-auto">
-                <div class="p-6">
-                    @if(session('success'))
-                        <div class="mb-6 bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-lg">
-                            <div class="flex items-center">
-                                <i class="fas fa-check-circle mr-3 text-green-500"></i>
-                                <span>{{ session('success') }}</span>
-                            </div>
+        {{-- ==========================================
+            CONTENIDO PRINCIPAL
+            ========================================== --}}
+        <div id="page-content-wrapper">
+            
+            {{-- Navbar Superior --}}
+            <nav class="navbar navbar-expand-lg navbar-custom">
+                <div class="container-fluid">
+                    {{-- Toggle Sidebar Button --}}
+                    <button id="sidebarToggle" type="button">
+                        <i class="fas fa-bars"></i>
+                    </button>
+
+                    {{-- Breadcrumb --}}
+                    <nav aria-label="breadcrumb" class="ms-3 d-none d-md-block">
+                        <ol class="breadcrumb breadcrumb-custom mb-0">
+                            <li class="breadcrumb-item"><a href="{{ url('/') }}">Inicio</a></li>
+                            @yield('breadcrumb')
+                        </ol>
+                    </nav>
+
+                    {{-- Right Side Navbar --}}
+                    <div class="ms-auto d-flex align-items-center gap-3">
+                        {{-- Notificaciones --}}
+                        <div class="dropdown">
+                            <button class="btn btn-light position-relative" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-bell"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 10px;">
+                                    {{ $pedidosPendientes ?? 0 }}
+                                </span>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">Notificaciones</h6></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.pedidos.index') }}">
+                                    <i class="fas fa-shopping-cart text-danger"></i>
+                                    {{ $pedidosPendientes ?? 0 }} pedidos pendientes
+                                </a></li>
+                                <li><a class="dropdown-item" href="{{ route('admin.productos.index') }}">
+                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                    {{ $stockBajo ?? 0 }} productos con stock bajo
+                                </a></li>
+                            </ul>
                         </div>
-                    @endif
 
-                    @if(session('error'))
-                        <div class="mb-6 bg-red-50 border border-red-200 text-red-800 px-6 py-4 rounded-lg">
-                            <div class="flex items-center">
-                                <i class="fas fa-exclamation-circle mr-3 text-red-500"></i>
-                                <span>{{ session('error') }}</span>
+                        {{-- User Dropdown --}}
+                        @auth
+                        <div class="dropdown user-dropdown">
+                            <div class="user-avatar" data-bs-toggle="dropdown" aria-expanded="false">
+                                {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
                             </div>
+                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                                <li><h6 class="dropdown-header">{{ Auth::user()->name }}</h6></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i> Perfil</a></li>
+                                <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i> Configuración</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="{{ route('logout') }}"
+                                       onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                                        <i class="fas fa-sign-out-alt me-2"></i> Cerrar Sesión
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
-                    @endif
-
-                    @yield('content')
+                        @endauth
+                    </div>
                 </div>
-            </main>
+            </nav>
+
+            {{-- Contenido de la Página --}}
+            <div class="content-wrapper fade-in">
+                @yield('content')
+            </div>
+
         </div>
     </div>
+
+    {{-- ==========================================
+        SCRIPTS
+        ========================================== --}}
+    
+    {{-- jQuery --}}
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    
+    {{-- Bootstrap Bundle JS --}}
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" 
+            integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+
+    {{-- SweetAlert2 --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.3/dist/sweetalert2.all.min.js"></script>
+
+    {{-- Custom Scripts --}}
     <script>
-        // Toggle mobile sidebar (opcional para móviles)
-        const sidebarToggle = document.getElementById('sidebar-toggle');
-        const sidebar = document.getElementById('sidebar');
-        
-        if (sidebarToggle) {
-            sidebarToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('-translate-x-full');
+        // ==========================================
+        // SIDEBAR TOGGLE
+        // ==========================================
+        document.getElementById('sidebarToggle').addEventListener('click', function() {
+            document.getElementById('wrapper').classList.toggle('toggled');
+            
+            // Guardar estado en localStorage
+            const isToggled = document.getElementById('wrapper').classList.contains('toggled');
+            localStorage.setItem('sidebarToggled', isToggled);
+        });
+
+        // Restaurar estado del sidebar
+        window.addEventListener('DOMContentLoaded', function() {
+            const sidebarToggled = localStorage.getItem('sidebarToggled') === 'true';
+            if (sidebarToggled) {
+                document.getElementById('wrapper').classList.add('toggled');
+            }
+        });
+
+        // Cerrar sidebar en mobile al hacer clic fuera
+        if (window.innerWidth < 768) {
+            document.getElementById('page-content-wrapper').addEventListener('click', function() {
+                if (document.getElementById('wrapper').classList.contains('toggled')) {
+                    document.getElementById('wrapper').classList.remove('toggled');
+                }
             });
         }
-</script>
+
+        // ==========================================
+        // TOOLTIPS
+        // ==========================================
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // ==========================================
+        // CSRF TOKEN PARA AJAX
+        // ==========================================
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
+            }
+        });
+
+        // ==========================================
+        // ALERTA DE SESIÓN
+        // ==========================================
+        @if(session('success'))
+            Swal.fire({
+                icon: 'success',
+                title: '¡Éxito!',
+                text: '{{ session('success') }}',
+                timer: 3000,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        @endif
+
+        @if(session('error'))
+            Swal.fire({
+                icon: 'error',
+                title: '¡Error!',
+                text: '{{ session('error') }}',
+                timer: 3000,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        @endif
+
+        @if(session('warning'))
+            Swal.fire({
+                icon: 'warning',
+                title: '¡Advertencia!',
+                text: '{{ session('warning') }}',
+                timer: 3000,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        @endif
+
+        @if(session('info'))
+            Swal.fire({
+                icon: 'info',
+                title: 'Información',
+                text: '{{ session('info') }}',
+                timer: 3000,
+                showConfirmButton: false,
+                toast: true,
+                position: 'top-end'
+            });
+        @endif
+
+        // ==========================================
+        // ANIMACIONES AL SCROLL
+        // ==========================================
+        window.addEventListener('scroll', function() {
+            const navbar = document.querySelector('.navbar-custom');
+            if (window.scrollY > 10) {
+                navbar.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+            } else {
+                navbar.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+            }
+        });
+    </script>
+
+    {{-- Custom Page Scripts --}}
+    @stack('scripts')
 </body>
 </html>
-

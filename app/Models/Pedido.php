@@ -14,7 +14,6 @@ class Pedido extends Model
         'empleado_id',
         'fecha',
         'hora',
-        'subtotal',
         'impuesto',
         'total',
         'estado',
@@ -26,16 +25,23 @@ class Pedido extends Model
         'hora' => 'datetime:H:i:s',
     ];
 
-    // Relación con Cliente (User)
-    public function cliente()
+    public function productos()
     {
-        return $this->belongsTo(Cliente::class, 'cliente_id');
+        return $this->belongsToMany(Producto::class, 'pedido_producto')
+                    ->withPivot('cantidad', 'precio_unitario', 'subtotal')
+                    ->withTimestamps();
     }
+
 
     // Relación con Empleado (User)
     public function empleado()
     {
         return $this->belongsTo(Empleado::class, 'empleado_id');
+    }
+
+    public function cliente()
+    {
+        return $this->belongsTo(Cliente::class);
     }
 
     // Relación con Detalles del Pedido

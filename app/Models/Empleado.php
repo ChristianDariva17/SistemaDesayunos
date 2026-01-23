@@ -2,9 +2,26 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Empleado extends Model
 {
-    protected $fillable = ['name', 'role'];
+    use HasFactory;
+
+    protected $fillable = [
+        'name',
+        'role',
+        'estado',
+    ];
+
+    protected $casts = [
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    public function pedidos()
+    {
+        return $this->hasMany(Pedido::class, 'empleado_id');
+    }
 }
