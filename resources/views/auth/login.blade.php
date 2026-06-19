@@ -583,7 +583,7 @@
             @endif
 
             {{-- FORMULARIO DE LOGIN --}}
-            <form action="{{ route('login') }}" method="POST" id="loginForm" autocomplete="on">
+            <form action="{{ route('login.post') }}" method="POST" id="loginForm" autocomplete="on">
                 @csrf
 
                 {{-- CAMPO EMAIL --}}

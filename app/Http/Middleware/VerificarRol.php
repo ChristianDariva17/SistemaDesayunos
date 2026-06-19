@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use Closure;
@@ -11,26 +13,31 @@ class VerificarRol
     /**
      * Handle an incoming request.
      *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     * @param  string  $rol  ← ESTE ES EL PARÁMETRO QUE FALTABA
+     * @param  string  ...$roles
      */
-    public function handle(Request $request, Closure $next, string $rol): Response
+    public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        // PASO 1: Verificar si el usuario está autenticado
-        if (!auth()->check()) {
-            return redirect()->route('login')
-                ->with('error', 'Debe iniciar sesión para acceder');
+        if (! $request->user()) {
+            return redirect()->route('login')->with('error', 'Debe iniciar sesión para acceder');
         }
 
-        // PASO 2: Obtener el usuario autenticado
-        $usuario = auth()->user();
+        $usuario = $request->user();
+        $allowedRoles = array_map(fn (string $role): string => $this->normalizeRole($role), $roles);
+        $currentRole = $this->normalizeRole($usuario->rol);
 
-        // PASO 3: Verificar si el usuario tiene el rol requerido
-        if ($usuario->rol !== $rol) {
+        if (! in_array($currentRole, $allowedRoles, true)) {
             abort(403, 'No tienes permisos para acceder a esta sección');
         }
 
-        // PASO 4: Si todo está bien, continuar con la petición
         return $next($request);
+    }
+
+    private function normalizeRole(string $role): string
+    {
+        return match ($role) {
+            'admin' => 'administrador',
+            'empleado' => 'trabajador',
+            default => $role,
+        };
     }
 }

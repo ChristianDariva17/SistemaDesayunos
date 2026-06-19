@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 /*
 |--------------------------------------------------------------------------
@@ -10,6 +12,7 @@ use Illuminate\Support\Facades\Route;
 
 // Autenticación
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ProfileController;
 
 // Controladores de ADMINISTRADOR (con alias "Admin" para evitar conflictos)
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
@@ -37,20 +40,47 @@ Route::get('/', function () {
 });
 
 // Rutas de autenticación
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.post');
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.post');
+});
 
-// Registro de usuarios (si aplica)
-Route::get('/register', [AuthController::class, 'showRegisterForm'])->name('register');
-Route::post('/register', [AuthController::class, 'register'])->name('register.post');
+Route::post('/logout', [AuthController::class, 'logout'])->middleware(['auth', 'valid.role'])->name('logout');
+
+Route::middleware(['auth', 'valid.role'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+// Dashboard genérico post-autenticación
+Route::get('/dashboard', function (Request $request) {
+    $user = auth()->user();
+
+    if (in_array($user?->rol, ['administrador', 'admin'], true)) {
+        return redirect()->route('admin.dashboard');
+    }
+
+    if (in_array($user?->rol, ['trabajador', 'empleado'], true)) {
+        return redirect()->route('trabajador.dashboard');
+    }
+
+    Auth::guard()->logoutCurrentDevice();
+
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect()->route('login')->withErrors([
+        'email' => 'Tu cuenta no tiene un rol válido. Contacta al administrador.',
+    ]);
+})->middleware(['auth', 'valid.role'])->name('dashboard');
 
 /*
 | Rutas de ADMINISTRADOR (Requieren autenticación + rol admin)
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function() {
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'valid.role', 'rol:administrador'])->group(function () {
 
     // ══════════════════════════════════════════════════════════════════
     // DASHBOARD
@@ -168,7 +198,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function() {
 |--------------------------------------------------------------------------
 */
 
-Route::prefix('trabajador')->name('trabajador.')->middleware(['auth'])->group(function() {
+Route::prefix('trabajador')->name('trabajador.')->middleware(['auth', 'valid.role', 'rol:trabajador'])->group(function () {
 
     // ══════════════════════════════════════════════════════════════════
     // DASHBOARD
