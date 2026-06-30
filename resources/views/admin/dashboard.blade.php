@@ -681,7 +681,7 @@
                         <i class="fas fa-box"></i>
                         <span>Productos</span>
                         @php
-                        $stockBajo = \App\Models\Producto::where('stock', '<', 10)->count();
+                        $stockBajo = \App\Models\Producto::stockBajo()->count();
                             @endphp
                             @if($stockBajo > 0)
                             <span class="badge badge-sidebar bg-warning">{{ $stockBajo }}</span>

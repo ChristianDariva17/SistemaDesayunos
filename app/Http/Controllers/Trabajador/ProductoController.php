@@ -50,7 +50,7 @@ class ProductoController extends Controller
         $productosNuevos = Producto::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->count();
-        $stockBajo = Producto::where('stock', '<=', 10)->count();
+        $stockBajo = Producto::stockBajo()->count();
 
         // ==========================================
         // PRODUCTOS PAGINADOS
@@ -137,7 +137,7 @@ class ProductoController extends Controller
                 'total' => Producto::count(),
                 'activos' => Producto::where('estado', 'activo')->count(),
                 'inactivos' => Producto::where('estado', 'inactivo')->count(),
-                'stock_bajo' => Producto::where('stock', '<=', 10)->count(),
+                'stock_bajo' => Producto::stockBajo()->count(),
                 'sin_stock' => Producto::where('stock', 0)->count(),
                 'valor_inventario' => Producto::where('estado', 'activo')->sum(DB::raw('precio * stock')),
                 'precio_promedio' => Producto::where('estado', 'activo')->avg('precio'),

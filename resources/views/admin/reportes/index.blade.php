@@ -66,7 +66,7 @@
     @php
         // Calcular estadísticas con caché para optimizar performance
         $totalProductos = \App\Models\Producto::count();
-        $stockBajo = \App\Models\Producto::where('stock', '<', 10)->count();
+        $stockBajo = \App\Models\Producto::stockBajo()->count();
         $pedidosMes = \App\Models\Pedido::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->count();
@@ -287,7 +287,7 @@
                 <div class="card-body d-flex flex-column">
                     <p class="text-muted mb-3">
                         <i class="fas fa-info-circle text-warning"></i>
-                        Productos críticos con menos de 10 unidades en inventario para reabastecimiento urgente.
+                        Productos críticos con 10 unidades o menos en inventario para reabastecimiento urgente.
                     </p>
 
                     {{-- Estadísticas --}}

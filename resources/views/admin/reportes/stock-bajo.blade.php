@@ -392,8 +392,8 @@
                 <div class="card-value">{{ $productos->whereBetween('stock', [1, 5])->count() }}</div>
             </td>
             <td class="yellow" style="width: 33.33%;">
-                <div class="card-label">BAJOS (6-9)</div>
-                <div class="card-value">{{ $productos->whereBetween('stock', [6, 9])->count() }}</div>
+                <div class="card-label">BAJOS (6-10)</div>
+                <div class="card-value">{{ $productos->whereBetween('stock', [6, 10])->count() }}</div>
             </td>
         </tr>
     </table>
@@ -524,11 +524,11 @@
                 </div>
             @endif
 
-            @if($productos->whereBetween('stock', [6, 9])->count() > 0)
+            @if($productos->whereBetween('stock', [6, 10])->count() > 0)
                 <div class="action-item">
                     <strong>(!) PRIORIDAD MEDIA:</strong> 
-                    Planificar reabastecimiento para los {{ $productos->whereBetween('stock', [6, 9])->count() }} producto(s) 
-                    con stock bajo (6-9 unidades) en los proximos dias.
+                    Planificar reabastecimiento para los {{ $productos->whereBetween('stock', [6, 10])->count() }} producto(s) 
+                    con stock bajo (6-10 unidades) en los proximos dias.
                 </div>
             @endif
 

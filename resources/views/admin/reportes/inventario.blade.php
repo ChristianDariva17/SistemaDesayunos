@@ -312,7 +312,7 @@
                     if ($producto->stock == 0) {
                         $stockClase = 'stock-critical';
                         $stockBadge = '<span class="badge badge-danger">AGOTADO</span>';
-                    } elseif ($producto->stock < 10) {
+                    } elseif ($producto->stock <= 10) {
                         $stockClase = 'stock-low';
                         $stockBadge = '<span class="badge badge-warning">STOCK BAJO</span>';
                     } else {
@@ -357,7 +357,7 @@
                 </td>
                 <td style="width: 25%;">
                     <div class="total-label">Productos Criticos</div>
-                    <div class="total-value">{{ $productos->where('stock', '<', 10)->count() }}</div>
+                    <div class="total-value">{{ $productos->where('stock', '<=', 10)->count() }}</div>
                 </td>
             </tr>
         </table>
@@ -367,7 +367,7 @@
     <div class="observations-box">
         <h3>OBSERVACIONES</h3>
         <ul>
-            <li>Hay <strong>{{ $productos->where('stock', '<', 10)->count() }}</strong> productos con stock bajo (menos de 10 unidades).</li>
+            <li>Hay <strong>{{ $productos->where('stock', '<=', 10)->count() }}</strong> productos con stock bajo (10 unidades o menos).</li>
             <li>Se recomienda reabastecer los productos marcados en rojo y naranja.</li>
             <li>El valor total del inventario es de <strong>S/ {{ number_format($valorInventario, 2) }}</strong>.</li>
             <li>Este reporte fue generado el {{ now()->format('d/m/Y') }} a las {{ now()->format('h:i A') }}.</li>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\InventoryLimits;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -94,7 +95,7 @@ class Producto extends Model
      */
     public function getTieneStockBajoAttribute(): bool
     {
-        return $this->stock <= 10;
+        return $this->stock <= InventoryLimits::LOW_STOCK_THRESHOLD;
     }
 
     /**
@@ -128,7 +129,7 @@ class Producto extends Model
      * Uso: Producto::stockBajo()->get()
      * Uso: Producto::stockBajo(5)->get()
      */
-    public function scopeStockBajo($query, int $cantidad = 10)
+    public function scopeStockBajo($query, int $cantidad = InventoryLimits::LOW_STOCK_THRESHOLD)
     {
         return $query->where('stock', '<=', $cantidad);
     }

@@ -20,7 +20,7 @@ class DashboardController extends Controller
         // Productos
         $totalProductos = Producto::count();
         $productosActivos = Producto::where('estado', 'activo')->count();
-        $stockBajo = Producto::where('stock', '<', 10)->count();
+        $stockBajo = Producto::stockBajo()->count();
         
         // Clientes
         $totalClientes = Cliente::count();
