@@ -21,7 +21,7 @@ final class StoreProductoRequest extends FormRequest
         return [
             'nombre' => ['required', 'string', 'max:255'],
             'descripcion' => ['nullable', 'string', 'max:1000'],
-            'categoria' => ['nullable', 'string', 'max:100'],
+            'categoria' => ['required', 'string', 'max:100'],
             'precio' => ['required', 'numeric', 'min:0', 'max:999999.99'],
             'codigo_barras' => ['nullable', 'string', 'max:50', 'unique:productos,codigo_barras'],
             'sku' => ['nullable', 'string', 'max:50', 'unique:productos,sku'],
@@ -40,6 +40,7 @@ final class StoreProductoRequest extends FormRequest
             'nombre.required' => 'El nombre del producto es obligatorio.',
             'nombre.max' => 'El nombre no puede tener más de 255 caracteres.',
             'descripcion.max' => 'La descripción no puede tener más de 1000 caracteres.',
+            'categoria.required' => 'La categoría del producto es obligatoria.',
             'categoria.max' => 'La categoría no puede tener más de 100 caracteres.',
             'precio.required' => 'El precio es obligatorio.',
             'precio.numeric' => 'El precio debe ser un número válido.',

@@ -22,6 +22,25 @@ it('validates producto creation through the admin form request', function (): vo
     $response->assertSessionHasErrors(['nombre', 'stock']);
 });
 
+it('requires categoria when creating a producto', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto sin categoria',
+            'descripcion' => 'Producto con categoria faltante',
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.create'));
+    $response->assertSessionHasErrors(['categoria']);
+});
+
 it('allows updating a producto without failing its own unique fields', function (): void {
     $admin = User::factory()->create([
         'rol' => 'administrador',
