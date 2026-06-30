@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Trabajador;
 
+use App\Actions\Pedido\CreatePedidoAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Pedido\StorePedidoRequest;
 use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\Empleado;
@@ -103,82 +105,16 @@ class PedidoController extends Controller
     /**
      * Guardar nuevo pedido
      */
-    public function store(Request $request)
+    public function store(StorePedidoRequest $request, CreatePedidoAction $createPedidoAction)
     {
-        $validated = $request->validate([
-            'cliente_id' => 'required|exists:clientes,id',
-            'empleado_id' => 'required|exists:empleados,id',
-            'productos' => 'required|array|min:1',
-            'productos.*.id' => 'required|exists:productos,id',
-            'productos.*.cantidad' => 'required|integer|min:1',
-            'productos.*.precio' => 'required|numeric|min:0.01',
-            'metodo_pago' => 'nullable|in:efectivo,tarjeta,transferencia,otro',
-            'observaciones' => 'nullable|string|max:500',
-        ], [
-            'cliente_id.required' => 'Debes seleccionar un cliente',
-            'productos.required' => 'Debes agregar al menos un producto',
-            'productos.min' => 'Debes agregar al menos un producto',
-        ]);
+        $validated = $request->validated();
 
-        DB::beginTransaction();
         try {
-            // Generar número de pedido único
-            $numero_pedido = $this->generarNumeroPedido();
-
-            // Calcular total
-            $total = 0;
-            foreach ($validated['productos'] as $prod) {
-                $total += $prod['cantidad'] * $prod['precio'];
-            }
-
-            // Crear el pedido
-            $pedido = Pedido::create([
-                'cliente_id' => $validated['cliente_id'],
-                'empleado_id' => $validated['empleado_id'],
-                'numero_pedido' => $numero_pedido,
-                'fecha' => now()->toDateString(),
-                'hora' => now()->format('H:i:s'),
-                'total' => $total,
-                'estado' => 'pendiente',
-                'metodo_pago' => $validated['metodo_pago'] ?? null,
-                'observaciones' => $validated['observaciones'] ?? null,
-            ]);
-
-            // Agregar productos al pedido
-            foreach ($validated['productos'] as $prod) {
-                $producto = Producto::findOrFail($prod['id']);
-
-                // Verificar stock
-                if ($producto->stock < $prod['cantidad']) {
-                    throw new Exception("Stock insuficiente para {$producto->nombre}. Disponible: {$producto->stock}");
-                }
-
-                // Adjuntar producto al pedido
-                $pedido->productos()->attach($prod['id'], [
-                    'cantidad' => $prod['cantidad'],
-                    'precio_unitario' => $prod['precio'],
-                    'subtotal' => $prod['cantidad'] * $prod['precio'],
-                ]);
-
-                // Reducir stock
-                $producto->decrement('stock', $prod['cantidad']);
-            }
-
-            DB::commit();
-
-            Log::info('Pedido creado', [
-                'pedido_id' => $pedido->id,
-                'numero_pedido' => $pedido->numero_pedido,
-                'total' => $pedido->total,
-                'productos_count' => count($validated['productos']),
-                'usuario' => auth()->id() ?? 'Sistema'
-            ]);
+            $pedido = $createPedidoAction->handle($validated, auth()->id());
 
             return redirect()->route('trabajador.pedidos.show', $pedido)
                 ->with('success', "✅ Pedido {$pedido->numero_pedido} creado correctamente");
         } catch (Exception $e) {
-            DB::rollback();
-
             Log::error('Error al crear pedido', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
