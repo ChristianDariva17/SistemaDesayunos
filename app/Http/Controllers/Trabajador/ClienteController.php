@@ -202,12 +202,12 @@ class ClienteController extends Controller
                 'regex:/^[0-9\+\-\(\)\s]+$/' // Permite números, +, -, (, ), espacios
             ],
             'email' => [
-                'required',
+                'nullable',
                 'email',
                 'max:255',
                 'unique:clientes,email,' . $clienteId
             ],
-            'direccion' => 'nullable|string|max:500',
+            'direccion' => 'nullable|string|max:255',
             'fecha_nacimiento' => [
                 'nullable',
                 'date',
@@ -230,13 +230,12 @@ class ClienteController extends Controller
             'nombre.required' => 'El nombre del cliente es obligatorio.',
             'nombre.max' => 'El nombre no puede tener más de 255 caracteres.',
             'apellido.max' => 'El apellido no puede tener más de 255 caracteres.',
-            'email.required' => 'El email es obligatorio.',
             'email.email' => 'El email debe ser una dirección válida.',
             'email.unique' => 'Este email ya está registrado por otro cliente.',
             'email.max' => 'El email no puede tener más de 255 caracteres.',
             'telefono.regex' => 'El formato del teléfono no es válido. Solo números, +, -, ( ) y espacios.',
             'telefono.max' => 'El teléfono no puede tener más de 20 caracteres.',
-            'direccion.max' => 'La dirección no puede tener más de 500 caracteres.',
+            'direccion.max' => 'La dirección no puede tener más de 255 caracteres.',
             'fecha_nacimiento.date' => 'La fecha de nacimiento debe ser una fecha válida.',
             'fecha_nacimiento.before' => 'La fecha de nacimiento no puede ser futura.',
             'fecha_nacimiento.after' => 'La fecha de nacimiento no puede ser mayor a 120 años.',

@@ -139,10 +139,10 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <!-- Email (OBLIGATORIO) -->
+                            <!-- Email (OPCIONAL) -->
                             <div class="col-md-6 mb-3">
                                 <label for="email" class="form-label fw-bold">
-                                    Correo Electrónico <span class="text-danger">*</span>
+                                    Correo Electrónico
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text">
@@ -154,7 +154,6 @@
                                            class="form-control @error('email') is-invalid @enderror"
                                            value="{{ old('email') }}"
                                            maxlength="255"
-                                           required
                                            placeholder="email@ejemplo.com">
                                     @error('email')
                                         <div class="invalid-feedback">
@@ -165,7 +164,7 @@
                                 </div>
                                 <small class="text-muted">
                                     <i class="fas fa-info-circle me-1"></i>
-                                    El email debe ser único en el sistema
+                                    Opcional. Si lo registras, debe ser único en el sistema.
                                 </small>
                             </div>
 
@@ -211,7 +210,7 @@
                                               id="direccion" 
                                               class="form-control @error('direccion') is-invalid @enderror"
                                               rows="2"
-                                              maxlength="500"
+                                              maxlength="255"
                                               placeholder="Ej: Av. Principal 123, Distrito, Ciudad">{{ old('direccion') }}</textarea>
                                     @error('direccion')
                                         <div class="invalid-feedback">
@@ -221,7 +220,7 @@
                                     @enderror
                                 </div>
                                 <small class="text-muted">
-                                    Máximo 500 caracteres
+                                    Máximo 255 caracteres
                                 </small>
                             </div>
                         </div>
