@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreProductoRequest;
+use App\Http\Requests\Admin\UpdateProductoRequest;
 use App\Models\Producto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -83,14 +85,10 @@ class ProductoController extends Controller
      * ==========================================
      * ✅ MEJORADO: Usa validación unificada + try-catch + transacciones
      */
-    public function store(Request $request)
+    public function store(StoreProductoRequest $request)
     {
         try {
-            // Validación usando método privado
-            $validated = $request->validate(
-                $this->getValidationRules(),
-                $this->getValidationMessages()
-            );
+            $validated = $request->validated();
 
             DB::beginTransaction();
 
@@ -155,14 +153,10 @@ class ProductoController extends Controller
      * ==========================================
      * ✅ MEJORADO: Usa model binding consistente + validación unificada
      */
-    public function update(Request $request, Producto $producto)
+    public function update(UpdateProductoRequest $request, Producto $producto)
     {
         try {
-            // Validación usando método privado con ID del producto
-            $validated = $request->validate(
-                $this->getValidationRules($producto),
-                $this->getValidationMessages()
-            );
+            $validated = $request->validated();
 
             DB::beginTransaction();
 
@@ -253,66 +247,11 @@ class ProductoController extends Controller
 
     /**
      * ==========================================
-     * MÉTODO PRIVADO: REGLAS DE VALIDACIÓN
-     * ==========================================
-     * ✅ MEJORADO: Alineado con la estructura de la tabla
-     */
-    private function getValidationRules(Producto $producto = null): array
-    {
-        $productoId = $producto ? $producto->id : null;
-
-        return [
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'nullable|string|max:1000',
-            'categoria' => 'nullable|string|max:100', // ✅ CORREGIDO: nullable según tabla
-            'precio' => 'required|numeric|min:0|max:999999.99',
-            'codigo_barras' => 'nullable|string|max:50|unique:productos,codigo_barras,' . $productoId,
-            'sku' => 'nullable|string|max:50|unique:productos,sku,' . $productoId,
-            'stock' => 'required|integer|min:0|max:999999', // ✅ CORREGIDO: required
-            'estado' => 'required|in:activo,inactivo',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-        ];
-    }
-
-    /**
-     * ==========================================
-     * MÉTODO PRIVADO: MENSAJES DE VALIDACIÓN
-     * ==========================================
-     */
-    private function getValidationMessages(): array
-    {
-        return [
-            'nombre.required' => 'El nombre del producto es obligatorio.',
-            'nombre.max' => 'El nombre no puede tener más de 255 caracteres.',
-            'descripcion.max' => 'La descripción no puede tener más de 1000 caracteres.',
-            'categoria.max' => 'La categoría no puede tener más de 100 caracteres.',
-            'precio.required' => 'El precio es obligatorio.',
-            'precio.numeric' => 'El precio debe ser un número válido.',
-            'precio.min' => 'El precio no puede ser negativo.',
-            'precio.max' => 'El precio no puede superar los 999,999.99.',
-            'codigo_barras.unique' => 'Este código de barras ya está registrado.',
-            'codigo_barras.max' => 'El código de barras no puede tener más de 50 caracteres.',
-            'sku.unique' => 'Este SKU ya está registrado.',
-            'sku.max' => 'El SKU no puede tener más de 50 caracteres.',
-            'stock.required' => 'El stock es obligatorio.',
-            'stock.integer' => 'El stock debe ser un número entero.',
-            'stock.min' => 'El stock no puede ser negativo.',
-            'stock.max' => 'El stock no puede superar las 999,999 unidades.',
-            'estado.required' => 'Debes seleccionar el estado del producto.',
-            'estado.in' => 'El estado debe ser activo o inactivo.',
-            'imagen.image' => 'El archivo debe ser una imagen.',
-            'imagen.mimes' => 'La imagen debe ser formato: jpeg, png, jpg, gif o webp.',
-            'imagen.max' => 'La imagen no puede pesar más de 2MB.',
-        ];
-    }
-
-    /**
-     * ==========================================
      * MÉTODO PRIVADO: MANEJAR SUBIDA DE IMAGEN
      * ==========================================
      * ✅ MEJORADO: Retorna string en lugar de ?string
      */
-    private function handleImageUpload(Request $request, Producto $producto = null): ?string
+    private function handleImageUpload(Request $request, ?Producto $producto = null): ?string
     {
         if (!$request->hasFile('imagen')) {
             return null;
