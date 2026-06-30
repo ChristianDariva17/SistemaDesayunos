@@ -666,6 +666,12 @@
                     Recuperar acceso
                 </a>
             </p>
+            <p>
+                ¿No tienes una cuenta?
+                <a href="{{ route('register') }}">
+                    Crear cuenta
+                </a>
+            </p>
         </div>
 
     </div>
