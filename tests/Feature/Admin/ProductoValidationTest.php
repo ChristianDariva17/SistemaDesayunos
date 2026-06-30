@@ -3,6 +3,31 @@
 use App\Models\Producto;
 use App\Models\User;
 
+it('treats stock 10 as low stock and standardizes the inventory scope', function (): void {
+    $lowStock = Producto::create([
+        'nombre' => 'Cafe',
+        'categoria' => 'bebida',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => 5.00,
+    ]);
+
+    $normalStock = Producto::create([
+        'nombre' => 'Jugo',
+        'categoria' => 'bebida',
+        'stock' => 11,
+        'estado' => 'activo',
+        'precio' => 7.50,
+    ]);
+
+    expect($lowStock->tiene_stock_bajo)->toBeTrue()
+        ->and($normalStock->tiene_stock_bajo)->toBeFalse()
+        ->and(Producto::stockBajo()->count())->toBe(1);
+
+    expect(Producto::stockBajo()->pluck('id')->all())->toContain($lowStock->id)
+        ->and(Producto::stockBajo()->pluck('id')->all())->not->toContain($normalStock->id);
+});
+
 it('validates producto creation through the admin form request', function (): void {
     $admin = User::factory()->create([
         'rol' => 'administrador',
