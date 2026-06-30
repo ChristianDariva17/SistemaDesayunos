@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Pedido\UpdatePedidoAction;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Pedido\UpdatePedidoRequest;
 use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\Empleado;
@@ -227,50 +229,16 @@ class PedidoController extends Controller
     /**
      * Actualizar pedido
      */
-    public function update(Request $request, Pedido $pedido)
+    public function update(UpdatePedidoRequest $request, Pedido $pedido, UpdatePedidoAction $updatePedidoAction)
     {
-        $validated = $request->validate([
-            'estado' => 'required|in:pendiente,procesando,completado,cancelado',
-            'observaciones' => 'nullable|string|max:500'
-        ]);
+        $validated = $request->validated();
 
-        DB::beginTransaction();
         try {
-            $estadoAnterior = $pedido->estado;
-
-            // Si se cancela, restaurar stock
-            if ($validated['estado'] === 'cancelado' && $estadoAnterior !== 'cancelado') {
-                foreach ($pedido->productos as $producto) {
-                    $producto->increment('stock', $producto->pivot->cantidad);
-                }
-            }
-
-            // Si se descancela, reducir stock nuevamente
-            if ($estadoAnterior === 'cancelado' && $validated['estado'] !== 'cancelado') {
-                foreach ($pedido->productos as $producto) {
-                    if ($producto->stock < $producto->pivot->cantidad) {
-                        throw new Exception("Stock insuficiente para {$producto->nombre}");
-                    }
-                    $producto->decrement('stock', $producto->pivot->cantidad);
-                }
-            }
-
-            $pedido->update($validated);
-
-            DB::commit();
-
-            Log::info('Pedido actualizado', [
-                'pedido_id' => $pedido->id,
-                'estado_anterior' => $estadoAnterior,
-                'estado_nuevo' => $validated['estado'],
-                'usuario' => auth()->id() ?? 'Sistema'
-            ]);
+            $updatePedidoAction->handle($validated, $pedido, auth()->id());
 
             return redirect()->route('admin.pedidos.show', $pedido)
                 ->with('success', "✅ Pedido actualizado exitosamente");
         } catch (Exception $e) {
-            DB::rollBack();
-
             Log::error('Error al actualizar pedido', [
                 'pedido_id' => $pedido->id,
                 'error' => $e->getMessage()
@@ -329,50 +297,28 @@ class PedidoController extends Controller
     /**
      * Cambiar estado del pedido (AJAX)
      */
-    public function cambiarEstado(Request $request, Pedido $pedido)
+    public function cambiarEstado(Request $request, Pedido $pedido, UpdatePedidoAction $updatePedidoAction)
     {
         $request->validate([
             'estado' => 'required|in:pendiente,procesando,completado,cancelado'
         ]);
-
-        DB::beginTransaction();
         try {
-            $estadoAnterior = $pedido->estado;
-            $nuevoEstado = $request->estado;
-
-            if ($nuevoEstado === 'cancelado' && $estadoAnterior !== 'cancelado') {
-                foreach ($pedido->productos as $producto) {
-                    $producto->increment('stock', $producto->pivot->cantidad);
-                }
-            }
-
-            if ($estadoAnterior === 'cancelado' && $nuevoEstado !== 'cancelado') {
-                foreach ($pedido->productos as $producto) {
-                    if ($producto->stock < $producto->pivot->cantidad) {
-                        return response()->json([
-                            'success' => false,
-                            'message' => "Stock insuficiente para {$producto->nombre}"
-                        ], 400);
-                    }
-                    $producto->decrement('stock', $producto->pivot->cantidad);
-                }
-            }
-
-            $pedido->update(['estado' => $nuevoEstado]);
-
-            DB::commit();
+            $updatePedidoAction->handle([
+                'estado' => $request->estado,
+            ], $pedido, auth()->id());
 
             return response()->json([
                 'success' => true,
-                'message' => "Estado cambiado a: " . ucfirst($nuevoEstado),
-                'nuevo_estado' => $nuevoEstado
+                'message' => 'Estado cambiado a: ' . ucfirst($request->estado),
+                'nuevo_estado' => $request->estado
             ]);
         } catch (Exception $e) {
-            DB::rollBack();
+            $status = str_contains($e->getMessage(), 'Stock insuficiente') ? 400 : 500;
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al cambiar estado'
-            ], 500);
+                'message' => $status === 400 ? $e->getMessage() : 'Error al cambiar estado'
+            ], $status);
         }
     }
 
