@@ -12,7 +12,6 @@ use App\Models\Cliente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Exception;
 
 class PedidoController extends Controller
@@ -371,49 +370,13 @@ class PedidoController extends Controller
      */
     public function duplicar(Pedido $pedido)
     {
-        DB::beginTransaction();
         try {
-            $nuevoPedido = $pedido->replicate();
-            $nuevoPedido->numero_pedido = $this->generarNumeroPedido();
-            $nuevoPedido->estado = 'pendiente';
-            $nuevoPedido->save();
-
-            foreach ($pedido->productos as $producto) {
-                if ($producto->stock < $producto->pivot->cantidad) {
-                    throw new Exception("Stock insuficiente para {$producto->nombre}");
-                }
-
-                $nuevoPedido->productos()->attach($producto->id, [
-                    'cantidad' => $producto->pivot->cantidad,
-                    'precio_unitario' => $producto->pivot->precio_unitario,
-                    'subtotal' => $producto->pivot->subtotal,
-                ]);
-
-                $producto->decrement('stock', $producto->pivot->cantidad);
-            }
-
-            DB::commit();
+            $nuevoPedido = $pedido->duplicarConProductos();
 
             return redirect()->route('trabajador.pedidos.show', $nuevoPedido)
                 ->with('success', "✅ Pedido duplicado: {$nuevoPedido->numero_pedido}");
         } catch (Exception $e) {
-            DB::rollBack();
             return redirect()->back()->with('error', '❌ ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Generar número de pedido único
-     */
-    private function generarNumeroPedido(): string
-    {
-        do {
-            $year = date('Y');
-            $month = date('m');
-            $random = strtoupper(Str::random(6));
-            $numero_pedido = "PED-{$year}{$month}-{$random}";
-        } while (Pedido::where('numero_pedido', $numero_pedido)->exists());
-
-        return $numero_pedido;
     }
 }
