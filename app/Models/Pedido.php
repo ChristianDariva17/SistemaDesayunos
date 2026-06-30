@@ -94,6 +94,23 @@ class Pedido extends Model
         });
     }
 
+    public function duplicarConProductos(): self
+    {
+        return DB::transaction(function (): self {
+            $this->loadMissing('productos');
+
+            $nuevoPedido = $this->replicate(['numero_pedido']);
+            $nuevoPedido->estado = 'pendiente';
+            $nuevoPedido->save();
+
+            $nuevoPedido->update([
+                'total' => static::registrarProductos($nuevoPedido, $this->productos),
+            ]);
+
+            return $nuevoPedido->load('productos');
+        });
+    }
+
     protected static function registrarProductos(self $pedido, iterable $productos): float
     {
         $total = 0;
