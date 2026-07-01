@@ -478,7 +478,7 @@
                                 <select name="estado" class="form-select" id="filterEstado">
                                     <option value="">Todos los estados</option>
                                     <option value="pendiente" {{ request('estado') == 'pendiente' ? 'selected' : '' }}>Pendiente</option>
-                                    <option value="en_proceso" {{ request('estado') == 'en_proceso' ? 'selected' : '' }}>En Proceso</option>
+                                    <option value="procesando" {{ request('estado') == 'procesando' ? 'selected' : '' }}>Procesando</option>
                                     <option value="completado" {{ request('estado') == 'completado' ? 'selected' : '' }}>Completado</option>
                                     <option value="cancelado" {{ request('estado') == 'cancelado' ? 'selected' : '' }}>Cancelado</option>
                                 </select>
@@ -586,9 +586,9 @@
                                                 <i class="fas fa-clock me-1"></i>Pendiente
                                             </span>
                                             @break
-                                            @case('en_proceso')
+                                            @case('procesando')
                                             <span class="badge bg-info">
-                                                <i class="fas fa-spinner me-1"></i>En Proceso
+                                                <i class="fas fa-spinner me-1"></i>Procesando
                                             </span>
                                             @break
                                             @case('completado')

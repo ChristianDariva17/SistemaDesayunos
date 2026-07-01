@@ -197,8 +197,8 @@
                             <option value="pendiente" {{ request('estado') == 'pendiente' ? 'selected' : '' }}>
                                 Pendiente
                             </option>
-                            <option value="en_proceso" {{ request('estado') == 'en_proceso' ? 'selected' : '' }}>
-                                En Proceso
+                            <option value="procesando" {{ request('estado') == 'procesando' ? 'selected' : '' }}>
+                                Procesando
                             </option>
                             <option value="completado" {{ request('estado') == 'completado' ? 'selected' : '' }}>
                                 Completado
@@ -392,9 +392,9 @@
                                             <i class="fas fa-clock me-1"></i> Pendiente
                                         </span>
                                         @break
-                                    @case('en_proceso')
+                                    @case('procesando')
                                         <span class="badge bg-info">
-                                            <i class="fas fa-spinner me-1"></i> En Proceso
+                                            <i class="fas fa-spinner me-1"></i> Procesando
                                         </span>
                                         @break
                                     @case('completado')
