@@ -121,13 +121,13 @@ class ClienteController extends Controller
             // Log de auditoría
             Log::info('Cliente creado', [
                 'cliente_id' => $cliente->id,
-                'nombre_completo' => trim($cliente->nombre . ' ' . $cliente->apellido),
+                'nombre_completo' => $this->formatClienteNombre($cliente),
                 'email' => $cliente->email,
                 'usuario' => auth()->id() ?? 'Sistema'
             ]);
 
             return redirect()->route('admin.clientes.index')
-                ->with('success', "✅ Cliente '{$cliente->nombre} {$cliente->apellido}' creado exitosamente");
+                ->with('success', '✅ Cliente ' . $this->formatClienteNombre($cliente) . ' creado exitosamente');
 
         } catch (Exception $e) {
             DB::rollBack();
@@ -217,12 +217,12 @@ class ClienteController extends Controller
             // Log de auditoría
             Log::info('Cliente actualizado', [
                 'cliente_id' => $cliente->id,
-                'nombre_completo' => trim($cliente->nombre . ' ' . $cliente->apellido),
+                'nombre_completo' => $this->formatClienteNombre($cliente),
                 'cambios' => $cliente->getChanges()
             ]);
 
             return redirect()->route('admin.clientes.show', $cliente)
-                ->with('success', "✅ Cliente '{$cliente->nombre} {$cliente->apellido}' actualizado correctamente");
+                ->with('success', '✅ Cliente ' . $this->formatClienteNombre($cliente) . ' actualizado correctamente');
 
         } catch (Exception $e) {
             DB::rollBack();
@@ -246,7 +246,7 @@ class ClienteController extends Controller
     public function destroy(Cliente $cliente)
     {
         try {
-            $nombreCompleto = trim($cliente->nombre . ' ' . $cliente->apellido);
+            $nombreCompleto = $this->formatClienteNombre($cliente);
             $clienteId = $cliente->id;
 
             // ==========================================
@@ -315,7 +315,7 @@ class ClienteController extends Controller
                 'clientes' => $clientes->map(function ($cliente) {
                     return [
                         'id' => $cliente->id,
-                        'nombre_completo' => trim($cliente->nombre . ' ' . $cliente->apellido),
+                        'nombre_completo' => $this->formatClienteNombre($cliente),
                         'email' => $cliente->email,
                         'telefono' => $cliente->telefono
                     ];
@@ -351,7 +351,7 @@ class ClienteController extends Controller
             // ✅ MEJORADO: Logging de cambio de estado
             Log::info('Estado de cliente cambiado', [
                 'cliente_id' => $cliente->id,
-                'nombre_completo' => trim($cliente->nombre . ' ' . $cliente->apellido),
+                'nombre_completo' => $this->formatClienteNombre($cliente),
                 'estado_anterior' => $estadoAnterior,
                 'estado_nuevo' => $nuevoEstado,
                 'usuario' => auth()->id() ?? 'Sistema'
@@ -494,7 +494,7 @@ class ClienteController extends Controller
             // Crear copia del cliente
             $nuevoCliente = $cliente->replicate();
             $nuevoCliente->nombre = $cliente->nombre;
-            $nuevoCliente->apellido = $cliente->apellido . ' (Copia)';
+            $nuevoCliente->apellido = $cliente->apellido ? $cliente->apellido . ' (Copia)' : null;
             $nuevoCliente->email = null; // Limpiar email único
             $nuevoCliente->telefono = null; // Limpiar teléfono
             
@@ -579,7 +579,7 @@ class ClienteController extends Controller
      * ==========================================
      * ✅ MEJORADO: Alineado con estructura de tabla
      */
-    private function getValidationRules(Cliente $cliente = null): array
+    private function getValidationRules(?Cliente $cliente = null): array
     {
         $clienteId = $cliente ? $cliente->id : null;
 
@@ -634,5 +634,10 @@ class ClienteController extends Controller
             'estado.in' => 'El estado debe ser activo o inactivo.',
             'notas.max' => 'Las notas no pueden tener más de 1000 caracteres.'
         ];
+    }
+
+    private function formatClienteNombre(Cliente $cliente): string
+    {
+        return trim($cliente->nombre . ' ' . ($cliente->apellido ?? ''));
     }
 }

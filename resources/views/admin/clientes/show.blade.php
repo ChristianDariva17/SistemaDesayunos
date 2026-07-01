@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', 'Perfil de Cliente - ' . $cliente->nombre . ' ' . $cliente->apellido)
+@section('title', 'Perfil de Cliente - ' . trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')))
 
 @section('breadcrumb')
         <li class="breadcrumb-item"><a href="{{ route('admin.clientes.index') }}">Clientes</a></li>
-        <li class="breadcrumb-item active" aria-current="page">{{ $cliente->nombre }} {{ $cliente->apellido }}</li>
+        <li class="breadcrumb-item active" aria-current="page">{{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}</li>
 @endsection
 
 @section('content')
@@ -48,7 +48,7 @@
                         <!-- Información Principal -->
                         <div>
                             <h2 class="mb-1 fw-bold">
-                                {{ $cliente->nombre }} {{ $cliente->apellido }}
+                                {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}
                                 @if($cliente->estado == 'activo')
                                     <span class="badge bg-success ms-2">
                                         <i class="fas fa-check-circle me-1"></i>
@@ -63,10 +63,17 @@
                             </h2>
 
                             <p class="text-muted mb-1">
+                            @if($cliente->email)
                                 <i class="fas fa-envelope me-2"></i>
                                 <a href="mailto:{{ $cliente->email }}" class="text-decoration-none">
                                     {{ $cliente->email }}
                                 </a>
+                            @else
+                                <span class="text-muted">
+                                    <i class="fas fa-envelope me-2"></i>
+                                    Sin correo electrónico
+                                </span>
+                            @endif
                             </p>
 
                             @if($cliente->telefono)
@@ -106,7 +113,7 @@
                         <form action="{{ route('admin.clientes.destroy', $cliente) }}" 
                               method="POST" 
                               class="d-inline"
-                              onsubmit="return confirm('⚠️ ¿Estás seguro de eliminar a {{ $cliente->nombre }} {{ $cliente->apellido }}?\n\nEsta acción NO se puede deshacer.');">
+                              onsubmit="return confirm('⚠️ ¿Estás seguro de eliminar a {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}?\n\nEsta acción NO se puede deshacer.');">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-danger">
@@ -253,7 +260,7 @@
                             <i class="fas fa-user text-primary me-2"></i>
                             Nombre Completo:
                         </label>
-                        <span class="info-value fw-bold">{{ $cliente->nombre }} {{ $cliente->apellido }}</span>
+                        <span class="info-value fw-bold">{{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}</span>
                     </div>
 
                     <div class="info-item">
@@ -588,7 +595,7 @@
                                     <small class="text-muted">{{ $cliente->created_at->diffForHumans() }}</small>
                                 </div>
                                 <p class="mb-2">
-                                    {{ $cliente->nombre }} {{ $cliente->apellido }} se registró en el sistema
+                                    {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }} se registró en el sistema
                                 </p>
                                 <small class="text-muted">
                                     <i class="fas fa-calendar me-1"></i>

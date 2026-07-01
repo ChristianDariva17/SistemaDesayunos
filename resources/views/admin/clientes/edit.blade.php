@@ -4,7 +4,7 @@
 
 @section('breadcrumb')
         <li class="breadcrumb-item"><a href="{{ route('admin.clientes.index') }}">Clientes</a></li>
-        <li class="breadcrumb-item"><a href="{{ route('admin.clientes.show', $cliente) }}">{{ $cliente->nombre }} {{ $cliente->apellido }}</a></li>
+        <li class="breadcrumb-item"><a href="{{ route('admin.clientes.show', $cliente) }}">{{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}</a></li>
         <li class="breadcrumb-item active" aria-current="page">Editar</li>
 @endsection
 
@@ -26,7 +26,7 @@
                             <p class="text-muted mb-0">
                                 <i class="fas fa-user me-1"></i>
                                 Actualizando datos de: 
-                                <strong>{{ $cliente->nombre }} {{ $cliente->apellido }}</strong>
+                                <strong>{{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}</strong>
                                 <span class="badge bg-{{ $cliente->estado === 'activo' ? 'success' : 'secondary' }} ms-2">
                                     {{ ucfirst($cliente->estado) }}
                                 </span>
@@ -478,7 +478,7 @@
                             <form action="{{ route('admin.clientes.destroy', $cliente) }}" 
                                   method="POST" 
                                   id="formEliminar"
-                                  onsubmit="return confirm('⚠️ ¿Estás seguro de eliminar a {{ $cliente->nombre }} {{ $cliente->apellido }}?\n\nEsta acción NO se puede deshacer.');">
+                                  onsubmit="return confirm('⚠️ ¿Estás seguro de eliminar a {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}?\n\nEsta acción NO se puede deshacer.');">
                                 @csrf
                                 @method('DELETE')
                                 <button type="submit" class="btn btn-danger">

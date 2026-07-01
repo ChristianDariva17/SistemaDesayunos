@@ -350,7 +350,7 @@
                                             {{-- Información --}}
                                             <div>
                                                 <div class="fw-bold">
-                                                    {{ $cliente->nombre }} {{ $cliente->apellido }}
+                                                    {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}
                                                 </div>
                                                 <small class="text-muted">
                                                     <i class="fas fa-calendar-plus me-1"></i>
@@ -429,7 +429,7 @@
                                             <form action="{{ route('admin.clientes.destroy', $cliente) }}" 
                                                   method="POST" 
                                                   class="d-inline"
-                                                  onsubmit="return confirm('⚠️ ¿Estás seguro de eliminar a {{ $cliente->nombre }} {{ $cliente->apellido }}?\n\nEsta acción NO se puede deshacer.');">
+                                                  onsubmit="return confirm('⚠️ ¿Estás seguro de eliminar a {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}?\n\nEsta acción NO se puede deshacer.');">
                                                 @csrf
                                                 @method('DELETE')
                                                 <button type="submit" 
