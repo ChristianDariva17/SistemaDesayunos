@@ -196,6 +196,11 @@
             border: 2px solid #ef4444;
         }
 
+        .status-procesando {
+            background-color: #dbeafe;
+            border: 2px solid #3b82f6;
+        }
+
         .status-number {
             font-size: 18px;
             font-weight: bold;
@@ -205,6 +210,7 @@
         .status-completado .status-number { color: #059669; }
         .status-pendiente .status-number { color: #d97706; }
         .status-cancelado .status-number { color: #dc2626; }
+        .status-procesando .status-number { color: #1d4ed8; }
 
         .status-label {
             font-size: 8px;
@@ -430,6 +436,11 @@
             color: white;
         }
 
+        .badge-procesando {
+            background-color: #3b82f6;
+            color: white;
+        }
+
         /* ==========================================
            RESUMEN FINAL
            ========================================== */
@@ -576,10 +587,12 @@
         $completados = $pedidos->where('estado', 'completado');
         $pendientes = $pedidos->where('estado', 'pendiente');
         $cancelados = $pedidos->where('estado', 'cancelado');
+        $procesando = $pedidos->where('estado', 'procesando');
         
         $totalCompletados = 0;
         $totalPendientes = 0;
         $totalCancelados = 0;
+        $totalProcesando = 0;
         
         foreach ($completados as $p) {
             $totalCompletados += floatval($p->total ?? 0);
@@ -589,6 +602,9 @@
         }
         foreach ($cancelados as $p) {
             $totalCancelados += floatval($p->total ?? 0);
+        }
+        foreach ($procesando as $p) {
+            $totalProcesando += floatval($p->total ?? 0);
         }
     @endphp
 
@@ -669,17 +685,22 @@
         <div class="section-title">[GRÁFICO] Análisis por Estado de Pedidos</div>
         <table class="status-grid">
             <tr>
-                <td class="status-box status-completado" style="width: 33.33%;">
+                <td class="status-box status-completado" style="width: 25%;">
                     <div class="status-number">{{ $completados->count() }}</div>
                     <div class="status-label">Completados</div>
                     <div class="status-amount">S/ {{ number_format($totalCompletados, 2) }}</div>
                 </td>
-                <td class="status-box status-pendiente" style="width: 33.33%;">
+                <td class="status-box status-pendiente" style="width: 25%;">
                     <div class="status-number">{{ $pendientes->count() }}</div>
                     <div class="status-label">Pendientes</div>
                     <div class="status-amount">S/ {{ number_format($totalPendientes, 2) }}</div>
                 </td>
-                <td class="status-box status-cancelado" style="width: 33.33%;">
+                <td class="status-box status-procesando" style="width: 25%;">
+                    <div class="status-number">{{ $procesando->count() }}</div>
+                    <div class="status-label">Procesando</div>
+                    <div class="status-amount">S/ {{ number_format($totalProcesando, 2) }}</div>
+                </td>
+                <td class="status-box status-cancelado" style="width: 25%;">
                     <div class="status-number">{{ $cancelados->count() }}</div>
                     <div class="status-label">Cancelados</div>
                     <div class="status-amount">S/ {{ number_format($totalCancelados, 2) }}</div>
@@ -748,7 +769,7 @@
                     <div class="card-title">[CALENDARIO] Ventas por Día (Últimos 7)</div>
                     @php
                         $ventasPorDia = $pedidos->groupBy(function($pedido) {
-                            return $pedido->created_at->format('Y-m-d');
+                            return $pedido->fecha->format('Y-m-d');
                         })->map(function($pedidosDia) {
                             $total = 0;
                             foreach ($pedidosDia as $p) {
@@ -837,16 +858,14 @@
                             case 'cancelado':
                                 $estadoBadge = '<span class="badge badge-cancelado">Cancelado</span>';
                                 break;
+                            case 'procesando':
+                                $estadoBadge = '<span class="badge badge-procesando">Procesando</span>';
+                                break;
                             default:
-                                $estadoBadge = '<span class="badge badge-pendiente">En Proceso</span>';
+                                $estadoBadge = '<span class="badge badge-pendiente">' . e(ucfirst($estadoPedido)) . '</span>';
                         }
                         
-                        $cantidadItems = 0;
-                        if (isset($pedido->detalles)) {
-                            $cantidadItems = is_countable($pedido->detalles) 
-                                ? count($pedido->detalles) 
-                                : $pedido->detalles->count();
-                        }
+                        $cantidadItems = $pedido->productos?->count() ?? 0;
                     @endphp
 
                     <tr>
@@ -860,8 +879,8 @@
                             @endif
                         </td>
                         <td>
-                            <div class="order-date">{{ $pedido->created_at->format('d/m/Y') }}</div>
-                            <div class="order-time">{{ $pedido->created_at->format('h:i A') }}</div>
+                            <div class="order-date">{{ $pedido->fecha->format('d/m/Y') }}</div>
+                            <div class="order-time">{{ \Carbon\Carbon::parse($pedido->fecha->format('Y-m-d') . ' ' . $pedido->hora)->format('h:i A') }}</div>
                         </td>
                         <td class="text-center">
                             <strong>{{ $cantidadItems }}</strong>

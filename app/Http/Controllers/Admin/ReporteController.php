@@ -38,10 +38,11 @@ class ReporteController extends Controller
             $totalPedidos = Pedido::count();
             $pedidosCompletados = Pedido::where('estado', 'completado')->count();
             $pedidosPendientes = Pedido::where('estado', 'pendiente')->count();
+            $pedidosProcesando = Pedido::where('estado', 'procesando')->count();
             $totalVentas = Pedido::where('estado', 'completado')->sum('total') ?? 0;
             $ventasMesActual = Pedido::where('estado', 'completado')
-                ->whereYear('created_at', now()->year)
-                ->whereMonth('created_at', now()->month)
+                ->whereYear('fecha', now()->year)
+                ->whereMonth('fecha', now()->month)
                 ->sum('total') ?? 0;
 
             // Estadísticas de empleados
@@ -59,6 +60,7 @@ class ReporteController extends Controller
                 'totalPedidos' => $totalPedidos,
                 'pedidosCompletados' => $pedidosCompletados,
                 'pedidosPendientes' => $pedidosPendientes,
+                'pedidosProcesando' => $pedidosProcesando,
                 'totalVentas' => $totalVentas,
                 'ventasMesActual' => $ventasMesActual,
                 'totalEmpleados' => $totalEmpleados,
@@ -79,6 +81,7 @@ class ReporteController extends Controller
                 'totalPedidos' => 0,
                 'pedidosCompletados' => 0,
                 'pedidosPendientes' => 0,
+                'pedidosProcesando' => 0,
                 'totalVentas' => 0,
                 'ventasMesActual' => 0,
                 'totalEmpleados' => 0,
@@ -221,12 +224,13 @@ class ReporteController extends Controller
             // ==========================================
             // 2. OBTENER PEDIDOS CON FILTRO DE FECHAS
             // ==========================================
-            $pedidos = Pedido::with(['cliente', 'detalles.producto'])
-                ->whereBetween('created_at', [
-                    $fechaInicio . ' 00:00:00',
-                    $fechaFin . ' 23:59:59'
+            $pedidos = Pedido::with(['cliente', 'productos'])
+                ->whereBetween('fecha', [
+                    $fechaInicio,
+                    $fechaFin,
                 ])
-                ->orderBy('created_at', 'desc')
+                ->orderBy('fecha', 'desc')
+                ->orderBy('hora', 'desc')
                 ->get();
 
             // ==========================================
@@ -248,11 +252,13 @@ class ReporteController extends Controller
             $pedidosCompletados = $pedidos->where('estado', 'completado')->count();
             $pedidosPendientes = $pedidos->where('estado', 'pendiente')->count();
             $pedidosCancelados = $pedidos->where('estado', 'cancelado')->count();
+            $pedidosProcesando = $pedidos->where('estado', 'procesando')->count();
 
             // Totales por estado
             $totalCompletados = 0.0;
             $totalPendientes = 0.0;
             $totalCancelados = 0.0;
+            $totalProcesando = 0.0;
 
             foreach ($pedidos as $pedido) {
                 $monto = floatval($pedido->total);
@@ -261,6 +267,8 @@ class ReporteController extends Controller
                     $totalCompletados += $monto;
                 } elseif ($pedido->estado === 'pendiente') {
                     $totalPendientes += $monto;
+                } elseif ($pedido->estado === 'procesando') {
+                    $totalProcesando += $monto;
                 } elseif ($pedido->estado === 'cancelado') {
                     $totalCancelados += $monto;
                 }
@@ -281,9 +289,11 @@ class ReporteController extends Controller
                 'pedidosCompletados' => $pedidosCompletados,
                 'pedidosPendientes' => $pedidosPendientes,
                 'pedidosCancelados' => $pedidosCancelados,
+                'pedidosProcesando' => $pedidosProcesando,
                 'totalCompletados' => $totalCompletados,
                 'totalPendientes' => $totalPendientes,
                 'totalCancelados' => $totalCancelados,
+                'totalProcesando' => $totalProcesando,
             ];
 
             // ==========================================
@@ -347,7 +357,7 @@ class ReporteController extends Controller
                     DB::raw('COUNT(pedidos.id) as total_pedidos'),
                     DB::raw('SUM(pedidos.total) as total_ventas')
                 )
-                ->whereBetween('pedidos.created_at', [$fechaInicio . ' 00:00:00', $fechaFin . ' 23:59:59'])
+                ->whereBetween('pedidos.fecha', [$fechaInicio, $fechaFin])
                 ->groupBy('clientes.id', 'clientes.nombre', 'clientes.email', 'clientes.telefono')
                 ->orderByDesc('total_ventas')
                 ->get();

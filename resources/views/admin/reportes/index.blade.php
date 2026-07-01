@@ -67,11 +67,11 @@
         // Calcular estadísticas con caché para optimizar performance
         $totalProductos = \App\Models\Producto::count();
         $stockBajo = \App\Models\Producto::stockBajo()->count();
-        $pedidosMes = \App\Models\Pedido::whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
+        $pedidosMes = \App\Models\Pedido::whereMonth('fecha', now()->month)
+            ->whereYear('fecha', now()->year)
             ->count();
-        $ventasMes = \App\Models\Pedido::whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
+        $ventasMes = \App\Models\Pedido::whereMonth('fecha', now()->month)
+            ->whereYear('fecha', now()->year)
             ->sum('total');
     @endphp
 
