@@ -457,10 +457,10 @@
                                                             Pendiente
                                                         </span>
                                                         @break
-                                                    @case('en_proceso')
+                                                    @case('procesando')
                                                         <span class="badge bg-info">
                                                             <i class="fas fa-spinner me-1"></i>
-                                                            En Proceso
+                                                            Procesando
                                                         </span>
                                                         @break
                                                     @case('completado')
