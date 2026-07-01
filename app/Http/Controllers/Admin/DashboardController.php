@@ -46,16 +46,16 @@ class DashboardController extends Controller
         // ==========================================
         // PRODUCTOS MÁS VENDIDOS
         // ==========================================
-        $productosMasVendidos = DB::table('detalle_pedidos')
-            ->join('productos', 'detalle_pedidos.producto_id', '=', 'productos.id')
-            ->join('pedidos', 'detalle_pedidos.pedido_id', '=', 'pedidos.id')
+        $productosMasVendidos = DB::table('pedido_producto')
+            ->join('productos', 'pedido_producto.producto_id', '=', 'productos.id')
+            ->join('pedidos', 'pedido_producto.pedido_id', '=', 'pedidos.id')
             ->where('pedidos.estado', 'completado')
             ->select(
                 'productos.id',
                 'productos.nombre',
                 'productos.categoria',
-                DB::raw('SUM(detalle_pedidos.cantidad) as total_vendido'),
-                DB::raw('SUM(detalle_pedidos.subtotal) as ingresos')
+                DB::raw('SUM(pedido_producto.cantidad) as total_vendido'),
+                DB::raw('SUM(pedido_producto.subtotal) as ingresos')
             )
             ->groupBy('productos.id', 'productos.nombre', 'productos.categoria')
             ->orderByDesc('total_vendido')
