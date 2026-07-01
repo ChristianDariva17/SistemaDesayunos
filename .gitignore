@@ -22,3 +22,15 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Local AI/tooling artifacts
+.agents/
+.atl/
+.claude/
+.codegraph/
+skills-lock.json
+
+# Local database dumps
+backup-sistemadariva_mejorado.sql
+database/sistemadariva_mejorado.sql
+sistemadariva.sql
