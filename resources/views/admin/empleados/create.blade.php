@@ -77,18 +77,18 @@
                     <div class="row g-3">
                         {{-- Nombre --}}
                         <div class="col-12">
-                            <label for="name" class="form-label fw-semibold required">
+                            <label for="nombre" class="form-label fw-semibold required">
                                 <i class="fas fa-user text-muted"></i> Nombre Completo
                             </label>
-                            <input type="text" 
-                                   class="form-control form-control-lg @error('name') is-invalid @enderror" 
-                                   id="name" 
-                                   name="name" 
-                                   value="{{ old('name') }}"
+                            <input type="text"
+                                   class="form-control form-control-lg @error('nombre') is-invalid @enderror"
+                                   id="nombre"
+                                   name="nombre"
+                                   value="{{ old('nombre') }}"
                                    placeholder="Ej: Juan Carlos Pérez García"
                                    maxlength="255"
                                    required>
-                            @error('name')
+                            @error('nombre')
                                 <div class="invalid-feedback">
                                     <i class="fas fa-exclamation-circle me-1"></i> {{ $message }}
                                 </div>
@@ -116,31 +116,34 @@
                     <div class="row g-4">
                         {{-- Rol --}}
                         <div class="col-12">
-                            <label for="role" class="form-label fw-semibold required">
+                            <label for="rol_operativo" class="form-label fw-semibold required">
                                 <i class="fas fa-user-tag text-muted"></i> Rol del Empleado
                             </label>
-                            <select class="form-select form-select-lg @error('role') is-invalid @enderror" 
-                                    id="role" 
-                                    name="role"
+                            <select class="form-select form-select-lg @error('rol_operativo') is-invalid @enderror"
+                                    id="rol_operativo"
+                                    name="rol_operativo"
                                     required>
                                 <option value="">Selecciona un rol...</option>
-                                <option value="mesero" {{ old('role') == 'mesero' ? 'selected' : '' }}>
+                                <option value="mesero" {{ old('rol_operativo') == 'mesero' ? 'selected' : '' }}>
                                     👨‍🍳 Mesero - Atención a mesas
                                 </option>
-                                <option value="cajero" {{ old('role') == 'cajero' ? 'selected' : '' }}>
+                                <option value="cajero" {{ old('rol_operativo') == 'cajero' ? 'selected' : '' }}>
                                     💰 Cajero - Gestión de pagos
                                 </option>
-                                <option value="cocinero" {{ old('role') == 'cocinero' ? 'selected' : '' }}>
+                                <option value="cocinero" {{ old('rol_operativo') == 'cocinero' ? 'selected' : '' }}>
                                     🍳 Cocinero - Preparación de alimentos
                                 </option>
-                                <option value="chef" {{ old('role') == 'chef' ? 'selected' : '' }}>
+                                <option value="chef" {{ old('rol_operativo') == 'chef' ? 'selected' : '' }}>
                                     👨‍🍳 Chef - Jefe de cocina
                                 </option>
-                                <option value="ayudante" {{ old('role') == 'ayudante' ? 'selected' : '' }}>
+                                <option value="ayudante" {{ old('rol_operativo') == 'ayudante' ? 'selected' : '' }}>
                                     🤝 Ayudante - Apoyo general
                                 </option>
+                                <option value="otros" {{ old('rol_operativo') == 'otros' ? 'selected' : '' }}>
+                                    🧩 Otros - Función operativa adicional
+                                </option>
                             </select>
-                            @error('role')
+                            @error('rol_operativo')
                                 <div class="invalid-feedback">
                                     <i class="fas fa-exclamation-circle me-1"></i> {{ $message }}
                                 </div>
@@ -227,9 +230,35 @@
                                 💡 <strong>Nota:</strong> Los campos de esta sección son opcionales. 
                                 Puedes completarlos ahora o editarlos más tarde.
                             </p>
-                            <div class="alert alert-info mb-0 small">
-                                <i class="fas fa-database me-1"></i> 
-                                Actualmente no hay campos adicionales configurados
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="telefono" class="form-label fw-semibold">
+                                        <i class="fas fa-phone text-muted"></i> Teléfono
+                                    </label>
+                                    <input type="text"
+                                           class="form-control @error('telefono') is-invalid @enderror"
+                                           id="telefono"
+                                           name="telefono"
+                                           value="{{ old('telefono') }}"
+                                           maxlength="255"
+                                           placeholder="Ej: 999 888 777">
+                                    @error('telefono')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-12">
+                                    <label for="observaciones" class="form-label fw-semibold">
+                                        <i class="fas fa-note-sticky text-muted"></i> Observaciones
+                                    </label>
+                                    <textarea class="form-control @error('observaciones') is-invalid @enderror"
+                                              id="observaciones"
+                                              name="observaciones"
+                                              rows="4"
+                                              placeholder="Observaciones internas opcionales">{{ old('observaciones') }}</textarea>
+                                    @error('observaciones')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -498,13 +527,14 @@
             'cajero': { emoji: '💰', text: 'Cajero', bg: 'bg-success' },
             'cocinero': { emoji: '🍳', text: 'Cocinero', bg: 'bg-warning' },
             'chef': { emoji: '👨‍🍳', text: 'Chef', bg: 'bg-danger' },
-            'ayudante': { emoji: '🤝', text: 'Ayudante', bg: 'bg-secondary' }
+            'ayudante': { emoji: '🤝', text: 'Ayudante', bg: 'bg-secondary' },
+            'otros': { emoji: '🧩', text: 'Otros', bg: 'bg-secondary' }
         };
 
         // Actualizar nombre
-        $('#name').on('input', function() {
-            const name = $(this).val().trim();
-            const charCount = name.length;
+        $('#nombre').on('input', function() {
+            const nombre = $(this).val().trim();
+            const charCount = nombre.length;
             
             // Actualizar contador
             $('#charCount').text(`${charCount}/255`);
@@ -516,11 +546,11 @@
             }
             
             // Actualizar preview
-            if (name) {
-                $('#previewName').text(name);
+            if (nombre) {
+                $('#previewName').text(nombre);
                 
                 // Actualizar iniciales del avatar
-                const words = name.split(' ');
+                const words = nombre.split(' ');
                 let initials = '';
                 if (words.length >= 2) {
                     initials = words[0].charAt(0).toUpperCase() + words[1].charAt(0).toUpperCase();
@@ -530,7 +560,7 @@
                 $('#previewInitials').text(initials || '?');
                 
                 // Actualizar usuario sugerido
-                const username = name.toLowerCase()
+                const username = nombre.toLowerCase()
                     .split(' ')
                     .slice(0, 2)
                     .join('.')
@@ -545,11 +575,11 @@
         });
 
         // Actualizar rol
-        $('#role').on('change', function() {
-            const role = $(this).val();
+        $('#rol_operativo').on('change', function() {
+            const rolOperativo = $(this).val();
             
-            if (role && roleConfig[role]) {
-                const config = roleConfig[role];
+            if (rolOperativo && roleConfig[rolOperativo]) {
+                const config = roleConfig[rolOperativo];
                 $('#previewRole')
                     .removeClass('bg-secondary bg-info bg-success bg-warning bg-danger')
                     .addClass(config.bg)
@@ -591,22 +621,28 @@
         // VALIDACIÓN DEL FORMULARIO
         // ==========================================
         $('#empleadoForm').on('submit', function(e) {
-            const name = $('#name').val().trim();
-            const role = $('#role').val();
+            const nombre = $('#nombre').val().trim();
+            const rolOperativo = $('#rol_operativo').val();
             const estado = $('input[name="estado"]:checked').val();
+            const telefono = $('#telefono').val().trim();
+            const observaciones = $('#observaciones').val().trim();
 
             let errors = [];
 
-            if (!name) {
+            if (!nombre) {
                 errors.push('El nombre del empleado es obligatorio');
             }
 
-            if (name.length > 255) {
+            if (nombre.length > 255) {
                 errors.push('El nombre no puede exceder 255 caracteres');
             }
 
-            if (!role) {
+            if (!rolOperativo) {
                 errors.push('Debes seleccionar un rol para el empleado');
+            }
+
+            if (telefono.length > 255) {
+                errors.push('El teléfono no puede exceder 255 caracteres');
             }
 
             if (!estado) {
@@ -637,9 +673,11 @@
                     <div class="text-start">
                         <p class="mb-2">Estás a punto de registrar al empleado:</p>
                         <div class="alert alert-info mb-3">
-                            <strong><i class="fas fa-user me-1"></i> ${name}</strong><br>
-                            <small>${roleConfig[role]?.emoji || '👤'} ${roleConfig[role]?.text || role}</small><br>
+                            <strong><i class="fas fa-user me-1"></i> ${nombre}</strong><br>
+                            <small>${roleConfig[rolOperativo]?.emoji || '👤'} ${roleConfig[rolOperativo]?.text || rolOperativo}</small><br>
                             <small>${estado === 'activo' ? '✅ Activo' : '❌ Inactivo'}</small>
+                            ${telefono ? `<br><small><i class="fas fa-phone me-1"></i>${telefono}</small>` : ''}
+                            ${observaciones ? `<br><small><i class="fas fa-note-sticky me-1"></i>${observaciones}</small>` : ''}
                         </div>
                         <p class="text-muted small mb-0">
                             <i class="fas fa-info-circle me-1"></i>
@@ -680,7 +718,7 @@
         // ==========================================
         // FOCUS EN PRIMER CAMPO
         // ==========================================
-        $('#name').focus();
+        $('#nombre').focus();
     });
 </script>
 @endpush

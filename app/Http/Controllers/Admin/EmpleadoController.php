@@ -7,6 +7,7 @@ use App\Models\Empleado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class EmpleadoController extends Controller
 {
@@ -17,18 +18,18 @@ class EmpleadoController extends Controller
     {
         $query = Empleado::query();
 
-        // Filtro por búsqueda (name y role)
+        // Filtro por búsqueda (nombre y rol_operativo)
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('role', 'like', "%{$search}%");
+                $q->where('nombre', 'like', "%{$search}%")
+                    ->orWhere('rol_operativo', 'like', "%{$search}%");
             });
         }
 
         // Filtro por rol específico
-        if ($request->filled('role')) {
-            $query->where('role', $request->role);
+        if ($request->filled('rol_operativo')) {
+            $query->where('rol_operativo', $request->rol_operativo);
         }
 
         // Filtro por estado
@@ -37,15 +38,15 @@ class EmpleadoController extends Controller
         }
 
         // Ordenamiento dinámico
-        $sortBy = $request->get('sort', 'name');
+        $sortBy = $request->get('sort', 'nombre');
         $sortDirection = $request->get('direction', 'asc');
 
         // Validar columnas permitidas para ordenar
-        $allowedSorts = ['name', 'role', 'estado', 'created_at'];
+        $allowedSorts = ['nombre', 'rol_operativo', 'estado', 'created_at'];
         if (in_array($sortBy, $allowedSorts)) {
             $query->orderBy($sortBy, $sortDirection);
         } else {
-            $query->orderBy('name', 'asc');
+            $query->orderBy('nombre', 'asc');
         }
 
         // Paginación configurable
@@ -77,10 +78,10 @@ class EmpleadoController extends Controller
 
             DB::commit();
 
-            Log::info("Empleado creado: {$empleado->name}", ['id' => $empleado->id]);
+            Log::info("Empleado creado: {$empleado->nombre}", ['id' => $empleado->id]);
 
             return redirect()->route('admin.empleados.index')
-                ->with('success', "✅ Empleado {$empleado->name} registrado correctamente");
+                ->with('success', "✅ Empleado {$empleado->nombre} registrado correctamente");
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Error al crear empleado: " . $e->getMessage());
@@ -100,6 +101,7 @@ class EmpleadoController extends Controller
         $empleado->loadCount('pedidos');
 
         // Cargar últimos pedidos
+        $empleado->load('user');
         $empleado->load(['pedidos' => function ($query) {
             $query->latest()->take(5);
         }]);
@@ -129,10 +131,10 @@ class EmpleadoController extends Controller
 
             DB::commit();
 
-            Log::info("Empleado actualizado: {$empleado->name}", ['id' => $empleado->id]);
+            Log::info("Empleado actualizado: {$empleado->nombre}", ['id' => $empleado->id]);
 
             return redirect()->route('admin.empleados.show', $empleado)
-                ->with('success', "✅ Empleado {$empleado->name} actualizado correctamente");
+                ->with('success', "✅ Empleado {$empleado->nombre} actualizado correctamente");
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error("Error al actualizar empleado: " . $e->getMessage());
@@ -149,7 +151,7 @@ class EmpleadoController extends Controller
     public function destroy(Empleado $empleado)
     {
         try {
-            $nombre = $empleado->name;
+            $nombre = $empleado->nombre;
 
             // ✅ VALIDAR SI TIENE PEDIDOS ANTES DE ELIMINAR
             if ($empleado->pedidos()->count() > 0) {
@@ -185,9 +187,20 @@ class EmpleadoController extends Controller
      */
     private function validateEmpleado(Request $request, $empleadoId = null)
     {
+        $userIdRules = ['nullable', 'integer', 'exists:users,id'];
+
+        if ($empleadoId !== null) {
+            $userIdRules[] = Rule::unique('empleados', 'user_id')->ignore($empleadoId);
+        } else {
+            $userIdRules[] = Rule::unique('empleados', 'user_id');
+        }
+
         $rules = [
-            'name' => 'required|string|max:255',
-            'role' => 'required|in:mesero,cajero,cocinero,chef,ayudante',
+            'user_id' => $userIdRules,
+            'nombre' => 'required|string|max:255',
+            'rol_operativo' => 'required|in:mesero,cajero,cocinero,chef,ayudante,otros',
+            'telefono' => 'nullable|string|max:255',
+            'observaciones' => 'nullable|string',
             'estado' => 'required|in:activo,inactivo',
         ];
 
@@ -195,10 +208,13 @@ class EmpleadoController extends Controller
         // 'email' => 'required|email|unique:empleados,email,' . $empleadoId,
 
         $messages = [
-            'name.required' => 'El nombre del empleado es obligatorio.',
-            'name.max' => 'El nombre no puede tener más de 255 caracteres.',
-            'role.required' => 'Debes seleccionar un rol para el empleado.',
-            'role.in' => 'El rol seleccionado no es válido.',
+            'user_id.exists' => 'El usuario seleccionado no es válido.',
+            'user_id.unique' => 'Ese usuario ya está asociado a otro empleado.',
+            'nombre.required' => 'El nombre del empleado es obligatorio.',
+            'nombre.max' => 'El nombre no puede tener más de 255 caracteres.',
+            'rol_operativo.required' => 'Debes seleccionar un rol para el empleado.',
+            'rol_operativo.in' => 'El rol seleccionado no es válido.',
+            'telefono.max' => 'El teléfono no puede tener más de 255 caracteres.',
             'estado.required' => 'Debes seleccionar el estado del empleado.',
             'estado.in' => 'El estado seleccionado no es válido.',
         ];
@@ -215,9 +231,9 @@ class EmpleadoController extends Controller
             'total' => Empleado::count(),
             'activos' => Empleado::where('estado', 'activo')->count(),
             'inactivos' => Empleado::where('estado', 'inactivo')->count(),
-            'por_rol' => Empleado::select('role', DB::raw('count(*) as total'))
-                ->groupBy('role')
-                ->pluck('total', 'role'),
+            'por_rol' => Empleado::select('rol_operativo', DB::raw('count(*) as total'))
+                ->groupBy('rol_operativo')
+                ->pluck('total', 'rol_operativo'),
         ];
 
         return response()->json($stats);

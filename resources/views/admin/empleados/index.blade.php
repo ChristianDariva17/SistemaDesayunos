@@ -129,7 +129,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <p class="stat-label mb-1">Meseros</p>
-                        <h3 class="stat-value mb-0">{{ $empleados->where('role', 'mesero')->count() }}</h3>
+                        <h3 class="stat-value mb-0">{{ $empleados->where('rol_operativo', 'mesero')->count() }}</h3>
                         <small class="text-muted">
                             <i class="fas fa-concierge-bell me-1"></i> En servicio
                         </small>
@@ -152,7 +152,7 @@
             <h5 class="mb-0">
                 <i class="fas fa-filter text-primary me-2"></i> Filtros de Búsqueda
             </h5>
-            @if(request()->hasAny(['search', 'role', 'estado', 'sort', 'direction', 'per_page']))
+            @if(request()->hasAny(['search', 'rol_operativo', 'estado', 'sort', 'direction', 'per_page']))
                 <a href="{{ route('admin.empleados.index') }}" class="btn btn-sm btn-outline-secondary">
                     <i class="fas fa-times me-1"></i> Limpiar Filtros
                 </a>
@@ -176,7 +176,7 @@
                                id="search" 
                                name="search" 
                                value="{{ request('search') }}"
-                               placeholder="Buscar por nombre o rol...">
+                               placeholder="Buscar por nombre o rol operativo...">
                         @if(request('search'))
                             <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('search').value=''; document.getElementById('filterForm').submit();">
                                 <i class="fas fa-times"></i>
@@ -187,25 +187,28 @@
 
                 {{-- Filtro por Rol --}}
                 <div class="col-lg-3">
-                    <label for="role" class="form-label fw-semibold">
+                    <label for="rol_operativo" class="form-label fw-semibold">
                         <i class="fas fa-user-tag text-muted"></i> Rol
                     </label>
-                    <select class="form-select" id="role" name="role" onchange="document.getElementById('filterForm').submit();">
+                    <select class="form-select" id="rol_operativo" name="rol_operativo" onchange="document.getElementById('filterForm').submit();">
                         <option value="">Todos los roles</option>
-                        <option value="mesero" {{ request('role') == 'mesero' ? 'selected' : '' }}>
+                        <option value="mesero" {{ request('rol_operativo') == 'mesero' ? 'selected' : '' }}>
                             👨‍🍳 Mesero
                         </option>
-                        <option value="cajero" {{ request('role') == 'cajero' ? 'selected' : '' }}>
+                        <option value="cajero" {{ request('rol_operativo') == 'cajero' ? 'selected' : '' }}>
                             💰 Cajero
                         </option>
-                        <option value="cocinero" {{ request('role') == 'cocinero' ? 'selected' : '' }}>
+                        <option value="cocinero" {{ request('rol_operativo') == 'cocinero' ? 'selected' : '' }}>
                             🍳 Cocinero
                         </option>
-                        <option value="chef" {{ request('role') == 'chef' ? 'selected' : '' }}>
+                        <option value="chef" {{ request('rol_operativo') == 'chef' ? 'selected' : '' }}>
                             👨‍🍳 Chef
                         </option>
-                        <option value="ayudante" {{ request('role') == 'ayudante' ? 'selected' : '' }}>
+                        <option value="ayudante" {{ request('rol_operativo') == 'ayudante' ? 'selected' : '' }}>
                             🤝 Ayudante
+                        </option>
+                        <option value="otros" {{ request('rol_operativo') == 'otros' ? 'selected' : '' }}>
+                            🧩 Otros
                         </option>
                     </select>
                 </div>
@@ -270,10 +273,10 @@
                         <tr>
                             <th style="width: 5%">#</th>
                             <th style="width: 30%">
-                                <a href="{{ route('admin.empleados.index', array_merge(request()->all(), ['sort' => 'name', 'direction' => request('sort') == 'name' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}" 
+                                <a href="{{ route('admin.empleados.index', array_merge(request()->all(), ['sort' => 'nombre', 'direction' => request('sort') == 'nombre' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}"
                                    class="text-decoration-none text-dark d-flex align-items-center">
                                     Empleado
-                                    @if(request('sort') == 'name')
+                                    @if(request('sort') == 'nombre')
                                         <i class="fas fa-sort-{{ request('direction') == 'asc' ? 'up' : 'down' }} ms-1 text-primary"></i>
                                     @else
                                         <i class="fas fa-sort ms-1 text-muted"></i>
@@ -281,10 +284,10 @@
                                 </a>
                             </th>
                             <th style="width: 20%">
-                                <a href="{{ route('admin.empleados.index', array_merge(request()->all(), ['sort' => 'role', 'direction' => request('sort') == 'role' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}" 
+                                <a href="{{ route('admin.empleados.index', array_merge(request()->all(), ['sort' => 'rol_operativo', 'direction' => request('sort') == 'rol_operativo' && request('direction') == 'asc' ? 'desc' : 'asc'])) }}"
                                    class="text-decoration-none text-dark d-flex align-items-center">
                                     Rol
-                                    @if(request('sort') == 'role')
+                                    @if(request('sort') == 'rol_operativo')
                                         <i class="fas fa-sort-{{ request('direction') == 'asc' ? 'up' : 'down' }} ms-1 text-primary"></i>
                                     @else
                                         <i class="fas fa-sort ms-1 text-muted"></i>
@@ -330,14 +333,14 @@
                             <td>
                                 <div class="d-flex align-items-center">
                                     {{-- Avatar --}}
-                                    <div class="avatar-circle me-3 {{ 'avatar-' . strtolower(substr($empleado->name, 0, 1)) }}">
+                                    <div class="avatar-circle me-3 {{ 'avatar-' . strtolower(substr($empleado->nombre, 0, 1)) }}">
                                         <span class="avatar-initials">
-                                            {{ strtoupper(substr($empleado->name, 0, 1)) }}
+                                            {{ strtoupper(substr($empleado->nombre, 0, 1)) }}
                                         </span>
                                     </div>
                                     {{-- Info --}}
                                     <div>
-                                        <strong class="d-block">{{ $empleado->name }}</strong>
+                                        <strong class="d-block">{{ $empleado->nombre }}</strong>
                                         <small class="text-muted">
                                             <i class="fas fa-id-badge me-1"></i> ID: {{ $empleado->id }}
                                         </small>
@@ -354,8 +357,9 @@
                                         'cocinero' => ['emoji' => '🍳', 'bg' => 'bg-warning', 'text' => 'Cocinero'],
                                         'chef' => ['emoji' => '👨‍🍳', 'bg' => 'bg-danger', 'text' => 'Chef'],
                                         'ayudante' => ['emoji' => '🤝', 'bg' => 'bg-secondary', 'text' => 'Ayudante'],
+                                        'otros' => ['emoji' => '🧩', 'bg' => 'bg-secondary', 'text' => 'Otros'],
                                     ];
-                                    $config = $roleConfig[$empleado->role] ?? ['emoji' => '👤', 'bg' => 'bg-secondary', 'text' => 'Sin rol'];
+                                    $config = $roleConfig[$empleado->rol_operativo] ?? ['emoji' => '👤', 'bg' => 'bg-secondary', 'text' => 'Sin rol'];
                                 @endphp
                                 <span class="badge {{ $config['bg'] }} px-3 py-2">
                                     {{ $config['emoji'] }} {{ $config['text'] }}
@@ -403,7 +407,7 @@
                                     <button type="button" 
                                             class="btn btn-sm btn-outline-danger btn-delete"
                                             data-id="{{ $empleado->id }}"
-                                            data-name="{{ $empleado->name }}"
+                                            data-name="{{ $empleado->nombre }}"
                                             data-bs-toggle="tooltip"
                                             title="Eliminar">
                                         <i class="fas fa-trash"></i>
@@ -437,20 +441,20 @@
                         <i class="fas fa-users fa-4x text-muted"></i>
                     </div>
                     <h4 class="text-muted mb-3">
-                        @if(request()->hasAny(['search', 'role', 'estado']))
+                        @if(request()->hasAny(['search', 'rol_operativo', 'estado']))
                             No hay empleados que coincidan con tu búsqueda
                         @else
                             Aún no has registrado ningún empleado
                         @endif
                     </h4>
                     <p class="text-muted mb-4">
-                        @if(request()->hasAny(['search', 'role', 'estado']))
+                        @if(request()->hasAny(['search', 'rol_operativo', 'estado']))
                             Intenta con otros criterios de búsqueda o filtros
                         @else
                             Comienza agregando tu primer empleado al sistema
                         @endif
                     </p>
-                    @if(request()->hasAny(['search', 'role', 'estado']))
+                    @if(request()->hasAny(['search', 'rol_operativo', 'estado']))
                         <a href="{{ route('admin.empleados.index') }}" class="btn btn-outline-primary">
                             <i class="fas fa-times me-2"></i> Limpiar filtros
                         </a>

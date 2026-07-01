@@ -1,10 +1,10 @@
 @extends('layouts.app')
 
-@section('title', $empleado->name)
+@section('title', $empleado->nombre)
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('admin.empleados.index') }}">Empleados</a></li>
-    <li class="breadcrumb-item active">{{ $empleado->name }}</li>
+    <li class="breadcrumb-item active">{{ $empleado->nombre }}</li>
 @endsection
 
 @section('content')
@@ -51,11 +51,11 @@
                     <div class="avatar-circle-xl me-4">
                         <span class="avatar-initials-xl">
                             @php
-                                $words = explode(' ', $empleado->name);
+                                $words = explode(' ', $empleado->nombre);
                                 if (count($words) >= 2) {
                                     echo strtoupper(substr($words[0], 0, 1) . substr($words[1], 0, 1));
                                 } else {
-                                    echo strtoupper(substr($empleado->name, 0, 2));
+                                    echo strtoupper(substr($empleado->nombre, 0, 2));
                                 }
                             @endphp
                         </span>
@@ -63,7 +63,7 @@
                     
                     {{-- Info --}}
                     <div>
-                        <h2 class="mb-1">{{ $empleado->name }}</h2>
+                        <h2 class="mb-1">{{ $empleado->nombre }}</h2>
                         <div class="mb-2">
                             @php
                                 $roleConfig = [
@@ -72,8 +72,9 @@
                                     'cocinero' => ['emoji' => '🍳', 'bg' => 'bg-warning', 'text' => 'Cocinero'],
                                     'chef' => ['emoji' => '👨‍🍳', 'bg' => 'bg-danger', 'text' => 'Chef'],
                                     'ayudante' => ['emoji' => '🤝', 'bg' => 'bg-secondary', 'text' => 'Ayudante'],
+                                    'otros' => ['emoji' => '🧩', 'bg' => 'bg-secondary', 'text' => 'Otros'],
                                 ];
-                                $config = $roleConfig[$empleado->role] ?? ['emoji' => '👤', 'bg' => 'bg-secondary', 'text' => 'Sin rol'];
+                                $config = $roleConfig[$empleado->rol_operativo] ?? ['emoji' => '👤', 'bg' => 'bg-secondary', 'text' => 'Sin rol'];
                             @endphp
                             <span class="badge {{ $config['bg'] }} px-3 py-2 me-2">
                                 {{ $config['emoji'] }} {{ $config['text'] }}
@@ -213,7 +214,7 @@
                             <label class="info-label">
                                 <i class="fas fa-user text-muted me-2"></i> Nombre Completo
                             </label>
-                            <div class="info-value">{{ $empleado->name }}</div>
+                            <div class="info-value">{{ $empleado->nombre }}</div>
                         </div>
                     </div>
 
@@ -227,6 +228,28 @@
                                 <span class="badge {{ $config['bg'] }} px-3 py-2">
                                     {{ $config['emoji'] }} {{ $config['text'] }}
                                 </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Teléfono --}}
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <label class="info-label">
+                                <i class="fas fa-phone text-muted me-2"></i> Teléfono
+                            </label>
+                            <div class="info-value">{{ $empleado->telefono ?? 'Sin teléfono' }}</div>
+                        </div>
+                    </div>
+
+                    {{-- Usuario vinculado --}}
+                    <div class="col-md-6">
+                        <div class="info-item">
+                            <label class="info-label">
+                                <i class="fas fa-user-cog text-muted me-2"></i> Usuario vinculado
+                            </label>
+                            <div class="info-value">
+                                {{ $empleado->user?->name ?? 'Sin usuario vinculado' }}
                             </div>
                         </div>
                     </div>
@@ -428,6 +451,11 @@
                     Desde aquí puedes ver toda la información del empleado. 
                     Usa las acciones rápidas para editar o gestionar este registro.
                 </p>
+                @if(!empty($empleado->observaciones))
+                    <div class="alert alert-secondary small mb-3">
+                        <i class="fas fa-note-sticky me-1"></i> {{ $empleado->observaciones }}
+                    </div>
+                @endif
                 <hr>
                 <div class="d-flex justify-content-between align-items-center">
                     <small class="text-muted">
@@ -723,7 +751,7 @@
         // ELIMINAR EMPLEADO
         // ==========================================
         $('#btnDelete').on('click', function() {
-            const empleadoName = '{{ $empleado->name }}';
+            const empleadoName = '{{ $empleado->nombre }}';
             const pedidosCount = {{ $empleado->pedidos_count ?? 0 }};
 
             let warningHtml = `

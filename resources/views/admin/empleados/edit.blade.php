@@ -4,7 +4,7 @@
 
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('admin.empleados.index') }}">Empleados</a></li>
-    <li class="breadcrumb-item"><a href="{{ route('admin.empleados.show', $empleado) }}">{{ $empleado->name }}</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('admin.empleados.show', $empleado) }}">{{ $empleado->nombre }}</a></li>
     <li class="breadcrumb-item active">Editar</li>
 @endsection
 
@@ -43,7 +43,7 @@
                 <i class="fas fa-user-edit text-primary"></i> Editar Empleado
             </h1>
             <p class="page-subtitle text-muted mb-0">
-                <i class="fas fa-info-circle me-1"></i> Actualiza los datos de <strong>{{ $empleado->name }}</strong>
+                <i class="fas fa-info-circle me-1"></i> Actualiza los datos de <strong>{{ $empleado->nombre }}</strong>
             </p>
         </div>
         <div class="col-auto">
@@ -87,34 +87,34 @@
                     <div class="row g-3">
                         {{-- Nombre --}}
                         <div class="col-12">
-                            <label for="name" class="form-label fw-semibold required">
+                            <label for="nombre" class="form-label fw-semibold required">
                                 <i class="fas fa-user text-muted"></i> Nombre Completo
                             </label>
                             <div class="mb-2">
                                 <small class="text-muted">
                                     <strong>Nombre actual:</strong> 
-                                    <span class="badge bg-light text-dark">{{ $empleado->name }}</span>
+                                    <span class="badge bg-light text-dark">{{ $empleado->nombre }}</span>
                                 </small>
                             </div>
-                            <input type="text" 
-                                   class="form-control form-control-lg @error('name') is-invalid @enderror" 
-                                   id="name" 
-                                   name="name" 
-                                   value="{{ old('name', $empleado->name) }}"
-                                   data-original="{{ $empleado->name }}"
+                            <input type="text"
+                                   class="form-control form-control-lg @error('nombre') is-invalid @enderror"
+                                   id="nombre"
+                                   name="nombre"
+                                   value="{{ old('nombre', $empleado->nombre) }}"
+                                   data-original="{{ $empleado->nombre }}"
                                    placeholder="Ej: Juan Carlos Pérez García"
                                    maxlength="255"
                                    required>
-                            @error('name')
+                            @error('nombre')
                                 <div class="invalid-feedback">
                                     <i class="fas fa-exclamation-circle me-1"></i> {{ $message }}
                                 </div>
                             @enderror
                             <div class="form-text d-flex justify-content-between">
-                                <span id="nameStatus" class="text-muted">
+                                <span id="nombreStatus" class="text-muted">
                                     <i class="fas fa-info-circle me-1"></i> Modifica el nombre del empleado
                                 </span>
-                                <span id="charCount" class="text-muted">{{ strlen($empleado->name) }}/255</span>
+                                <span id="charCount" class="text-muted">{{ strlen($empleado->nombre) }}/255</span>
                             </div>
                         </div>
                     </div>
@@ -133,48 +133,87 @@
                     <div class="row g-4">
                         {{-- Rol --}}
                         <div class="col-12">
-                            <label for="role" class="form-label fw-semibold required">
+                            <label for="rol_operativo" class="form-label fw-semibold required">
                                 <i class="fas fa-user-tag text-muted"></i> Rol del Empleado
                             </label>
                             <div class="mb-2">
                                 <small class="text-muted">
                                     <strong>Rol actual:</strong> 
                                     <span class="badge bg-light text-dark">
-                                        {{ ucfirst($empleado->role ?? 'Sin rol') }}
+                                        {{ ucfirst($empleado->rol_operativo ?? 'Sin rol') }}
                                     </span>
                                 </small>
                             </div>
-                            <select class="form-select form-select-lg @error('role') is-invalid @enderror" 
-                                    id="role" 
-                                    name="role"
-                                    data-original="{{ $empleado->role }}"
+                            <select class="form-select form-select-lg @error('rol_operativo') is-invalid @enderror"
+                                    id="rol_operativo"
+                                    name="rol_operativo"
+                                    data-original="{{ $empleado->rol_operativo }}"
                                     required>
                                 <option value="">Selecciona un rol...</option>
-                                <option value="mesero" {{ old('role', $empleado->role) == 'mesero' ? 'selected' : '' }}>
+                                <option value="mesero" {{ old('rol_operativo', $empleado->rol_operativo) == 'mesero' ? 'selected' : '' }}>
                                     👨‍🍳 Mesero - Atención a mesas
                                 </option>
-                                <option value="cajero" {{ old('role', $empleado->role) == 'cajero' ? 'selected' : '' }}>
+                                <option value="cajero" {{ old('rol_operativo', $empleado->rol_operativo) == 'cajero' ? 'selected' : '' }}>
                                     💰 Cajero - Gestión de pagos
                                 </option>
-                                <option value="cocinero" {{ old('role', $empleado->role) == 'cocinero' ? 'selected' : '' }}>
+                                <option value="cocinero" {{ old('rol_operativo', $empleado->rol_operativo) == 'cocinero' ? 'selected' : '' }}>
                                     🍳 Cocinero - Preparación de alimentos
                                 </option>
-                                <option value="chef" {{ old('role', $empleado->role) == 'chef' ? 'selected' : '' }}>
+                                <option value="chef" {{ old('rol_operativo', $empleado->rol_operativo) == 'chef' ? 'selected' : '' }}>
                                     👨‍🍳 Chef - Jefe de cocina
                                 </option>
-                                <option value="ayudante" {{ old('role', $empleado->role) == 'ayudante' ? 'selected' : '' }}>
+                                <option value="ayudante" {{ old('rol_operativo', $empleado->rol_operativo) == 'ayudante' ? 'selected' : '' }}>
                                     🤝 Ayudante - Apoyo general
                                 </option>
+                                <option value="otros" {{ old('rol_operativo', $empleado->rol_operativo) == 'otros' ? 'selected' : '' }}>
+                                    🧩 Otros - Función operativa adicional
+                                </option>
                             </select>
-                            @error('role')
+                            @error('rol_operativo')
                                 <div class="invalid-feedback">
                                     <i class="fas fa-exclamation-circle me-1"></i> {{ $message }}
                                 </div>
                             @enderror
                             <div class="form-text">
-                                <span id="roleStatus" class="text-muted">
+                                <span id="rolOperativoStatus" class="text-muted">
                                     <i class="fas fa-info-circle me-1"></i> Actualiza la función del empleado
                                 </span>
+                            </div>
+                        </div>
+
+                        {{-- Contacto y Observaciones --}}
+                        <div class="col-12">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="telefono" class="form-label fw-semibold">
+                                        <i class="fas fa-phone text-muted"></i> Teléfono
+                                    </label>
+                                    <input type="text"
+                                           class="form-control @error('telefono') is-invalid @enderror"
+                                           id="telefono"
+                                           name="telefono"
+                                           value="{{ old('telefono', $empleado->telefono) }}"
+                                           data-original="{{ $empleado->telefono }}"
+                                           maxlength="255"
+                                           placeholder="Ej: 999 888 777">
+                                    @error('telefono')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                                <div class="col-12">
+                                    <label for="observaciones" class="form-label fw-semibold">
+                                        <i class="fas fa-note-sticky text-muted"></i> Observaciones
+                                    </label>
+                                    <textarea class="form-control @error('observaciones') is-invalid @enderror"
+                                              id="observaciones"
+                                              name="observaciones"
+                                              rows="4"
+                                              data-original="{{ $empleado->observaciones }}"
+                                              placeholder="Observaciones internas opcionales">{{ old('observaciones', $empleado->observaciones) }}</textarea>
+                                    @error('observaciones')
+                                        <div class="invalid-feedback">{{ $message }}</div>
+                                    @enderror
+                                </div>
                             </div>
                         </div>
 
@@ -312,13 +351,13 @@
                     <div class="preview-avatar mx-auto mb-3">
                         <div class="avatar-circle-large" id="previewAvatar">
                             <span class="avatar-initials-large" id="previewInitials">
-                                {{ strtoupper(substr($empleado->name, 0, 1)) }}
+                                {{ strtoupper(substr($empleado->nombre, 0, 1)) }}
                             </span>
                         </div>
                     </div>
 
                     {{-- Nombre --}}
-                    <h5 class="mb-1" id="previewName">{{ $empleado->name }}</h5>
+                    <h5 class="mb-1" id="previewName">{{ $empleado->nombre }}</h5>
                     
                     {{-- Rol --}}
                     <div class="mb-3">
@@ -329,8 +368,9 @@
                                 'cocinero' => ['emoji' => '🍳', 'bg' => 'bg-warning', 'text' => 'Cocinero'],
                                 'chef' => ['emoji' => '👨‍🍳', 'bg' => 'bg-danger', 'text' => 'Chef'],
                                 'ayudante' => ['emoji' => '🤝', 'bg' => 'bg-secondary', 'text' => 'Ayudante'],
+                                'otros' => ['emoji' => '🧩', 'bg' => 'bg-secondary', 'text' => 'Otros'],
                             ];
-                            $config = $roleConfig[$empleado->role] ?? ['emoji' => '👤', 'bg' => 'bg-secondary', 'text' => 'Sin rol'];
+                            $config = $roleConfig[$empleado->rol_operativo] ?? ['emoji' => '👤', 'bg' => 'bg-secondary', 'text' => 'Sin rol'];
                         @endphp
                         <span class="badge {{ $config['bg'] }} px-3 py-2" id="previewRole">
                             {{ $config['emoji'] }} {{ $config['text'] }}
@@ -619,8 +659,10 @@
         // VALORES ORIGINALES
         // ==========================================
         const originalData = {
-            name: $('#name').data('original'),
-            role: $('#role').data('original'),
+            nombre: $('#nombre').data('original'),
+            rolOperativo: $('#rol_operativo').data('original'),
+            telefono: $('#telefono').data('original'),
+            observaciones: $('#observaciones').data('original'),
             estado: $('input[name="estado"]').filter('[data-original]').first().data('original')
         };
 
@@ -632,7 +674,8 @@
             'cajero': { emoji: '💰', text: 'Cajero', bg: 'bg-success' },
             'cocinero': { emoji: '🍳', text: 'Cocinero', bg: 'bg-warning' },
             'chef': { emoji: '👨‍🍳', text: 'Chef', bg: 'bg-danger' },
-            'ayudante': { emoji: '🤝', text: 'Ayudante', bg: 'bg-secondary' }
+            'ayudante': { emoji: '🤝', text: 'Ayudante', bg: 'bg-secondary' },
+            'otros': { emoji: '🧩', text: 'Otros', bg: 'bg-secondary' }
         };
 
         // ==========================================
@@ -640,32 +683,48 @@
         // ==========================================
         function detectChanges() {
             const currentData = {
-                name: $('#name').val().trim(),
-                role: $('#role').val(),
+                nombre: $('#nombre').val().trim(),
+                rolOperativo: $('#rol_operativo').val(),
+                telefono: $('#telefono').val().trim(),
+                observaciones: $('#observaciones').val().trim(),
                 estado: $('input[name="estado"]:checked').val()
             };
 
             let changedFields = 0;
-            const totalFields = 3;
+            const totalFields = 5;
 
             // Verificar nombre
-            if (currentData.name !== originalData.name) {
+            if (currentData.nombre !== originalData.nombre) {
                 changedFields++;
-                $('#name').addClass('input-changed');
-                $('#nameStatus').html('<i class="fas fa-exclamation-triangle text-warning me-1"></i> Campo modificado');
+                $('#nombre').addClass('input-changed');
+                $('#nombreStatus').html('<i class="fas fa-exclamation-triangle text-warning me-1"></i> Campo modificado');
             } else {
-                $('#name').removeClass('input-changed');
-                $('#nameStatus').html('<i class="fas fa-info-circle me-1"></i> Modifica el nombre del empleado');
+                $('#nombre').removeClass('input-changed');
+                $('#nombreStatus').html('<i class="fas fa-info-circle me-1"></i> Modifica el nombre del empleado');
             }
 
             // Verificar rol
-            if (currentData.role !== originalData.role) {
+            if (currentData.rolOperativo !== originalData.rolOperativo) {
                 changedFields++;
-                $('#role').addClass('input-changed');
-                $('#roleStatus').html('<i class="fas fa-exclamation-triangle text-warning me-1"></i> Campo modificado');
+                $('#rol_operativo').addClass('input-changed');
+                $('#rolOperativoStatus').html('<i class="fas fa-exclamation-triangle text-warning me-1"></i> Campo modificado');
             } else {
-                $('#role').removeClass('input-changed');
-                $('#roleStatus').html('<i class="fas fa-info-circle me-1"></i> Actualiza la función del empleado');
+                $('#rol_operativo').removeClass('input-changed');
+                $('#rolOperativoStatus').html('<i class="fas fa-info-circle me-1"></i> Actualiza la función del empleado');
+            }
+
+            if (currentData.telefono !== originalData.telefono) {
+                changedFields++;
+                $('#telefono').addClass('input-changed');
+            } else {
+                $('#telefono').removeClass('input-changed');
+            }
+
+            if (currentData.observaciones !== originalData.observaciones) {
+                changedFields++;
+                $('#observaciones').addClass('input-changed');
+            } else {
+                $('#observaciones').removeClass('input-changed');
             }
 
             // Verificar estado
@@ -703,9 +762,9 @@
         // ==========================================
 
         // Actualizar nombre
-        $('#name').on('input', function() {
-            const name = $(this).val().trim();
-            const charCount = name.length;
+        $('#nombre').on('input', function() {
+            const nombre = $(this).val().trim();
+            const charCount = nombre.length;
             
             // Actualizar contador
             $('#charCount').text(`${charCount}/255`);
@@ -717,11 +776,11 @@
             }
             
             // Actualizar preview
-            if (name) {
-                $('#previewName').text(name);
+            if (nombre) {
+                $('#previewName').text(nombre);
                 
                 // Actualizar iniciales del avatar
-                const words = name.split(' ');
+                const words = nombre.split(' ');
                 let initials = '';
                 if (words.length >= 2) {
                     initials = words[0].charAt(0).toUpperCase() + words[1].charAt(0).toUpperCase();
@@ -735,11 +794,11 @@
         });
 
         // Actualizar rol
-        $('#role').on('change', function() {
-            const role = $(this).val();
+        $('#rol_operativo').on('change', function() {
+            const rolOperativo = $(this).val();
             
-            if (role && roleConfig[role]) {
-                const config = roleConfig[role];
+            if (rolOperativo && roleConfig[rolOperativo]) {
+                const config = roleConfig[rolOperativo];
                 $('#previewRole')
                     .removeClass('bg-secondary bg-info bg-success bg-warning bg-danger')
                     .addClass(config.bg)
@@ -778,22 +837,28 @@
         $('#empleadoForm').on('submit', function(e) {
             e.preventDefault();
             
-            const name = $('#name').val().trim();
-            const role = $('#role').val();
+            const nombre = $('#nombre').val().trim();
+            const rolOperativo = $('#rol_operativo').val();
             const estado = $('input[name="estado"]:checked').val();
+            const telefono = $('#telefono').val().trim();
+            const observaciones = $('#observaciones').val().trim();
 
             let errors = [];
 
-            if (!name) {
+            if (!nombre) {
                 errors.push('El nombre del empleado es obligatorio');
             }
 
-            if (name.length > 255) {
+            if (nombre.length > 255) {
                 errors.push('El nombre no puede exceder 255 caracteres');
             }
 
-            if (!role) {
+            if (!rolOperativo) {
                 errors.push('Debes seleccionar un rol para el empleado');
+            }
+
+            if (telefono.length > 255) {
+                errors.push('El teléfono no puede exceder 255 caracteres');
             }
 
             if (!estado) {
@@ -815,8 +880,10 @@
 
             // Verificar si hay cambios
             let changedFields = [];
-            if (name !== originalData.name) changedFields.push('Nombre');
-            if (role !== originalData.role) changedFields.push('Rol');
+            if (nombre !== originalData.nombre) changedFields.push('Nombre');
+            if (rolOperativo !== originalData.rolOperativo) changedFields.push('Rol');
+            if (telefono !== originalData.telefono) changedFields.push('Teléfono');
+            if (observaciones !== originalData.observaciones) changedFields.push('Observaciones');
             if (estado !== originalData.estado) changedFields.push('Estado');
 
             if (changedFields.length === 0) {
@@ -836,7 +903,7 @@
                     <div class="text-start">
                         <p class="mb-2">Estás a punto de actualizar los siguientes campos:</p>
                         <div class="alert alert-warning mb-3">
-                            <strong><i class="fas fa-user me-1"></i> ${name}</strong><br>
+                            <strong><i class="fas fa-user me-1"></i> ${nombre}</strong><br>
                             <small class="d-block mt-2"><strong>Campos modificados:</strong></small>
                             <ul class="mb-0 mt-1">
                                 ${changedFields.map(field => `<li>${field}</li>`).join('')}
@@ -875,7 +942,7 @@
         // ELIMINAR EMPLEADO
         // ==========================================
         $('#btnDelete').on('click', function() {
-            const empleadoName = '{{ $empleado->name }}';
+            const empleadoName = '{{ $empleado->nombre }}';
 
             Swal.fire({
                 title: '¿Estás seguro?',
