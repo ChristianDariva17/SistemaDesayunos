@@ -83,9 +83,9 @@
                             <i class="fas fa-clock me-1"></i> Pendiente
                         </span>
                         @break
-                    @case('en_proceso')
+                    @case('procesando')
                         <span class="badge bg-info ms-2 fs-6">
-                            <i class="fas fa-spinner me-1"></i> En Proceso
+                            <i class="fas fa-spinner me-1"></i> Procesando
                         </span>
                         @break
                     @case('completado')
@@ -380,9 +380,9 @@
                                 <i class="fas fa-clock me-2"></i> Pendiente
                             </span>
                             @break
-                        @case('en_proceso')
+                        @case('procesando')
                             <span class="badge bg-info fs-6 w-100 py-2">
-                                <i class="fas fa-spinner me-2"></i> En Proceso
+                                <i class="fas fa-spinner me-2"></i> Procesando
                             </span>
                             @break
                         @case('completado')
