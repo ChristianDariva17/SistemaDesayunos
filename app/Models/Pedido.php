@@ -3,6 +3,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Exception;
@@ -46,6 +47,11 @@ class Pedido extends Model
     public function cliente()
     {
         return $this->belongsTo(Cliente::class);
+    }
+
+    public function stockMovimientos(): HasMany
+    {
+        return $this->hasMany(StockMovimiento::class);
     }
 
     public static function generarNumeroPedido(): string

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\InventoryLimits;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Producto extends Model
 {
@@ -50,6 +51,11 @@ class Producto extends Model
         return $this->belongsToMany(Pedido::class, 'pedido_producto')
             ->withPivot('cantidad', 'precio_unitario')
             ->withTimestamps();
+    }
+
+    public function stockMovimientos(): HasMany
+    {
+        return $this->hasMany(StockMovimiento::class);
     }
 
     /**

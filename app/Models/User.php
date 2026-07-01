@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -23,6 +24,11 @@ class User extends Authenticatable
         'password',
         'rol',
     ];
+
+    public function stockMovimientos(): HasMany
+    {
+        return $this->hasMany(StockMovimiento::class);
+    }
 
     // Agregar estos métodos al final de la clase
     public function esAdministrador(): bool
