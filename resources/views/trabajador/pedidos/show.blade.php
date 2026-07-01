@@ -297,7 +297,7 @@
             </h1>
             <p class="text-muted mb-0">
                 <i class="far fa-calendar me-1"></i>
-                Creado el {{ $pedido->created_at->format('d/m/Y') }} a las {{ $pedido->created_at->format('H:i') }}
+                Creado el {{ $pedido->fecha->format('d/m/Y') }} a las {{ \Carbon\Carbon::parse($pedido->fecha->format('Y-m-d') . ' ' . $pedido->hora)->format('H:i') }}
             </p>
         </div>
         <div>
@@ -638,8 +638,8 @@
                                 <i class="far fa-calendar-plus me-2"></i>Fecha de Creación
                             </span>
                             <span class="value">
-                                {{ $pedido->created_at->format('d/m/Y H:i') }}
-                                <small class="text-muted">({{ $pedido->created_at->diffForHumans() }})</small>
+                                {{ $pedido->fecha->format('d/m/Y') }} {{ \Carbon\Carbon::parse($pedido->fecha->format('Y-m-d') . ' ' . $pedido->hora)->format('H:i') }}
+                                <small class="text-muted">({{ \Carbon\Carbon::parse($pedido->fecha->format('Y-m-d') . ' ' . $pedido->hora)->diffForHumans() }})</small>
                             </span>
                         </li>
 

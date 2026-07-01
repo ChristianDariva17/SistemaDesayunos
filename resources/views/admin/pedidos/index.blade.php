@@ -320,7 +320,7 @@
                                     <strong class="text-primary">#{{ $pedido->numero_pedido }}</strong>
                                     <small class="text-muted">
                                         <i class="fas fa-clock me-1"></i>
-                                        {{ $pedido->created_at->diffForHumans() }}
+                                        {{ \Carbon\Carbon::parse($pedido->fecha->format('Y-m-d') . ' ' . $pedido->hora)->diffForHumans() }}
                                     </small>
                                 </div>
                             </td>
@@ -335,7 +335,7 @@
                                             </span>
                                         </div>
                                         <div>
-                                            <strong class="d-block">{{ $pedido->cliente->nombre }} {{ $pedido->cliente->apellido }}</strong>
+                                            <strong class="d-block">{{ trim($pedido->cliente->nombre . ' ' . ($pedido->cliente->apellido ?? '')) }}</strong>
                                             @if($pedido->cliente->email)
                                                 <small class="text-muted">{{ $pedido->cliente->email }}</small>
                                             @endif

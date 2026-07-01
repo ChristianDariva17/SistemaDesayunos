@@ -102,7 +102,7 @@
             </div>
             <p class="page-subtitle text-muted mb-0">
                 <i class="fas fa-calendar me-1"></i> 
-                Creado el {{ $pedido->created_at->format('d/m/Y') }} a las {{ $pedido->created_at->format('H:i') }}
+                Creado el {{ $pedido->fecha->format('d/m/Y') }} a las {{ \Carbon\Carbon::parse($pedido->fecha->format('Y-m-d') . ' ' . $pedido->hora)->format('H:i') }}
             </p>
         </div>
         <div class="col-auto">
@@ -147,7 +147,7 @@
                             </span>
                         </div>
                         <div class="flex-grow-1">
-                            <h5 class="mb-1">{{ $pedido->cliente->nombre }} {{ $pedido->cliente->apellido }}</h5>
+                            <h5 class="mb-1">{{ trim($pedido->cliente->nombre . ' ' . ($pedido->cliente->apellido ?? '')) }}</h5>
                             <div class="text-muted">
                                 @if($pedido->cliente->email)
                                     <div class="mb-1">
@@ -219,8 +219,8 @@
                             <div>
                                 <h6 class="mb-1">{{ $pedido->empleado->nombre }}</h6>
                                 <div class="text-muted small">
-                                    @if(isset($pedido->empleado->role))
-                                        <span class="badge bg-secondary me-1">{{ ucfirst($pedido->empleado->role) }}</span>
+                                    @if(isset($pedido->empleado->rol_operativo))
+                                        <span class="badge bg-secondary me-1">{{ ucfirst($pedido->empleado->rol_operativo) }}</span>
                                     @endif
                                     @if(isset($pedido->empleado->estado))
                                         <span class="badge bg-success">{{ ucfirst($pedido->empleado->estado) }}</span>
@@ -469,10 +469,10 @@
                         <div class="timeline-content">
                             <h6 class="mb-1">Pedido Creado</h6>
                             <p class="mb-0 small text-muted">
-                                {{ $pedido->created_at->format('d/m/Y H:i') }}
+                                {{ $pedido->fecha->format('d/m/Y') }} {{ \Carbon\Carbon::parse($pedido->fecha->format('Y-m-d') . ' ' . $pedido->hora)->format('H:i') }}
                             </p>
                             <p class="mb-0 small text-muted">
-                                <i class="fas fa-clock me-1"></i> {{ $pedido->created_at->diffForHumans() }}
+                                <i class="fas fa-clock me-1"></i> {{ \Carbon\Carbon::parse($pedido->fecha->format('Y-m-d') . ' ' . $pedido->hora)->diffForHumans() }}
                             </p>
                         </div>
                     </div>

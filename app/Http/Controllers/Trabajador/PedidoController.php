@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Trabajador;
 use App\Actions\Pedido\CreatePedidoAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Pedido\StorePedidoRequest;
+use App\Http\Requests\Pedido\UpdatePedidoRequest;
 use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\Empleado;
@@ -25,17 +26,17 @@ class PedidoController extends Controller
             'total_pedidos' => Pedido::count(),
             'pendientes' => Pedido::where('estado', 'pendiente')->count(),
             'completados' => Pedido::where('estado', 'completado')->count(),
-            'ventas_hoy' => Pedido::whereDate('created_at', today())
+            'ventas_hoy' => Pedido::whereDate('fecha', today())
                 ->where('estado', 'completado')
                 ->sum('total'),
-            'ventas_mes' => Pedido::whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
+            'ventas_mes' => Pedido::whereMonth('fecha', now()->month)
+                ->whereYear('fecha', now()->year)
                 ->where('estado', 'completado')
                 ->sum('total'),
         ];
 
-        // ✅ SIN 'email'
-        $query = Pedido::query()->with(['empleado:id,name,role', 'cliente:id,nombre,apellido']);
+        // Load canonical employee fields.
+        $query = Pedido::query()->with(['empleado:id,nombre,rol_operativo', 'cliente:id,nombre,apellido']);
 
         if ($request->filled('search')) {
             $search = $request->get('search');
@@ -53,23 +54,28 @@ class PedidoController extends Controller
         }
 
         if ($request->filled('fecha_desde')) {
-            $query->whereDate('created_at', '>=', $request->get('fecha_desde'));
+            $query->whereDate('fecha', '>=', $request->get('fecha_desde'));
         }
         if ($request->filled('fecha_hasta')) {
-            $query->whereDate('created_at', '<=', $request->get('fecha_hasta'));
+            $query->whereDate('fecha', '<=', $request->get('fecha_hasta'));
+        }
+
+        if ($request->filled('fecha')) {
+            $query->whereDate('fecha', $request->get('fecha'));
         }
 
         if ($request->filled('empleado_id')) {
             $query->where('empleado_id', $request->get('empleado_id'));
         }
 
-        $pedidos = $query->orderBy('created_at', 'desc')
+        $pedidos = $query->orderBy('fecha', 'desc')
+            ->orderBy('hora', 'desc')
             ->paginate(15)
             ->withQueryString();
 
         $empleados = \App\Models\Empleado::where('estado', 'activo')
-            ->orderBy('name')
-            ->get(['id', 'name', 'role']);
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'rol_operativo']);
 
         return view('trabajador.pedidos.index', compact('pedidos', 'estadisticas', 'empleados'));
     }
@@ -84,10 +90,10 @@ class PedidoController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'precio', 'stock', 'imagen']);
 
-        // ✅ CORREGIDO: Cambié 'nombre' por 'name'
+        // Use canonical employee fields.
         $empleados = Empleado::where('estado', 'activo')
-            ->orderBy('name')
-            ->get(['id', 'name']);
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'rol_operativo']);
 
         $clientes = Cliente::where('estado', 'activo')
             ->orderBy('nombre')
@@ -130,10 +136,9 @@ class PedidoController extends Controller
      */
     public function show(Pedido $pedido)
     {
-        // ✅ CORREGIDO: Solo columnas que existen en la tabla
         $pedido->load([
             'cliente',
-            'empleado:id,name,role,estado',
+            'empleado:id,nombre,rol_operativo,estado',
             'productos' => function ($query) {
                 $query->select('productos.id', 'productos.nombre', 'productos.imagen')
                     ->withPivot('cantidad', 'precio_unitario', 'subtotal');
@@ -153,7 +158,7 @@ class PedidoController extends Controller
 
         // Obtener listas completas
         $clientes = Cliente::orderBy('nombre')->get();
-        $empleados = Empleado::where('estado', 'activo')->orderBy('name')->get();
+        $empleados = Empleado::where('estado', 'activo')->orderBy('nombre')->get();
         $productos = Producto::where('stock', '>', 0)->orderBy('nombre')->get();
 
         return view('trabajador.pedidos.edit', compact('pedido', 'clientes', 'empleados', 'productos'));
@@ -162,12 +167,9 @@ class PedidoController extends Controller
     /**
      * Actualizar pedido
      */
-    public function update(Request $request, Pedido $pedido)
+    public function update(UpdatePedidoRequest $request, Pedido $pedido)
     {
-        $validated = $request->validate([
-            'estado' => 'required|in:pendiente,procesando,completado,cancelado',
-            'observaciones' => 'nullable|string|max:500'
-        ]);
+        $validated = $request->validated();
 
         DB::beginTransaction();
         try {
@@ -325,14 +327,16 @@ class PedidoController extends Controller
      */
     public function exportar(Request $request)
     {
-        // ✅ SIN 'email'
-        $query = Pedido::with(['cliente:id,nombre,apellido', 'empleado:id,name,role']);
+        // Load canonical employee fields.
+        $query = Pedido::with(['cliente:id,nombre,apellido', 'empleado:id,nombre,rol_operativo']);
 
         if ($request->filled('estado')) {
             $query->where('estado', $request->estado);
         }
 
-        $pedidos = $query->orderBy('created_at', 'desc')->get();
+        $pedidos = $query->orderBy('fecha', 'desc')
+            ->orderBy('hora', 'desc')
+            ->get();
 
         $filename = 'pedidos_' . now()->format('Y-m-d_His') . '.csv';
 
@@ -351,9 +355,9 @@ class PedidoController extends Controller
                 fputcsv($file, [
                     $pedido->numero_pedido,
                     $pedido->cliente->nombre ?? 'Sin cliente',
-                    $pedido->empleado->name ?? 'Sin empleado',
-                    $pedido->empleado->role ?? 'N/A',  // ✅ Agregado role
-                    $pedido->created_at->format('d/m/Y H:i'),
+                    $pedido->empleado->nombre ?? 'Sin empleado',
+                    $pedido->empleado->rol_operativo ?? 'N/A',
+                    $pedido->fecha?->format('d/m/Y') . ' ' . substr((string) $pedido->hora, 0, 5),
                     number_format($pedido->total, 2),
                     ucfirst($pedido->estado)
                 ]);

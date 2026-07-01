@@ -155,7 +155,7 @@
                                 @foreach($clientes as $cliente)
                                     <option value="{{ $cliente->id }}" 
                                             {{ old('cliente_id', $pedido->cliente_id) == $cliente->id ? 'selected' : '' }}>
-                                        {{ $cliente->nombre }} {{ $cliente->apellido }} - {{ $cliente->email }}
+                                        {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}@if($cliente->email) - {{ $cliente->email }}@endif
                                     </option>
                                 @endforeach
                             </select>
@@ -492,7 +492,7 @@
                         </div>
                         <div class="d-flex justify-content-between mb-2">
                             <span class="text-muted">Creado:</span>
-                            <strong>{{ $pedido->created_at->format('d/m/Y H:i') }}</strong>
+                            <strong>{{ $pedido->fecha->format('d/m/Y') }} {{ \Carbon\Carbon::parse($pedido->fecha->format('Y-m-d') . ' ' . $pedido->hora)->format('H:i') }}</strong>
                         </div>
                         <div class="d-flex justify-content-between mb-0">
                             <span class="text-muted">Modificado:</span>

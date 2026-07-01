@@ -26,7 +26,7 @@ class Pedido extends Model
 
     protected $casts = [
         'fecha' => 'date',
-        'hora' => 'datetime:H:i:s',
+        'hora' => 'string',
     ];
 
     public function productos()
@@ -46,12 +46,6 @@ class Pedido extends Model
     public function cliente()
     {
         return $this->belongsTo(Cliente::class);
-    }
-
-    // Relación con Detalles del Pedido
-    public function detalles()
-    {
-        return $this->hasMany(DetallePedido::class);
     }
 
     public static function generarNumeroPedido(): string

@@ -426,7 +426,7 @@
                                     <option value="">Seleccione un cliente</option>
                                     @foreach($clientes as $cliente)
                                         <option value="{{ $cliente->id }}" {{ old('cliente_id', $pedido->cliente_id) == $cliente->id ? 'selected' : '' }}>
-                                            {{ $cliente->nombre }} {{ $cliente->apellido }} - {{ $cliente->email }}
+                                            {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}@if($cliente->email) - {{ $cliente->email }}@endif
                                         </option>
                                     @endforeach
                                 </select>
@@ -636,7 +636,7 @@
                         <ul class="list-unstyled mb-0">
                             <li class="mb-2">
                                 <small class="text-muted">Creado:</small><br>
-                                <strong>{{ $pedido->created_at->format('d/m/Y H:i') }}</strong>
+                                <strong>{{ $pedido->fecha->format('d/m/Y') }} {{ \Carbon\Carbon::parse($pedido->fecha->format('Y-m-d') . ' ' . $pedido->hora)->format('H:i') }}</strong>
                             </li>
                             <li class="mb-0">
                                 <small class="text-muted">Última actualización:</small><br>

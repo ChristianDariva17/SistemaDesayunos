@@ -347,7 +347,7 @@
                                     <option value="">Seleccione un cliente</option>
                                     @foreach($clientes as $cliente)
                                         <option value="{{ $cliente->id }}" {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
-                                            {{ $cliente->nombre }} {{ $cliente->apellido }} - {{ $cliente->email }}
+                                            {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}@if($cliente->email) - {{ $cliente->email }}@endif
                                         </option>
                                     @endforeach
                                 </select>

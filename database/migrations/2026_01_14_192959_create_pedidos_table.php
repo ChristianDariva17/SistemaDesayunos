@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->unsignedBigInteger('cliente_id')->nullable();
             $table->string('estado')->default('pendiente');
-            $table->decimal('total', 10, 2)->default(0);
+            $table->decimal('total', 10, 2);
             $table->timestamps();
         });
     }
