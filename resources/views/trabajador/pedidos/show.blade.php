@@ -465,7 +465,7 @@
                             </div>
                             <div>
                                 <h5 class="mb-1 text-gray-800">
-                                    {{ $pedido->cliente->nombre }} {{ $pedido->cliente->apellido }}
+                                    {{ trim($pedido->cliente->nombre . ' ' . ($pedido->cliente->apellido ?? '')) }}
                                 </h5>
                                 <p class="mb-0 text-muted small">Cliente #{{ $pedido->cliente->id }}</p>
                             </div>
