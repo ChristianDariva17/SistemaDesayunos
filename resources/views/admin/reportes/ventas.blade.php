@@ -837,7 +837,7 @@
                     $igvGeneral = 0;
                 @endphp
 
-                @foreach($pedidos->sortByDesc('created_at') as $pedido)
+                @foreach($pedidos as $pedido)
                     @php
                         $totalPedido = floatval($pedido->total ?? 0);
                         $subtotal = $totalPedido / 1.18;

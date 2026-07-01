@@ -113,7 +113,7 @@
                                 {{ number_format($stockBajo) }}
                             </div>
                             <div class="text-xs text-muted mt-1">
-                                <i class="fas fa-exclamation-triangle"></i> Menos de 10 unidades
+                                <i class="fas fa-exclamation-triangle"></i> 10 unidades o menos
                             </div>
                         </div>
                         <div class="col-auto">
