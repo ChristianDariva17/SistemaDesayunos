@@ -11,11 +11,18 @@ return new class extends Migration
         Schema::create('productos', function (Blueprint $table): void {
             $table->id();
             $table->string('nombre');
-            $table->string('categoria')->nullable();
+            $table->text('descripcion')->nullable();
+            $table->string('categoria');
+            $table->decimal('precio', 10, 2);
+            $table->string('codigo_barras')->nullable();
+            $table->string('sku')->nullable();
             $table->integer('stock')->default(0);
             $table->string('estado')->default('activo');
-            $table->decimal('precio', 10, 2)->default(0);
             $table->timestamps();
+
+            $table->unique('codigo_barras', 'productos_codigo_barras_unique');
+            $table->unique('sku', 'productos_sku_unique');
+            $table->index(['estado', 'categoria'], 'productos_estado_categoria_index');
         });
     }
 
