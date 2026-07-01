@@ -408,7 +408,7 @@
                                 </label>
                                 <select name="estado" id="estado" class="form-select @error('estado') is-invalid @enderror" required>
                                     <option value="pendiente" {{ old('estado', $pedido->estado) == 'pendiente' ? 'selected' : '' }}>Pendiente</option>
-                                    <option value="en_proceso" {{ old('estado', $pedido->estado) == 'en_proceso' ? 'selected' : '' }}>En Proceso</option>
+                                    <option value="procesando" {{ old('estado', $pedido->estado) == 'procesando' ? 'selected' : '' }}>Procesando</option>
                                     <option value="completado" {{ old('estado', $pedido->estado) == 'completado' ? 'selected' : '' }}>Completado</option>
                                     <option value="cancelado" {{ old('estado', $pedido->estado) == 'cancelado' ? 'selected' : '' }}>Cancelado</option>
                                 </select>

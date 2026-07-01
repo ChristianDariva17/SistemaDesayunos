@@ -250,8 +250,8 @@
                                 <option value="pendiente" {{ old('estado', $pedido->estado) == 'pendiente' ? 'selected' : '' }}>
                                     ⏳ Pendiente
                                 </option>
-                                <option value="en_proceso" {{ old('estado', $pedido->estado) == 'en_proceso' ? 'selected' : '' }}>
-                                    🔄 En Proceso
+                                <option value="procesando" {{ old('estado', $pedido->estado) == 'procesando' ? 'selected' : '' }}>
+                                    🔄 Procesando
                                 </option>
                                 <option value="completado" {{ old('estado', $pedido->estado) == 'completado' ? 'selected' : '' }}>
                                     ✅ Completado
@@ -272,8 +272,8 @@
                                     @case('pendiente')
                                         <span class="badge bg-warning">Pendiente</span>
                                         @break
-                                    @case('en_proceso')
-                                        <span class="badge bg-info">En Proceso</span>
+                                    @case('procesando')
+                                        <span class="badge bg-info">Procesando</span>
                                         @break
                                     @case('completado')
                                         <span class="badge bg-success">Completado</span>
