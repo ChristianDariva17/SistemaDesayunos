@@ -180,13 +180,74 @@
         <h4 class="mb-0">
             <i class="fas fa-file-pdf text-danger"></i> Reportes Disponibles
         </h4>
-        <span class="badge bg-secondary">3 reportes</span>
+        <span class="badge bg-secondary">4 reportes</span>
     </div>
 
     {{-- ==========================================
         TARJETAS DE REPORTES
         ========================================== --}}
     <div class="row">
+
+        {{-- ====================================
+            REPORTE DE MOVIMIENTOS DE STOCK
+            ==================================== --}}
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm h-100 card-hover">
+                <div class="card-header bg-gradient-info text-white py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-exchange-alt"></i> Movimientos de Stock
+                        </h5>
+                        <span class="badge bg-light text-info">
+                            <i class="fas fa-filter"></i> Filtrable
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-body d-flex flex-column">
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-info-circle text-info"></i>
+                        Consulta el historial de entradas, salidas, ajustes, devoluciones y cancelaciones del inventario.
+                    </p>
+
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <div class="border rounded p-2 bg-light">
+                                <small class="text-muted d-block mb-1">
+                                    <i class="fas fa-list"></i> Movimientos
+                                </small>
+                                <strong class="text-info h5">
+                                    {{ number_format(\App\Models\StockMovimiento::count()) }}
+                                </strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-2 bg-light">
+                                <small class="text-muted d-block mb-1">
+                                    <i class="fas fa-calendar-day"></i> Hoy
+                                </small>
+                                <strong class="text-primary h5">
+                                    {{ number_format(\App\Models\StockMovimiento::whereDate('created_at', now()->toDateString())->count()) }}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-auto">
+                        <a href="{{ route('admin.reportes.stock-movimientos') }}" class="btn btn-info text-white btn-lg">
+                            <i class="fas fa-table me-2"></i>Ver Reporte
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-light text-muted small">
+                    <i class="fas fa-search"></i> Filtros por producto, fecha, tipo y usuario
+                    <span class="float-end text-success">
+                        <i class="fas fa-circle pulse"></i> Disponible
+                    </span>
+                </div>
+            </div>
+        </div>
 
         {{-- ====================================
             1. REPORTE DE INVENTARIO
@@ -586,6 +647,10 @@
     
     .bg-gradient-warning {
         background: linear-gradient(135deg, #f6c23e 0%, #dda20a 100%) !important;
+    }
+
+    .bg-gradient-info {
+        background: linear-gradient(135deg, #36b9cc 0%, #258391 100%) !important;
     }
 
     /* Efecto hover en las cards */

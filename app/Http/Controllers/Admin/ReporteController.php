@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 use App\Models\Cliente;
 use App\Models\Empleado;
+use App\Models\StockMovimiento;
+use App\Models\User;
+use Illuminate\Validation\Rule;
 
 class ReporteController extends Controller
 {
@@ -194,6 +197,75 @@ class ReporteController extends Controller
 
             return back()->with('error', 'Error al generar el reporte: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Muestra el reporte filtrable de movimientos de stock.
+     */
+    public function stockMovimientos(Request $request)
+    {
+        $rules = [
+            'producto_id' => ['nullable', 'integer', 'exists:productos,id'],
+            'tipo' => ['nullable', Rule::in(StockMovimiento::TIPOS)],
+            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'fecha_inicio' => ['nullable', 'date_format:Y-m-d'],
+            'fecha_fin' => ['nullable', 'date_format:Y-m-d'],
+        ];
+
+        if ($request->filled('fecha_inicio')) {
+            $rules['fecha_fin'][] = 'after_or_equal:fecha_inicio';
+        }
+
+        $validated = $request->validate($rules);
+
+        $query = StockMovimiento::query()
+            ->with(['producto', 'pedido', 'user']);
+
+        if (!empty($validated['producto_id'])) {
+            $query->where('producto_id', (int) $validated['producto_id']);
+        }
+
+        if (!empty($validated['tipo'])) {
+            $query->where('tipo', $validated['tipo']);
+        }
+
+        if (!empty($validated['user_id'])) {
+            $query->where('user_id', (int) $validated['user_id']);
+        }
+
+        if (!empty($validated['fecha_inicio'])) {
+            $query->whereDate('created_at', '>=', $validated['fecha_inicio']);
+        }
+
+        if (!empty($validated['fecha_fin'])) {
+            $query->whereDate('created_at', '<=', $validated['fecha_fin']);
+        }
+
+        $movimientos = $query
+            ->latest()
+            ->paginate(15)
+            ->withQueryString();
+
+        $productos = Producto::query()
+            ->orderBy('nombre')
+            ->get(['id', 'nombre']);
+
+        $usuarios = User::query()
+            ->whereIn('id', StockMovimiento::query()
+                ->select('user_id')
+                ->whereNotNull('user_id')
+            )
+            ->orderBy('name')
+            ->get(['id', 'name', 'email']);
+
+        $tipos = StockMovimiento::TIPOS;
+
+        return view('admin.reportes.stock-movimientos', compact(
+            'movimientos',
+            'productos',
+            'usuarios',
+            'tipos'
+        ));
     }
 
     /**
