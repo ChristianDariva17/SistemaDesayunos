@@ -25,6 +25,9 @@
                 <a href="{{ route('admin.stock-entries.create') }}" class="btn btn-success shadow-sm">
                     <i class="fas fa-dolly me-2"></i>Registrar Entrada
                 </a>
+                <a href="{{ route('admin.stock-adjustments.create') }}" class="btn btn-warning shadow-sm">
+                    <i class="fas fa-sliders-h me-2"></i>Registrar Ajuste
+                </a>
                 <a href="{{ route('admin.reportes.index') }}" class="btn btn-outline-secondary shadow-sm">
                     <i class="fas fa-arrow-left me-2"></i>Volver a Reportes
                 </a>

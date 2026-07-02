@@ -32,6 +32,10 @@
                     <i class="fas fa-dolly me-2"></i>
                     Registrar Entrada
                 </a>
+                <a href="{{ route('admin.stock-adjustments.create') }}" class="btn btn-warning btn-lg shadow-sm">
+                    <i class="fas fa-sliders-h me-2"></i>
+                    Ajustar Stock
+                </a>
                 <a href="{{ route('admin.productos.create') }}" class="btn btn-primary btn-lg shadow-sm">
                     <i class="fas fa-plus-circle me-2"></i>
                     Nuevo Producto
