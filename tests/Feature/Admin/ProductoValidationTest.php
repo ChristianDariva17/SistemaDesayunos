@@ -204,6 +204,147 @@ it('defaults blank producto minimum stock to zero on update', function (): void 
     ]);
 });
 
+it('stores blank producto identifiers as null on create', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto sin identificadores',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'codigo_barras' => '   ',
+            'sku' => '',
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.index'));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'nombre' => 'Producto sin identificadores',
+        'codigo_barras' => null,
+        'sku' => null,
+        'stock_minimo' => 0,
+    ]);
+});
+
+it('stores blank producto identifiers as null on update', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Producto identificadores editables',
+        'descripcion' => 'Producto de prueba',
+        'categoria' => 'bebida',
+        'precio' => 12.50,
+        'codigo_barras' => 'BAR-EDITABLE',
+        'sku' => 'SKU-EDITABLE',
+        'stock' => 5,
+        'stock_minimo' => 4,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.edit', $producto))
+        ->put(route('admin.productos.update', $producto), [
+            'nombre' => 'Producto identificadores editables',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'codigo_barras' => '   ',
+            'sku' => "\t",
+            'stock' => 5,
+            'stock_minimo' => '',
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'id' => $producto->id,
+        'codigo_barras' => null,
+        'sku' => null,
+        'stock_minimo' => 0,
+    ]);
+});
+
+it('rejects duplicate producto barcode after trimming whitespace', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    Producto::create([
+        'nombre' => 'Producto con código',
+        'descripcion' => 'Producto existente',
+        'categoria' => 'bebida',
+        'precio' => 12.50,
+        'codigo_barras' => 'BAR-001',
+        'stock' => 5,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto código duplicado',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'codigo_barras' => '  BAR-001  ',
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.create'));
+    $response->assertSessionHasErrors(['codigo_barras']);
+
+    $this->assertDatabaseMissing('productos', [
+        'nombre' => 'Producto código duplicado',
+    ]);
+});
+
+it('rejects duplicate producto sku after trimming whitespace', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    Producto::create([
+        'nombre' => 'Producto con SKU',
+        'descripcion' => 'Producto existente',
+        'categoria' => 'bebida',
+        'precio' => 12.50,
+        'sku' => 'SKU-001',
+        'stock' => 5,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto SKU duplicado',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'sku' => "\nSKU-001\t",
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.create'));
+    $response->assertSessionHasErrors(['sku']);
+
+    $this->assertDatabaseMissing('productos', [
+        'nombre' => 'Producto SKU duplicado',
+    ]);
+});
+
 it('validates producto minimum stock boundaries', function (mixed $minimum): void {
     $admin = User::factory()->create([
         'rol' => 'administrador',
@@ -252,8 +393,8 @@ it('allows updating a producto without failing its own unique fields', function 
             'descripcion' => 'Actualizado',
             'categoria' => 'desayuno',
             'precio' => 17.50,
-            'codigo_barras' => '1234567890',
-            'sku' => 'SKU-001',
+            'codigo_barras' => '  1234567890  ',
+            'sku' => "\tSKU-001\n",
             'stock' => 9,
             'estado' => 'activo',
         ]);

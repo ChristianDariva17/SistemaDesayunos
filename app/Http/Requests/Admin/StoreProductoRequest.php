@@ -10,11 +10,33 @@ final class StoreProductoRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        $this->normalizeIdentifier('codigo_barras');
+        $this->normalizeIdentifier('sku');
+
         if (! $this->has('stock_minimo') || in_array($this->input('stock_minimo'), [null, ''], true)) {
             $this->merge([
                 'stock_minimo' => 0,
             ]);
         }
+    }
+
+    private function normalizeIdentifier(string $field): void
+    {
+        if (! $this->has($field)) {
+            return;
+        }
+
+        $value = $this->input($field);
+
+        if (! is_string($value)) {
+            return;
+        }
+
+        $value = trim($value);
+
+        $this->merge([
+            $field => $value === '' ? null : $value,
+        ]);
     }
 
     public function authorize(): bool
