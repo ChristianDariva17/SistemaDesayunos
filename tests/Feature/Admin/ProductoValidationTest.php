@@ -71,6 +71,164 @@ it('requires categoria when creating a producto', function (): void {
     $response->assertSessionHasErrors(['categoria']);
 });
 
+it('allows an admin to create and update producto minimum stock', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto con mínimo',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'stock_minimo' => 3,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.index'));
+    $response->assertSessionHasNoErrors();
+
+    $producto = Producto::where('nombre', 'Producto con mínimo')->firstOrFail();
+
+    expect($producto->stock_minimo)->toBe(3);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.edit', $producto))
+        ->put(route('admin.productos.update', $producto), [
+            'nombre' => 'Producto con mínimo actualizado',
+            'descripcion' => 'Producto actualizado',
+            'categoria' => 'bebida',
+            'precio' => 13.50,
+            'stock' => 5,
+            'stock_minimo' => 7,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'id' => $producto->id,
+        'nombre' => 'Producto con mínimo actualizado',
+        'stock_minimo' => 7,
+    ]);
+});
+
+it('defaults blank producto minimum stock to zero on create', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto sin mínimo explícito',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'stock_minimo' => '',
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.index'));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'nombre' => 'Producto sin mínimo explícito',
+        'stock_minimo' => 0,
+    ]);
+});
+
+it('defaults omitted producto minimum stock to zero on create', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto mínimo omitido',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.index'));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'nombre' => 'Producto mínimo omitido',
+        'stock_minimo' => 0,
+    ]);
+});
+
+it('defaults blank producto minimum stock to zero on update', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Producto mínimo editable',
+        'descripcion' => 'Producto de prueba',
+        'categoria' => 'bebida',
+        'precio' => 12.50,
+        'stock' => 5,
+        'stock_minimo' => 4,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.edit', $producto))
+        ->put(route('admin.productos.update', $producto), [
+            'nombre' => 'Producto mínimo editable',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'stock_minimo' => '',
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'id' => $producto->id,
+        'stock_minimo' => 0,
+    ]);
+});
+
+it('validates producto minimum stock boundaries', function (mixed $minimum): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto mínimo inválido',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'stock_minimo' => $minimum,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.create'));
+    $response->assertSessionHasErrors(['stock_minimo']);
+})->with([
+    'negative' => -1,
+    'decimal' => 1.5,
+    'overflow' => 1000000,
+]);
+
 it('allows updating a producto without failing its own unique fields', function (): void {
     $admin = User::factory()->create([
         'rol' => 'administrador',

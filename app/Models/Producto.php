@@ -25,6 +25,7 @@ class Producto extends Model
         'codigo_barras',
         'sku',
         'stock',
+        'stock_minimo',
         'estado',
         'imagen',
     ];
@@ -32,6 +33,7 @@ class Producto extends Model
     protected $casts = [
         'precio' => 'decimal:2',
         'stock' => 'integer',
+        'stock_minimo' => 'integer',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -138,6 +140,13 @@ class Producto extends Model
     public function scopeStockBajo($query, int $cantidad = InventoryLimits::LOW_STOCK_THRESHOLD)
     {
         return $query->where('stock', '<=', $cantidad);
+    }
+
+    public function scopeStockMinimoBajo($query)
+    {
+        return $query
+            ->where('stock_minimo', '>', 0)
+            ->whereColumn('stock', '<=', 'stock_minimo');
     }
 
     /**

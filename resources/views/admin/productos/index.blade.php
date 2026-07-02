@@ -36,6 +36,10 @@
                     <i class="fas fa-sliders-h me-2"></i>
                     Ajustar Stock
                 </a>
+                <a href="{{ route('admin.reportes.stock-bajo', ['accion' => 'ver']) }}" class="btn btn-danger btn-lg shadow-sm" target="_blank">
+                    <i class="fas fa-bell me-2"></i>
+                    Alertas Stock
+                </a>
                 <a href="{{ route('admin.productos.create') }}" class="btn btn-primary btn-lg shadow-sm">
                     <i class="fas fa-plus-circle me-2"></i>
                     Nuevo Producto
@@ -144,7 +148,7 @@
                             </p>
                             <h3 class="mb-0 fw-bold text-warning">{{ $stockBajo }}</h3>
                             <small class="text-muted">
-                                <i class="fas fa-exclamation-triangle me-1"></i>≤ 10 unidades
+                                <i class="fas fa-exclamation-triangle me-1"></i>Según mínimo configurado
                             </small>
                         </div>
                         <div class="bg-warning bg-opacity-10 rounded-3 p-3">
@@ -302,7 +306,7 @@
                                             <i class="fas fa-times-circle me-1"></i>
                                             Sin stock
                                         </span>
-                                    @elseif($producto->stock <= 10)
+                                    @elseif($producto->stock_minimo > 0 && $producto->stock <= $producto->stock_minimo)
                                         <span class="badge bg-warning bg-opacity-10 text-warning border border-warning">
                                             <i class="fas fa-exclamation-triangle me-1"></i>
                                             {{ $producto->stock }} und.

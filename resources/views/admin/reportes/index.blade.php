@@ -348,7 +348,7 @@
                 <div class="card-body d-flex flex-column">
                     <p class="text-muted mb-3">
                         <i class="fas fa-info-circle text-warning"></i>
-                        Productos críticos con 10 unidades o menos en inventario para reabastecimiento urgente.
+                        Productos cuyo stock actual está en o por debajo del mínimo configurado.
                     </p>
 
                     {{-- Estadísticas --}}
@@ -366,9 +366,9 @@
                         <div class="col-6">
                             <div class="border rounded p-2 bg-light">
                                 <small class="text-muted d-block mb-1">
-                                    <i class="fas fa-layer-group"></i> Mínimo
+                                    <i class="fas fa-layer-group"></i> Alertas
                                 </small>
-                                <strong class="text-danger h5">10 unid</strong>
+                                <strong class="text-danger h5">Personal</strong>
                             </div>
                         </div>
                     </div>

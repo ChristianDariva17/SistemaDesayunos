@@ -56,7 +56,7 @@ class ProductoController extends Controller
         $productosNuevos = Producto::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->count();
-        $stockBajo = Producto::stockBajo()->count();
+        $stockBajo = Producto::stockMinimoBajo()->count();
 
         // ==========================================
         // PRODUCTOS PAGINADOS

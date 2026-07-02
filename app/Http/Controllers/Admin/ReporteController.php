@@ -28,7 +28,7 @@ class ReporteController extends Controller
             $totalProductos = Producto::count();
             $productosActivos = Producto::where('estado', 'activo')->count();
             $stockTotal = Producto::sum('stock');
-            $stockBajo = Producto::stockBajo()->count();
+            $stockBajo = Producto::stockMinimoBajo()->count();
             $valorInventario = DB::table('productos')
                 ->selectRaw('SUM(precio * stock) as total')
                 ->value('total') ?? 0;
@@ -156,8 +156,8 @@ class ReporteController extends Controller
             // 1. OBTENER ACCIÓN
             $accion = $request->input('accion', 'descargar');
 
-            // 2. OBTENER PRODUCTOS CON STOCK BAJO (10 unidades o menos)
-            $productos = Producto::stockBajo()
+            // 2. OBTENER PRODUCTOS CON STOCK BAJO SEGUN SU MINIMO CONFIGURADO
+            $productos = Producto::stockMinimoBajo()
                 ->orderBy('stock', 'asc')
                 ->get();
 

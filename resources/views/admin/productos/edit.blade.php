@@ -286,6 +286,41 @@
                                     </small>
                                 @enderror
                             </div>
+
+                            {{-- Stock Mínimo --}}
+                            <div class="col-md-6 mb-4">
+                                <label for="stock_minimo" class="form-label fw-bold">
+                                    Stock Mínimo
+                                    <i class="fas fa-question-circle text-muted"
+                                       data-bs-toggle="tooltip"
+                                       data-bs-placement="right"
+                                       title="Cantidad mínima para alertas de stock bajo (0 desactiva la alerta)"></i>
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text bg-light">
+                                        <i class="fas fa-bell text-danger"></i>
+                                    </span>
+                                    <input
+                                        type="number"
+                                        name="stock_minimo"
+                                        id="stock_minimo"
+                                        class="form-control @error('stock_minimo') is-invalid @enderror"
+                                        value="{{ old('stock_minimo', $producto->stock_minimo) }}"
+                                        placeholder="0"
+                                        min="0"
+                                        max="999999"
+                                    >
+                                    <span class="input-group-text bg-light">und.</span>
+                                </div>
+                                @error('stock_minimo')
+                                    <small class="text-danger">{{ $message }}</small>
+                                @else
+                                    <small class="text-muted">
+                                        <i class="fas fa-info-circle me-1"></i>
+                                        Mínimo actual: <strong>{{ $producto->stock_minimo }} unidades</strong>
+                                    </small>
+                                @enderror
+                            </div>
                         </div>
                     </div>
                 </div>

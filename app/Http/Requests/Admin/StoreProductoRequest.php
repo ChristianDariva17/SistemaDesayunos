@@ -8,6 +8,15 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class StoreProductoRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('stock_minimo') || in_array($this->input('stock_minimo'), [null, ''], true)) {
+            $this->merge([
+                'stock_minimo' => 0,
+            ]);
+        }
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -26,6 +35,7 @@ final class StoreProductoRequest extends FormRequest
             'codigo_barras' => ['nullable', 'string', 'max:50', 'unique:productos,codigo_barras'],
             'sku' => ['nullable', 'string', 'max:50', 'unique:productos,sku'],
             'stock' => ['required', 'integer', 'min:0', 'max:999999'],
+            'stock_minimo' => ['nullable', 'integer', 'min:0', 'max:999999'],
             'estado' => ['required', 'in:activo,inactivo'],
             'imagen' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
         ];
@@ -54,6 +64,9 @@ final class StoreProductoRequest extends FormRequest
             'stock.integer' => 'El stock debe ser un número entero.',
             'stock.min' => 'El stock no puede ser negativo.',
             'stock.max' => 'El stock no puede superar las 999,999 unidades.',
+            'stock_minimo.integer' => 'El stock mínimo debe ser un número entero.',
+            'stock_minimo.min' => 'El stock mínimo no puede ser negativo.',
+            'stock_minimo.max' => 'El stock mínimo no puede superar las 999,999 unidades.',
             'estado.required' => 'Debes seleccionar el estado del producto.',
             'estado.in' => 'El estado debe ser activo o inactivo.',
             'imagen.image' => 'El archivo debe ser una imagen.',

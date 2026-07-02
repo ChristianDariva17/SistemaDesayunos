@@ -8,7 +8,7 @@
         @page {
             margin: 20px;
         }
-        
+
         * {
             margin: 0;
             padding: 0;
@@ -372,7 +372,7 @@
             <h3>(!) ATENCION: Productos con stock critico detectados</h3>
             <p>
                 <strong>{{ $productos->count() }}</strong> producto(s) requieren reabastecimiento urgente.
-                Se recomienda tomar accion inmediata para evitar quiebres de stock que puedan afectar las operaciones del restaurante.
+                Se recomienda revisar el inventario para evitar quiebres de stock que puedan afectar las operaciones del restaurante.
                 Los productos estan ordenados por nivel de criticidad (de mayor a menor urgencia).
             </p>
         </div>
@@ -388,12 +388,12 @@
                 <div class="card-value">{{ $productos->where('stock', 0)->count() }}</div>
             </td>
             <td class="orange" style="width: 33.33%;">
-                <div class="card-label">CRITICOS (1-5)</div>
-                <div class="card-value">{{ $productos->whereBetween('stock', [1, 5])->count() }}</div>
+                <div class="card-label">BAJO MINIMO</div>
+                <div class="card-value">{{ $productos->filter(fn ($producto) => $producto->stock > 0 && $producto->stock < $producto->stock_minimo)->count() }}</div>
             </td>
             <td class="yellow" style="width: 33.33%;">
-                <div class="card-label">BAJOS (6-10)</div>
-                <div class="card-value">{{ $productos->whereBetween('stock', [6, 10])->count() }}</div>
+                <div class="card-label">EN MINIMO</div>
+                <div class="card-value">{{ $productos->filter(fn ($producto) => $producto->stock > 0 && $producto->stock === $producto->stock_minimo)->count() }}</div>
             </td>
         </tr>
     </table>
@@ -411,9 +411,10 @@
                     <th style="width: 22%;">PRODUCTO</th>
                     <th style="width: 12%;">CATEGORIA</th>
                     <th style="width: 8%; text-align: center;">STOCK</th>
+                    <th style="width: 8%; text-align: center;">MINIMO</th>
                     <th style="width: 14%;">NIVEL</th>
                     <th style="width: 10%; text-align: right;">PRECIO</th>
-                    <th style="width: 15%; text-align: right;">REPOSICION</th>
+                    <th style="width: 15%; text-align: right;">FALTANTE</th>
                     <th style="width: 10%; text-align: center;">URGENCIA</th>
                 </tr>
             </thead>
@@ -426,24 +427,22 @@
                 @foreach($productos as $producto)
                     @php
                         // Determinar nivel de criticidad
+                        $cantidadSugerida = max($producto->stock_minimo - $producto->stock, 0);
                         if ($producto->stock == 0) {
                             $criticidad = 'agotado';
                             $badge = '<span class="badge badge-agotado">AGOTADO</span>';
                             $urgenciaColor = 'urgencia-agotado';
                             $urgenciaPorcentaje = 100;
-                            $cantidadSugerida = 50;
-                        } elseif ($producto->stock >= 1 && $producto->stock <= 5) {
+                        } elseif ($producto->stock < $producto->stock_minimo) {
                             $criticidad = 'critico';
-                            $badge = '<span class="badge badge-critico">CRITICO</span>';
+                            $badge = '<span class="badge badge-critico">BAJO MINIMO</span>';
                             $urgenciaColor = 'urgencia-critico';
                             $urgenciaPorcentaje = 80;
-                            $cantidadSugerida = 50 - $producto->stock;
                         } else {
                             $criticidad = 'bajo';
-                            $badge = '<span class="badge badge-bajo">BAJO</span>';
+                            $badge = '<span class="badge badge-bajo">EN MINIMO</span>';
                             $urgenciaColor = 'urgencia-bajo';
                             $urgenciaPorcentaje = 50;
-                            $cantidadSugerida = 50 - $producto->stock;
                         }
 
                         $costoReposicion = $cantidadSugerida * $producto->precio;
@@ -463,6 +462,10 @@
                             <strong style="font-size: 12px; color: #dc2626;">{{ $producto->stock }}</strong>
                             <br><small style="color: #666;">unidades</small>
                         </td>
+                        <td class="text-center">
+                            <strong>{{ $producto->stock_minimo }}</strong>
+                            <br><small style="color: #666;">unidades</small>
+                        </td>
                         <td>
                             {!! $badge !!}
                             <table class="urgencia-bar-container" style="border: 0; margin-top: 3px;">
@@ -480,7 +483,7 @@
                         <td class="text-center">
                             @if($producto->stock == 0)
                                 <strong style="color: #dc2626;">MAXIMA</strong>
-                            @elseif($producto->stock <= 5)
+                            @elseif($producto->stock < $producto->stock_minimo)
                                 <strong style="color: #f97316;">ALTA</strong>
                             @else
                                 <strong style="color: #f59e0b;">MEDIA</strong>
@@ -491,8 +494,8 @@
 
                 {{-- Fila de totales --}}
                 <tr style="background-color: #dbeafe; font-weight: bold;">
-                    <td colspan="6" class="text-right">
-                        <strong>COSTO TOTAL DE REPOSICION:</strong>
+                    <td colspan="7" class="text-right">
+                        <strong>COSTO ESTIMADO PARA ALCANZAR MINIMOS:</strong>
                     </td>
                     <td class="text-right" style="font-size: 11px; color: #1e40af;">
                         S/ {{ number_format($totalReposicion, 2) }}
@@ -507,35 +510,35 @@
             ========================================== --}}
         <div class="actions-box">
             <h3>ACCIONES RECOMENDADAS</h3>
-            
+
             @if($productos->where('stock', 0)->count() > 0)
                 <div class="action-item">
-                    <strong>(!) PRIORIDAD MAXIMA:</strong> 
-                    Reabastecer inmediatamente los {{ $productos->where('stock', 0)->count() }} producto(s) agotado(s) 
+                    <strong>(!) PRIORIDAD MAXIMA:</strong>
+                    Revisar inmediatamente los {{ $productos->where('stock', 0)->count() }} producto(s) agotado(s)
                     para evitar perdida de ventas.
                 </div>
             @endif
 
-            @if($productos->whereBetween('stock', [1, 5])->count() > 0)
+            @if($productos->filter(fn ($producto) => $producto->stock > 0 && $producto->stock < $producto->stock_minimo)->count() > 0)
                 <div class="action-item">
-                    <strong>(!) PRIORIDAD ALTA:</strong> 
-                    Solicitar pedido urgente para los {{ $productos->whereBetween('stock', [1, 5])->count() }} producto(s) 
-                    en nivel critico (1-5 unidades).
+                    <strong>(!) PRIORIDAD ALTA:</strong>
+                    Revisar los {{ $productos->filter(fn ($producto) => $producto->stock > 0 && $producto->stock < $producto->stock_minimo)->count() }} producto(s)
+                    por debajo de su minimo configurado.
                 </div>
             @endif
 
-            @if($productos->whereBetween('stock', [6, 10])->count() > 0)
+            @if($productos->filter(fn ($producto) => $producto->stock > 0 && $producto->stock === $producto->stock_minimo)->count() > 0)
                 <div class="action-item">
-                    <strong>(!) PRIORIDAD MEDIA:</strong> 
-                    Planificar reabastecimiento para los {{ $productos->whereBetween('stock', [6, 10])->count() }} producto(s) 
-                    con stock bajo (6-10 unidades) en los proximos dias.
+                    <strong>(!) PRIORIDAD MEDIA:</strong>
+                    Vigilar los {{ $productos->filter(fn ($producto) => $producto->stock > 0 && $producto->stock === $producto->stock_minimo)->count() }} producto(s)
+                    que estan exactamente en su minimo configurado.
                 </div>
             @endif
 
             <div class="action-item">
-                <strong>$ PRESUPUESTO REQUERIDO:</strong> 
-                Se necesita un presupuesto de <strong>S/ {{ number_format($totalReposicion, 2) }}</strong> 
-                para reponer todos los productos al nivel optimo de 50 unidades.
+                <strong>$ COSTO ESTIMADO:</strong>
+                Se estima <strong>S/ {{ number_format($totalReposicion, 2) }}</strong>
+                para llevar los productos alertados a su minimo configurado.
             </div>
         </div>
 
@@ -548,13 +551,9 @@
                 <div class="checklist-item">
                     [ ] <strong>{{ $producto->nombre }}</strong> - 
                     Stock actual: {{ $producto->stock }} unid. | 
-                    Reponer: 
-                    @if($producto->stock == 0)
-                        50 unid.
-                    @else
-                        {{ 50 - $producto->stock }} unid.
-                    @endif
-                    | Costo: S/ {{ number_format(($producto->stock == 0 ? 50 : 50 - $producto->stock) * $producto->precio, 2) }}
+                    Minimo: {{ $producto->stock_minimo }} unid. |
+                    Faltante: {{ max($producto->stock_minimo - $producto->stock, 0) }} unid.
+                    | Costo: S/ {{ number_format(max($producto->stock_minimo - $producto->stock, 0) * $producto->precio, 2) }}
                 </div>
             @endforeach
         </div>
@@ -577,11 +576,9 @@
         <div class="observations-box">
             <h3 style="color: #92400e; font-size: 12px; margin-bottom: 8px;">OBSERVACIONES FINALES</h3>
             <ul style="font-size: 9px;">
-                <li><strong>Nivel de Stock Minimo:</strong> 10 unidades por producto.</li>
-                <li><strong>Nivel Optimo Sugerido:</strong> 50 unidades por producto.</li>
+                <li><strong>Nivel de Stock Minimo:</strong> configurable por producto.</li>
                 <li><strong>Productos Criticos:</strong> {{ $productos->count() }} requieren atencion.</li>
-                <li><strong>Inversion Necesaria:</strong> S/ {{ number_format($totalReposicion, 2) }} para reposicion completa.</li>
-                <li><strong>Tiempo Estimado de Reabastecimiento:</strong> 24-48 horas (coordinar con proveedores).</li>
+                <li><strong>Inversion Estimada:</strong> S/ {{ number_format($totalReposicion, 2) }} para alcanzar los minimos configurados.</li>
                 <li>Este reporte fue generado el {{ now()->format('d/m/Y') }} a las {{ now()->format('h:i A') }}.</li>
             </ul>
         </div>
