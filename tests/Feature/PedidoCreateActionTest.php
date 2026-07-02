@@ -341,3 +341,103 @@ it('creates a pedido through the trabajador HTTP store flow', function (): void 
 
     expect($producto->refresh()->stock)->toBe(7);
 });
+
+it('rejects duplicate product lines in the admin HTTP store flow before hitting the pivot constraint', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.paredes.duplicate-create@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Sandwich',
+        'categoria' => 'desayuno',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => 12.50,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->from(route('admin.pedidos.create'))
+        ->post(route('admin.pedidos.store'), [
+            'cliente_id' => $cliente->id,
+            'empleado_id' => $empleado->id,
+            'metodo_pago' => 'efectivo',
+            'productos' => [
+                [
+                    'producto_id' => $producto->id,
+                    'cantidad' => 1,
+                ],
+                [
+                    'id' => $producto->id,
+                    'cantidad' => 2,
+                ],
+            ],
+        ]);
+
+    $response->assertRedirect(route('admin.pedidos.create'));
+    $response->assertSessionHasErrors(['productos.0.id', 'productos.1.id']);
+
+    $this->assertDatabaseCount('pedidos', 0);
+    $this->assertDatabaseCount('pedido_producto', 0);
+
+    expect($producto->refresh()->stock)->toBe(10);
+});
+
+it('exposes subtotal through the product to pedidos pivot relationship', function (): void {
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.paredes.product-pivot@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Sandwich',
+        'categoria' => 'desayuno',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => 12.50,
+    ]);
+
+    $pedido = Pedido::create([
+        'numero_pedido' => 'PED-202607-PIVOT1',
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'metodo_pago' => 'efectivo',
+        'fecha' => '2026-07-02',
+        'hora' => '08:30:00',
+        'total' => 37.50,
+        'estado' => 'pendiente',
+        'observaciones' => null,
+    ]);
+
+    $pedido->productos()->attach($producto->id, [
+        'cantidad' => 3,
+        'precio_unitario' => 12.50,
+        'subtotal' => 37.50,
+    ]);
+
+    $pedidoFromProduct = $producto->pedidos()->firstOrFail();
+
+    expect((int) $pedidoFromProduct->pivot->cantidad)->toBe(3)
+        ->and((float) $pedidoFromProduct->pivot->precio_unitario)->toBe(12.5)
+        ->and((float) $pedidoFromProduct->pivot->subtotal)->toBe(37.5);
+});
