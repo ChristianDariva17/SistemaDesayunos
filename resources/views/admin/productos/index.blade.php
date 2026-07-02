@@ -25,12 +25,18 @@
         </div>
         <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
             {{-- ========================================== --}}
-            {{-- BOTÓN NUEVO PRODUCTO --}}
+            {{-- ACCIONES PRINCIPALES --}}
             {{-- ========================================== --}}
-            <a href="{{ route('admin.productos.create') }}" class="btn btn-primary btn-lg shadow-sm">
-                <i class="fas fa-plus-circle me-2"></i>
-                Nuevo Producto
-            </a>
+            <div class="d-flex gap-2 justify-content-lg-end justify-content-start flex-wrap">
+                <a href="{{ route('admin.stock-entries.create') }}" class="btn btn-success btn-lg shadow-sm">
+                    <i class="fas fa-dolly me-2"></i>
+                    Registrar Entrada
+                </a>
+                <a href="{{ route('admin.productos.create') }}" class="btn btn-primary btn-lg shadow-sm">
+                    <i class="fas fa-plus-circle me-2"></i>
+                    Nuevo Producto
+                </a>
+            </div>
         </div>
     </div>
 

@@ -21,9 +21,14 @@
             </p>
         </div>
         <div class="col-lg-4 text-lg-end mt-3 mt-lg-0">
-            <a href="{{ route('admin.reportes.index') }}" class="btn btn-outline-secondary shadow-sm">
-                <i class="fas fa-arrow-left me-2"></i>Volver a Reportes
-            </a>
+            <div class="d-flex gap-2 justify-content-lg-end justify-content-start flex-wrap">
+                <a href="{{ route('admin.stock-entries.create') }}" class="btn btn-success shadow-sm">
+                    <i class="fas fa-dolly me-2"></i>Registrar Entrada
+                </a>
+                <a href="{{ route('admin.reportes.index') }}" class="btn btn-outline-secondary shadow-sm">
+                    <i class="fas fa-arrow-left me-2"></i>Volver a Reportes
+                </a>
+            </div>
         </div>
     </div>
 

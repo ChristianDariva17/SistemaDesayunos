@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\ClienteController as AdminClienteController;
 use App\Http\Controllers\Admin\PedidoController as AdminPedidoController;
 use App\Http\Controllers\Admin\EmpleadoController as AdminEmpleadoController;
 use App\Http\Controllers\Admin\ReporteController as AdminReporteController;
+use App\Http\Controllers\Admin\StockEntryController as AdminStockEntryController;
 
 // Controladores de TRABAJADOR (con alias "Trabajador" para evitar conflictos)
 use App\Http\Controllers\Trabajador\DashboardController as TrabajadorDashboardController;
@@ -113,7 +114,13 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'valid.role', 'rol:a
          ->name('productos.toggle-estado');
 
     Route::post('productos/{producto}/duplicar', [AdminProductoController::class, 'duplicar'])
-         ->name('productos.duplicar');
+          ->name('productos.duplicar');
+
+    Route::get('stock-entries/create', [AdminStockEntryController::class, 'create'])
+         ->name('stock-entries.create');
+
+    Route::post('stock-entries', [AdminStockEntryController::class, 'store'])
+         ->name('stock-entries.store');
 
     // ══════════════════════════════════════════════════════════════════
     // CLIENTES - CRUD COMPLETO
