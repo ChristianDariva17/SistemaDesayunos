@@ -6,6 +6,7 @@ use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\Pedido;
 use App\Models\Producto;
+use App\Models\StockMovimiento;
 use App\Models\User;
 
 function createPedidoDuplicationFixture(int $stock = 10, float $originalPrice = 10.00): array
@@ -87,6 +88,17 @@ it('duplicates a pedido with a fresh number, pending state, stock reservation, a
         'subtotal' => 25.0,
     ]);
 
+    $this->assertDatabaseHas('stock_movimientos', [
+        'pedido_id' => $duplicatedPedido->id,
+        'producto_id' => $producto->id,
+        'user_id' => null,
+        'tipo' => StockMovimiento::TIPO_SALIDA,
+        'cantidad' => 2,
+        'stock_anterior' => 10,
+        'stock_nuevo' => 8,
+        'motivo' => 'Pedido stock reservation',
+    ]);
+
     expect($producto->refresh()->stock)->toBe(8);
 });
 
@@ -98,6 +110,7 @@ it('rolls back duplication when product stock is insufficient', function (): voi
 
     $this->assertDatabaseCount('pedidos', 1);
     $this->assertDatabaseCount('pedido_producto', 1);
+    $this->assertDatabaseCount('stock_movimientos', 0);
 
     expect($producto->refresh()->stock)->toBe(1);
 });
@@ -122,4 +135,47 @@ it('duplicates a pedido through the admin HTTP flow', function (): void {
         ->and($duplicatedPedido->estado)->toBe('pendiente')
         ->and((float) $duplicatedPedido->total)->toBe(20.0)
         ->and($producto->refresh()->stock)->toBe(8);
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'pedido_id' => $duplicatedPedido->id,
+        'producto_id' => $producto->id,
+        'user_id' => $user->id,
+        'tipo' => StockMovimiento::TIPO_SALIDA,
+        'cantidad' => 2,
+        'stock_anterior' => 10,
+        'stock_nuevo' => 8,
+        'motivo' => 'Pedido stock reservation',
+    ]);
+});
+
+it('duplicates a pedido through the trabajador HTTP flow with an actor stock movement', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'trabajador',
+    ]);
+    [$pedido, $producto] = createPedidoDuplicationFixture();
+
+    $response = $this->actingAs($user)
+        ->post(route('trabajador.pedidos.duplicar', $pedido));
+
+    $duplicatedPedido = Pedido::query()
+        ->whereKeyNot($pedido->id)
+        ->with('productos')
+        ->firstOrFail();
+
+    $response->assertRedirect(route('trabajador.pedidos.show', $duplicatedPedido));
+
+    expect($duplicatedPedido->estado)->toBe('pendiente')
+        ->and((float) $duplicatedPedido->total)->toBe(20.0)
+        ->and($producto->refresh()->stock)->toBe(8);
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'pedido_id' => $duplicatedPedido->id,
+        'producto_id' => $producto->id,
+        'user_id' => $user->id,
+        'tipo' => StockMovimiento::TIPO_SALIDA,
+        'cantidad' => 2,
+        'stock_anterior' => 10,
+        'stock_nuevo' => 8,
+        'motivo' => 'Pedido stock reservation',
+    ]);
 });

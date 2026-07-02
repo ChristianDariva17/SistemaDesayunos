@@ -7,6 +7,7 @@ use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\Pedido;
 use App\Models\Producto;
+use App\Models\StockMovimiento;
 use App\Models\User;
 
 it('creates a pedido through the shared create action and persists stock changes', function (): void {
@@ -70,6 +71,66 @@ it('creates a pedido through the shared create action and persists stock changes
         'cantidad' => 3,
         'precio_unitario' => 12.5,
         'subtotal' => 37.5,
+    ]);
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'pedido_id' => $pedido->id,
+        'user_id' => $user->id,
+        'tipo' => StockMovimiento::TIPO_SALIDA,
+        'cantidad' => 3,
+        'stock_anterior' => 10,
+        'stock_nuevo' => 7,
+        'motivo' => 'Pedido stock reservation',
+    ]);
+
+    expect($producto->refresh()->stock)->toBe(7);
+});
+
+it('creates salida stock movements when creating a pedido directly through the model', function (): void {
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.paredes.model@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Sandwich',
+        'categoria' => 'desayuno',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => 12.50,
+    ]);
+
+    $pedido = Pedido::crearConProductos([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'metodo_pago' => 'efectivo',
+        'observaciones' => 'Pedido directo de prueba',
+        'productos' => [
+            [
+                'id' => $producto->id,
+                'cantidad' => 3,
+            ],
+        ],
+    ]);
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'pedido_id' => $pedido->id,
+        'user_id' => null,
+        'tipo' => StockMovimiento::TIPO_SALIDA,
+        'cantidad' => 3,
+        'stock_anterior' => 10,
+        'stock_nuevo' => 7,
+        'motivo' => 'Pedido stock reservation',
     ]);
 
     expect($producto->refresh()->stock)->toBe(7);
@@ -136,6 +197,8 @@ it('rolls back pedido creation when product stock is insufficient', function ():
         'producto_id' => $productoConStock->id,
         'cantidad' => 3,
     ]);
+
+    $this->assertDatabaseCount('stock_movimientos', 0);
 
     expect($productoConStock->refresh()->stock)->toBe(10)
         ->and($productoSinStock->refresh()->stock)->toBe(1);

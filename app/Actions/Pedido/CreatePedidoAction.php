@@ -4,11 +4,17 @@ declare(strict_types=1);
 
 namespace App\Actions\Pedido;
 
+use App\Actions\Stock\RegisterStockMovementAction;
 use App\Models\Pedido;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 
 final class CreatePedidoAction
 {
+    public function __construct(
+        private readonly RegisterStockMovementAction $registerStockMovement,
+    ) {}
+
     /**
      * Create a pedido using the canonical domain flow.
      *
@@ -16,7 +22,11 @@ final class CreatePedidoAction
      */
     public function handle(array $data, ?int $userId = null): Pedido
     {
-        $pedido = Pedido::crearConProductos($data);
+        $pedido = Pedido::crearConProductos(
+            $data,
+            $this->registerStockMovement,
+            $userId === null ? null : User::find($userId),
+        );
 
         Log::info('Pedido creado', [
             'pedido_id' => $pedido->id,

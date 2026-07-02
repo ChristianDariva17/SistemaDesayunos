@@ -1,12 +1,16 @@
 <?php
+
+declare(strict_types=1);
+
 namespace App\Models;
 
+use App\Actions\Stock\RegisterStockMovementAction;
+use Exception;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
-use Exception;
 
 class Pedido extends Model
 {
@@ -72,9 +76,15 @@ class Pedido extends Model
         });
     }
 
-    public static function crearConProductos(array $data): self
+    public static function crearConProductos(
+        array $data,
+        ?RegisterStockMovementAction $registerStockMovement = null,
+        ?User $user = null,
+    ): self
     {
-        return DB::transaction(function () use ($data): self {
+        $registerStockMovement ??= app(RegisterStockMovementAction::class);
+
+        return DB::transaction(function () use ($data, $registerStockMovement, $user): self {
             $pedido = static::create([
                 'cliente_id' => $data['cliente_id'],
                 'empleado_id' => $data['empleado_id'],
@@ -87,16 +97,21 @@ class Pedido extends Model
             ]);
 
             $pedido->update([
-                'total' => static::registrarProductos($pedido, $data['productos']),
+                'total' => static::registrarProductos($pedido, $data['productos'], $registerStockMovement, $user),
             ]);
 
             return $pedido->load('productos');
         });
     }
 
-    public function duplicarConProductos(): self
+    public function duplicarConProductos(
+        ?RegisterStockMovementAction $registerStockMovement = null,
+        ?User $user = null,
+    ): self
     {
-        return DB::transaction(function (): self {
+        $registerStockMovement ??= app(RegisterStockMovementAction::class);
+
+        return DB::transaction(function () use ($registerStockMovement, $user): self {
             $this->loadMissing('productos');
 
             $nuevoPedido = $this->replicate(['numero_pedido']);
@@ -104,21 +119,28 @@ class Pedido extends Model
             $nuevoPedido->save();
 
             $nuevoPedido->update([
-                'total' => static::registrarProductos($nuevoPedido, $this->productos),
+                'total' => static::registrarProductos($nuevoPedido, $this->productos, $registerStockMovement, $user),
             ]);
 
             return $nuevoPedido->load('productos');
         });
     }
 
-    protected static function registrarProductos(self $pedido, iterable $productos): float
+    protected static function registrarProductos(
+        self $pedido,
+        iterable $productos,
+        ?RegisterStockMovementAction $registerStockMovement = null,
+        ?User $user = null,
+    ): float
     {
         $total = 0;
 
         foreach ($productos as $productoData) {
-            $producto = Producto::findOrFail(
-                $productoData instanceof Producto ? $productoData->getKey() : $productoData['id']
-            );
+            $productoId = $productoData instanceof Producto ? $productoData->getKey() : $productoData['id'];
+
+            $producto = Producto::query()
+                ->lockForUpdate()
+                ->findOrFail($productoId);
 
             $cantidad = $productoData instanceof Producto
                 ? (int) $productoData->pivot->cantidad
@@ -127,24 +149,34 @@ class Pedido extends Model
             $precioUnitario = (float) $producto->precio;
             $subtotal = $cantidad * $precioUnitario;
 
-            $stockActualizado = Producto::query()
-                ->whereKey($producto->id)
-                ->where('stock', '>=', $cantidad)
-                ->decrement('stock', $cantidad);
+            $stockAnterior = (int) $producto->stock;
 
-            if ($stockActualizado === 0) {
-                $stockDisponible = (int) Producto::query()
-                    ->whereKey($producto->id)
-                    ->value('stock');
-
-                throw new Exception("Stock insuficiente para {$producto->nombre}. Disponible: {$stockDisponible}");
+            if ($stockAnterior < $cantidad) {
+                throw new Exception("Stock insuficiente para {$producto->nombre}. Disponible: {$stockAnterior}");
             }
+
+            $stockNuevo = $stockAnterior - $cantidad;
+
+            $producto->update([
+                'stock' => $stockNuevo,
+            ]);
 
             $pedido->productos()->attach($producto->id, [
                 'cantidad' => $cantidad,
                 'precio_unitario' => $precioUnitario,
                 'subtotal' => $subtotal,
             ]);
+
+            $registerStockMovement?->handle(
+                producto: $producto,
+                tipo: StockMovimiento::TIPO_SALIDA,
+                cantidad: $cantidad,
+                stockAnterior: $stockAnterior,
+                stockNuevo: $stockNuevo,
+                pedido: $pedido,
+                user: $user,
+                motivo: 'Pedido stock reservation',
+            );
 
             $total += $subtotal;
         }

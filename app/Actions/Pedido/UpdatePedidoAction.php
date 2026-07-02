@@ -4,13 +4,21 @@ declare(strict_types=1);
 
 namespace App\Actions\Pedido;
 
+use App\Actions\Stock\RegisterStockMovementAction;
 use App\Models\Pedido;
+use App\Models\Producto;
+use App\Models\StockMovimiento;
+use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 final class UpdatePedidoAction
 {
+    public function __construct(
+        private readonly RegisterStockMovementAction $registerStockMovement,
+    ) {}
+
     /**
      * @param array{estado:string,observaciones?:string|null} $data
      */
@@ -23,13 +31,14 @@ final class UpdatePedidoAction
                 ->findOrFail($pedido->getKey());
 
             $estadoAnterior = $pedido->estado;
+            $user = $userId === null ? null : User::find($userId);
 
             if ($data['estado'] === 'cancelado' && $estadoAnterior !== 'cancelado') {
-                $this->restoreStock($pedido);
+                $this->restoreStock($pedido, $user);
             }
 
             if ($estadoAnterior === 'cancelado' && $data['estado'] !== 'cancelado') {
-                $this->reserveStockAgain($pedido);
+                $this->reserveStockAgain($pedido, $user);
             }
 
             $pedido->update($data);
@@ -45,24 +54,62 @@ final class UpdatePedidoAction
         });
     }
 
-    private function restoreStock(Pedido $pedido): void
+    private function restoreStock(Pedido $pedido, ?User $user): void
     {
         foreach ($pedido->productos as $producto) {
-            $producto->increment('stock', $producto->pivot->cantidad);
+            $lockedProducto = Producto::query()
+                ->lockForUpdate()
+                ->findOrFail($producto->getKey());
+            $cantidad = (int) $producto->pivot->cantidad;
+            $stockAnterior = (int) $lockedProducto->stock;
+            $stockNuevo = $stockAnterior + $cantidad;
+
+            $lockedProducto->update([
+                'stock' => $stockNuevo,
+            ]);
+
+            $this->registerStockMovement->handle(
+                producto: $lockedProducto,
+                tipo: StockMovimiento::TIPO_CANCELACION,
+                cantidad: $cantidad,
+                stockAnterior: $stockAnterior,
+                stockNuevo: $stockNuevo,
+                pedido: $pedido,
+                user: $user,
+                motivo: 'Pedido cancellation stock restoration',
+            );
         }
     }
 
-    private function reserveStockAgain(Pedido $pedido): void
+    private function reserveStockAgain(Pedido $pedido, ?User $user): void
     {
         foreach ($pedido->productos as $producto) {
-            $stockActualizado = $producto->newQuery()
-                ->whereKey($producto->getKey())
-                ->where('stock', '>=', $producto->pivot->cantidad)
-                ->decrement('stock', $producto->pivot->cantidad);
+            $lockedProducto = Producto::query()
+                ->lockForUpdate()
+                ->findOrFail($producto->getKey());
+            $cantidad = (int) $producto->pivot->cantidad;
+            $stockAnterior = (int) $lockedProducto->stock;
 
-            if ($stockActualizado === 0) {
+            if ($stockAnterior < $cantidad) {
                 throw new Exception("Stock insuficiente para {$producto->nombre}");
             }
+
+            $stockNuevo = $stockAnterior - $cantidad;
+
+            $lockedProducto->update([
+                'stock' => $stockNuevo,
+            ]);
+
+            $this->registerStockMovement->handle(
+                producto: $lockedProducto,
+                tipo: StockMovimiento::TIPO_SALIDA,
+                cantidad: $cantidad,
+                stockAnterior: $stockAnterior,
+                stockNuevo: $stockNuevo,
+                pedido: $pedido,
+                user: $user,
+                motivo: 'Pedido reactivation stock reservation',
+            );
         }
     }
 }
