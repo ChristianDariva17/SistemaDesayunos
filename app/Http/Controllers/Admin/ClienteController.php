@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreClienteRequest;
+use App\Http\Requests\Admin\UpdateClienteRequest;
 use App\Models\Cliente;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -102,14 +104,10 @@ class ClienteController extends Controller
      * MÉTODO: STORE - GUARDAR NUEVO CLIENTE
      * ==========================================
      */
-    public function store(Request $request)
+    public function store(StoreClienteRequest $request)
     {
         try {
-            // Validación usando método privado
-            $validated = $request->validate(
-                $this->getValidationRules(),
-                $this->getValidationMessages()
-            );
+            $validated = $request->validated();
 
             DB::beginTransaction();
 
@@ -198,14 +196,10 @@ class ClienteController extends Controller
      * MÉTODO: UPDATE - ACTUALIZAR CLIENTE
      * ==========================================
      */
-    public function update(Request $request, Cliente $cliente)
+    public function update(UpdateClienteRequest $request, Cliente $cliente)
     {
         try {
-            // Validación usando método privado con ID del cliente
-            $validated = $request->validate(
-                $this->getValidationRules($cliente),
-                $this->getValidationMessages()
-            );
+            $validated = $request->validated();
 
             DB::beginTransaction();
 
@@ -571,69 +565,6 @@ class ClienteController extends Controller
                 'message' => 'Error al obtener estadísticas'
             ], 500);
         }
-    }
-
-    /**
-     * ==========================================
-     * MÉTODO PRIVADO: REGLAS DE VALIDACIÓN
-     * ==========================================
-     * ✅ MEJORADO: Alineado con estructura de tabla
-     */
-    private function getValidationRules(?Cliente $cliente = null): array
-    {
-        $clienteId = $cliente ? $cliente->id : null;
-
-        return [
-            'nombre' => 'required|string|max:255',
-            'apellido' => 'nullable|string|max:255',
-            'telefono' => [
-                'nullable',
-                'string',
-                'max:20',
-                'regex:/^[0-9\+\-\(\)\s]+$/' // Permite números, +, -, (, ), espacios
-            ],
-            'email' => [
-                'nullable',
-                'email',
-                'max:255',
-                'unique:clientes,email,' . $clienteId
-            ],
-            'direccion' => 'nullable|string|max:255',
-            'fecha_nacimiento' => [
-                'nullable',
-                'date',
-                'before:today',
-                'after:' . now()->subYears(120)->format('Y-m-d') // Máximo 120 años
-            ],
-            'estado' => 'required|in:activo,inactivo',
-            'notas' => 'nullable|string|max:1000'
-        ];
-    }
-
-    /**
-     * ==========================================
-     * MÉTODO PRIVADO: MENSAJES DE VALIDACIÓN
-     * ==========================================
-     */
-    private function getValidationMessages(): array
-    {
-        return [
-            'nombre.required' => 'El nombre del cliente es obligatorio.',
-            'nombre.max' => 'El nombre no puede tener más de 255 caracteres.',
-            'apellido.max' => 'El apellido no puede tener más de 255 caracteres.',
-            'email.email' => 'El email debe ser una dirección válida.',
-            'email.unique' => 'Este email ya está registrado por otro cliente.',
-            'email.max' => 'El email no puede tener más de 255 caracteres.',
-            'telefono.regex' => 'El formato del teléfono no es válido. Solo números, +, -, ( ) y espacios.',
-            'telefono.max' => 'El teléfono no puede tener más de 20 caracteres.',
-            'direccion.max' => 'La dirección no puede tener más de 255 caracteres.',
-            'fecha_nacimiento.date' => 'La fecha de nacimiento debe ser una fecha válida.',
-            'fecha_nacimiento.before' => 'La fecha de nacimiento no puede ser futura.',
-            'fecha_nacimiento.after' => 'La fecha de nacimiento no puede ser mayor a 120 años.',
-            'estado.required' => 'Debes seleccionar el estado del cliente.',
-            'estado.in' => 'El estado debe ser activo o inactivo.',
-            'notas.max' => 'Las notas no pueden tener más de 1000 caracteres.'
-        ];
     }
 
     private function formatClienteNombre(Cliente $cliente): string
