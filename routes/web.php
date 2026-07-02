@@ -199,6 +199,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'valid.role', 'rol:a
         Route::get('/stock-movimientos', [AdminReporteController::class, 'stockMovimientos'])
              ->name('stock-movimientos');
 
+        // Resumen de inventario por producto
+        Route::get('/resumen-inventario', [AdminReporteController::class, 'resumenInventario'])
+             ->name('resumen-inventario');
+
         // Reporte de ventas
         Route::get('/ventas', [AdminReporteController::class, 'ventas'])
              ->name('ventas');

@@ -269,6 +269,72 @@ class ReporteController extends Controller
     }
 
     /**
+     * Muestra el resumen de inventario por producto.
+     */
+    public function resumenInventario(Request $request)
+    {
+        $validated = $request->validate([
+            'buscar' => ['nullable', 'string', 'max:255'],
+            'categoria' => ['nullable', 'string', 'max:255'],
+            'estado' => ['nullable', Rule::in(['activo', 'inactivo'])],
+        ]);
+
+        $latestMovementDate = StockMovimiento::query()
+            ->select('created_at')
+            ->whereColumn('stock_movimientos.producto_id', 'productos.id')
+            ->latest('created_at')
+            ->latest('id')
+            ->limit(1);
+
+        $latestMovementType = StockMovimiento::query()
+            ->select('tipo')
+            ->whereColumn('stock_movimientos.producto_id', 'productos.id')
+            ->latest('created_at')
+            ->latest('id')
+            ->limit(1);
+
+        $query = Producto::query()
+            ->select('productos.*')
+            ->selectSub($latestMovementDate, 'ultimo_movimiento_fecha')
+            ->selectSub($latestMovementType, 'ultimo_movimiento_tipo')
+            ->withSum([
+                'stockMovimientos as total_entradas' => fn ($query) => $query->where('tipo', StockMovimiento::TIPO_ENTRADA),
+            ], 'cantidad')
+            ->withSum([
+                'stockMovimientos as total_salidas' => fn ($query) => $query->where('tipo', StockMovimiento::TIPO_SALIDA),
+            ], 'cantidad')
+            ->withSum([
+                'stockMovimientos as total_ajustes' => fn ($query) => $query->where('tipo', StockMovimiento::TIPO_AJUSTE),
+            ], 'cantidad');
+
+        if (!empty($validated['buscar'])) {
+            $query->where('nombre', 'like', '%' . $validated['buscar'] . '%');
+        }
+
+        if (!empty($validated['categoria'])) {
+            $query->where('categoria', $validated['categoria']);
+        }
+
+        if (!empty($validated['estado'])) {
+            $query->where('estado', $validated['estado']);
+        }
+
+        $productos = $query
+            ->orderBy('nombre')
+            ->paginate(15)
+            ->withQueryString();
+
+        $categorias = Producto::query()
+            ->select('categoria')
+            ->whereNotNull('categoria')
+            ->distinct()
+            ->orderBy('categoria')
+            ->pluck('categoria');
+
+        return view('admin.reportes.resumen-inventario', compact('productos', 'categorias'));
+    }
+
+    /**
      * Genera el reporte de ventas por rango de fechas en PDF
      * ✅ MÉTODO COMPLETAMENTE CORREGIDO
      */

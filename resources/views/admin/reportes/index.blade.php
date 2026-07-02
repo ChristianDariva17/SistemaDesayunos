@@ -180,7 +180,7 @@
         <h4 class="mb-0">
             <i class="fas fa-file-pdf text-danger"></i> Reportes Disponibles
         </h4>
-        <span class="badge bg-secondary">4 reportes</span>
+        <span class="badge bg-secondary">5 reportes</span>
     </div>
 
     {{-- ==========================================
@@ -242,6 +242,67 @@
 
                 <div class="card-footer bg-light text-muted small">
                     <i class="fas fa-search"></i> Filtros por producto, fecha, tipo y usuario
+                    <span class="float-end text-success">
+                        <i class="fas fa-circle pulse"></i> Disponible
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        {{-- ====================================
+            REPORTE RESUMEN DE INVENTARIO
+            ==================================== --}}
+        <div class="col-lg-4 mb-4">
+            <div class="card shadow-sm h-100 card-hover">
+                <div class="card-header bg-gradient-primary text-white py-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clipboard-list"></i> Resumen de Inventario
+                        </h5>
+                        <span class="badge bg-light text-primary">
+                            <i class="fas fa-filter"></i> Filtrable
+                        </span>
+                    </div>
+                </div>
+
+                <div class="card-body d-flex flex-column">
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-info-circle text-primary"></i>
+                        Consulta stock actual, mínimos, entradas, salidas, ajustes y último movimiento por producto.
+                    </p>
+
+                    <div class="row text-center mb-3">
+                        <div class="col-6">
+                            <div class="border rounded p-2 bg-light">
+                                <small class="text-muted d-block mb-1">
+                                    <i class="fas fa-box"></i> Productos
+                                </small>
+                                <strong class="text-primary h5">
+                                    {{ number_format($estadisticas['totalProductos'] ?? 0) }}
+                                </strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="border rounded p-2 bg-light">
+                                <small class="text-muted d-block mb-1">
+                                    <i class="fas fa-exclamation-triangle"></i> Stock bajo
+                                </small>
+                                <strong class="text-danger h5">
+                                    {{ number_format($estadisticas['stockBajo'] ?? 0) }}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mt-auto">
+                        <a href="{{ route('admin.reportes.resumen-inventario') }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-table me-2"></i>Ver Resumen
+                        </a>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-light text-muted small">
+                    <i class="fas fa-search"></i> Filtros por producto, categoría y estado
                     <span class="float-end text-success">
                         <i class="fas fa-circle pulse"></i> Disponible
                     </span>
