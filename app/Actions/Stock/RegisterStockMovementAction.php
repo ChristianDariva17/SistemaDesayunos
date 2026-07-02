@@ -27,6 +27,7 @@ final class RegisterStockMovementAction
         return StockMovimiento::create([
             'producto_id' => $producto->getKey(),
             'pedido_id' => $pedido?->getKey(),
+            'pedido_numero' => $pedido?->numero_pedido,
             'user_id' => $user?->getKey(),
             'tipo' => $tipo,
             'cantidad' => $cantidad,

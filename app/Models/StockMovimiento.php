@@ -31,6 +31,7 @@ class StockMovimiento extends Model
     protected $fillable = [
         'producto_id',
         'pedido_id',
+        'pedido_numero',
         'user_id',
         'tipo',
         'cantidad',
@@ -42,6 +43,7 @@ class StockMovimiento extends Model
     protected $casts = [
         'producto_id' => 'integer',
         'pedido_id' => 'integer',
+        'pedido_numero' => 'string',
         'user_id' => 'integer',
         'cantidad' => 'integer',
         'stock_anterior' => 'integer',

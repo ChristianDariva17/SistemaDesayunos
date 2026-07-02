@@ -9,6 +9,8 @@ use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 function stockMovimientoTestProducto(array $attributes = []): Producto
 {
@@ -59,6 +61,7 @@ it('persists a stock movement with product pedido and user relations', function 
     $movimiento = StockMovimiento::create([
         'producto_id' => $producto->id,
         'pedido_id' => $pedido->id,
+        'pedido_numero' => $pedido->numero_pedido,
         'user_id' => $user->id,
         'tipo' => 'salida',
         'cantidad' => 3,
@@ -80,6 +83,7 @@ it('persists a stock movement with product pedido and user relations', function 
         'id' => $movimiento->id,
         'producto_id' => $producto->id,
         'pedido_id' => $pedido->id,
+        'pedido_numero' => $pedido->numero_pedido,
         'user_id' => $user->id,
         'tipo' => 'salida',
         'cantidad' => 3,
@@ -147,6 +151,7 @@ it('registers a valid stock movement through the stock action', function (): voi
     expect($movimiento)->toBeInstanceOf(StockMovimiento::class)
         ->and($movimiento->producto_id)->toBe($producto->id)
         ->and($movimiento->pedido_id)->toBe($pedido->id)
+        ->and($movimiento->pedido_numero)->toBe($pedido->numero_pedido)
         ->and($movimiento->user_id)->toBe($user->id)
         ->and($movimiento->tipo)->toBe(StockMovimiento::TIPO_SALIDA)
         ->and($movimiento->cantidad)->toBe(3)
@@ -158,12 +163,79 @@ it('registers a valid stock movement through the stock action', function (): voi
         'id' => $movimiento->id,
         'producto_id' => $producto->id,
         'pedido_id' => $pedido->id,
+        'pedido_numero' => $pedido->numero_pedido,
         'user_id' => $user->id,
         'tipo' => StockMovimiento::TIPO_SALIDA,
         'cantidad' => 3,
         'stock_anterior' => 10,
         'stock_nuevo' => 7,
         'motivo' => 'Pedido registrado',
+    ]);
+});
+
+it('keeps the historical pedido number when a related pedido is deleted', function (): void {
+    $producto = stockMovimientoTestProducto();
+    $pedido = stockMovimientoTestPedido([
+        'numero_pedido' => 'PED-202607-HISTORY',
+    ]);
+
+    $movimiento = app(RegisterStockMovementAction::class)->handle(
+        producto: $producto,
+        tipo: StockMovimiento::TIPO_SALIDA,
+        cantidad: 1,
+        stockAnterior: 10,
+        stockNuevo: 9,
+        pedido: $pedido,
+        motivo: 'Pedido registered',
+    );
+
+    $pedido->delete();
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'id' => $movimiento->id,
+        'pedido_id' => null,
+        'pedido_numero' => 'PED-202607-HISTORY',
+    ]);
+});
+
+it('backfills historical pedido numbers for existing stock movements during migration', function (): void {
+    $migration = include database_path('migrations/2026_07_01_000001_add_pedido_numero_to_stock_movimientos_table.php');
+    $migration->down();
+
+    $producto = stockMovimientoTestProducto();
+    $pedido = stockMovimientoTestPedido([
+        'numero_pedido' => 'PED-202607-BACKFILL',
+    ]);
+
+    $movimientoId = DB::table('stock_movimientos')->insertGetId([
+        'producto_id' => $producto->id,
+        'pedido_id' => $pedido->id,
+        'user_id' => null,
+        'tipo' => StockMovimiento::TIPO_SALIDA,
+        'cantidad' => 1,
+        'stock_anterior' => 10,
+        'stock_nuevo' => 9,
+        'motivo' => 'Existing movement before pedido number snapshot',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $migration->up();
+
+    expect(Schema::hasColumn('stock_movimientos', 'pedido_numero'))->toBeTrue();
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'id' => $movimientoId,
+        'pedido_id' => $pedido->id,
+        'pedido_numero' => 'PED-202607-BACKFILL',
+    ]);
+
+    $pedido->delete();
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'id' => $movimientoId,
+        'pedido_id' => null,
+        'pedido_numero' => 'PED-202607-BACKFILL',
     ]);
 });
 
@@ -282,6 +354,7 @@ it('registers a stock movement without pedido or user through the stock action',
     );
 
     expect($movimiento->pedido_id)->toBeNull()
+        ->and($movimiento->pedido_numero)->toBeNull()
         ->and($movimiento->user_id)->toBeNull()
         ->and($movimiento->tipo)->toBe(StockMovimiento::TIPO_AJUSTE)
         ->and($movimiento->cantidad)->toBe(2)
@@ -293,6 +366,7 @@ it('registers a stock movement without pedido or user through the stock action',
         'id' => $movimiento->id,
         'producto_id' => $producto->id,
         'pedido_id' => null,
+        'pedido_numero' => null,
         'user_id' => null,
         'tipo' => StockMovimiento::TIPO_AJUSTE,
         'cantidad' => 2,

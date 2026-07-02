@@ -439,6 +439,7 @@ it('records stock movements when deleting a non-cancelled pedido restores stock'
     $this->assertDatabaseHas('stock_movimientos', [
         'producto_id' => $producto->id,
         'pedido_id' => null,
+        'pedido_numero' => 'PED-202606-DESTROY',
         'user_id' => $user->id,
         'tipo' => StockMovimiento::TIPO_CANCELACION,
         'cantidad' => 2,
