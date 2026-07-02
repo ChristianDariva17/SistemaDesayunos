@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreEmpleadoRequest;
+use App\Http\Requests\Admin\UpdateEmpleadoRequest;
 use App\Models\Empleado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 
 class EmpleadoController extends Controller
 {
@@ -67,10 +68,10 @@ class EmpleadoController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreEmpleadoRequest $request)
     {
         try {
-            $validated = $this->validateEmpleado($request);
+            $validated = $request->validated();
 
             DB::beginTransaction();
 
@@ -120,10 +121,10 @@ class EmpleadoController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Empleado $empleado)
+    public function update(UpdateEmpleadoRequest $request, Empleado $empleado)
     {
         try {
-            $validated = $this->validateEmpleado($request, $empleado->id);
+            $validated = $request->validated();
 
             DB::beginTransaction();
 
@@ -176,50 +177,6 @@ class EmpleadoController extends Controller
             return back()
                 ->with('error', '❌ Error al eliminar el empleado. Por favor intenta nuevamente.');
         }
-    }
-
-    /**
-     * Validar datos del empleado (reutilizable)
-     * 
-     * @param Request $request
-     * @param int|null $empleadoId
-     * @return array
-     */
-    private function validateEmpleado(Request $request, $empleadoId = null)
-    {
-        $userIdRules = ['nullable', 'integer', 'exists:users,id'];
-
-        if ($empleadoId !== null) {
-            $userIdRules[] = Rule::unique('empleados', 'user_id')->ignore($empleadoId);
-        } else {
-            $userIdRules[] = Rule::unique('empleados', 'user_id');
-        }
-
-        $rules = [
-            'user_id' => $userIdRules,
-            'nombre' => 'required|string|max:255',
-            'rol_operativo' => 'required|in:mesero,cajero,cocinero,chef,ayudante,otros',
-            'telefono' => 'nullable|string|max:255',
-            'observaciones' => 'nullable|string',
-            'estado' => 'required|in:activo,inactivo',
-        ];
-
-        // Si el modelo tiene email, agregar validación única
-        // 'email' => 'required|email|unique:empleados,email,' . $empleadoId,
-
-        $messages = [
-            'user_id.exists' => 'El usuario seleccionado no es válido.',
-            'user_id.unique' => 'Ese usuario ya está asociado a otro empleado.',
-            'nombre.required' => 'El nombre del empleado es obligatorio.',
-            'nombre.max' => 'El nombre no puede tener más de 255 caracteres.',
-            'rol_operativo.required' => 'Debes seleccionar un rol para el empleado.',
-            'rol_operativo.in' => 'El rol seleccionado no es válido.',
-            'telefono.max' => 'El teléfono no puede tener más de 255 caracteres.',
-            'estado.required' => 'Debes seleccionar el estado del empleado.',
-            'estado.in' => 'El estado seleccionado no es válido.',
-        ];
-
-        return $request->validate($rules, $messages);
     }
 
     /**
