@@ -12,6 +12,7 @@ final class UpdateProductoRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        $this->normalizeCategory();
         $this->normalizeIdentifier('codigo_barras');
         $this->normalizeIdentifier('sku');
 
@@ -20,6 +21,25 @@ final class UpdateProductoRequest extends FormRequest
                 'stock_minimo' => 0,
             ]);
         }
+    }
+
+    private function normalizeCategory(): void
+    {
+        if (! $this->has('categoria')) {
+            return;
+        }
+
+        $value = $this->input('categoria');
+
+        if (! is_string($value)) {
+            return;
+        }
+
+        $value = trim($value);
+
+        $this->merge([
+            'categoria' => $value === '' ? null : $value,
+        ]);
     }
 
     private function normalizeIdentifier(string $field): void

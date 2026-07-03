@@ -71,6 +71,123 @@ it('requires categoria when creating a producto', function (): void {
     $response->assertSessionHasErrors(['categoria']);
 });
 
+it('rejects blank producto categoria after trimming whitespace on create', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto con categoria en blanco',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => '   ',
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.create'));
+    $response->assertSessionHasErrors(['categoria']);
+
+    $this->assertDatabaseMissing('productos', [
+        'nombre' => 'Producto con categoria en blanco',
+    ]);
+});
+
+it('stores trimmed producto categoria on create', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto categoria normalizada',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => '  bebida  ',
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.index'));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'nombre' => 'Producto categoria normalizada',
+        'categoria' => 'bebida',
+    ]);
+});
+
+it('rejects blank producto categoria after trimming whitespace on update', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Producto categoria editable',
+        'descripcion' => 'Producto de prueba',
+        'categoria' => 'bebida',
+        'precio' => 12.50,
+        'stock' => 5,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.edit', $producto))
+        ->put(route('admin.productos.update', $producto), [
+            'nombre' => 'Producto categoria editable',
+            'descripcion' => 'Producto de prueba',
+            'categoria' => "\t  \n",
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.edit', $producto));
+    $response->assertSessionHasErrors(['categoria']);
+
+    $this->assertDatabaseHas('productos', [
+        'id' => $producto->id,
+        'categoria' => 'bebida',
+    ]);
+});
+
+it('stores trimmed producto categoria on update', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Producto categoria para normalizar',
+        'descripcion' => 'Producto de prueba',
+        'categoria' => 'bebida',
+        'precio' => 12.50,
+        'stock' => 5,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.edit', $producto))
+        ->put(route('admin.productos.update', $producto), [
+            'nombre' => 'Producto categoria para normalizar',
+            'descripcion' => 'Producto de prueba actualizado',
+            'categoria' => '  panaderia  ',
+            'precio' => 13.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'id' => $producto->id,
+        'categoria' => 'panaderia',
+    ]);
+});
+
 it('allows an admin to create and update producto minimum stock', function (): void {
     $admin = User::factory()->create([
         'rol' => 'administrador',
