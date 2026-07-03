@@ -85,6 +85,110 @@ it('increments product stock and records an entrada ledger movement', function (
     ]);
 });
 
+it('stores blank stock entry motivo as null', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    $producto = stockEntryProducto([
+        'stock' => 5,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.stock-entries.store'), [
+            'producto_id' => $producto->id,
+            'cantidad' => 4,
+            'motivo' => "\t  \n",
+        ])
+        ->assertRedirect(route('admin.reportes.stock-movimientos', [
+            'producto_id' => $producto->id,
+        ]));
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'tipo' => StockMovimiento::TIPO_ENTRADA,
+        'cantidad' => 4,
+        'motivo' => null,
+    ]);
+});
+
+it('stores unicode blank stock entry motivo as null', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    $producto = stockEntryProducto([
+        'stock' => 5,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.stock-entries.store'), [
+            'producto_id' => $producto->id,
+            'cantidad' => 4,
+            'motivo' => "\u{00A0}\u{2003}",
+        ])
+        ->assertRedirect(route('admin.reportes.stock-movimientos', [
+            'producto_id' => $producto->id,
+        ]));
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'tipo' => StockMovimiento::TIPO_ENTRADA,
+        'cantidad' => 4,
+        'motivo' => null,
+    ]);
+});
+
+it('stores trimmed stock entry motivo', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    $producto = stockEntryProducto([
+        'stock' => 5,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.stock-entries.store'), [
+            'producto_id' => $producto->id,
+            'cantidad' => 4,
+            'motivo' => '  Weekly receiving  ',
+        ])
+        ->assertRedirect(route('admin.reportes.stock-movimientos', [
+            'producto_id' => $producto->id,
+        ]));
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'tipo' => StockMovimiento::TIPO_ENTRADA,
+        'cantidad' => 4,
+        'motivo' => 'Weekly receiving',
+    ]);
+});
+
+it('trims unicode whitespace around stock entry motivo', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    $producto = stockEntryProducto([
+        'stock' => 5,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.stock-entries.store'), [
+            'producto_id' => $producto->id,
+            'cantidad' => 4,
+            'motivo' => "\u{00A0}Weekly receiving\u{2003}",
+        ])
+        ->assertRedirect(route('admin.reportes.stock-movimientos', [
+            'producto_id' => $producto->id,
+        ]));
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'tipo' => StockMovimiento::TIPO_ENTRADA,
+        'cantidad' => 4,
+        'motivo' => 'Weekly receiving',
+    ]);
+});
+
 it('validates product and quantity before registering a stock entry', function (): void {
     $admin = User::factory()->create([
         'rol' => 'administrador',

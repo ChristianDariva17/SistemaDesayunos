@@ -11,6 +11,30 @@ use Illuminate\Validation\Validator;
 
 final class StoreStockEntryRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('motivo')) {
+            return;
+        }
+
+        $value = $this->input('motivo');
+
+        if (! is_string($value)) {
+            return;
+        }
+
+        $value = $this->trimUnicodeWhitespace($value);
+
+        $this->merge([
+            'motivo' => $value === '' ? null : $value,
+        ]);
+    }
+
+    private function trimUnicodeWhitespace(string $value): string
+    {
+        return preg_replace('/^[\s\p{Z}\x{FEFF}]+|[\s\p{Z}\x{FEFF}]+$/u', '', $value) ?? trim($value);
+    }
+
     public function authorize(): bool
     {
         return true;
