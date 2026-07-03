@@ -274,6 +274,98 @@ it('creates a pedido through the admin HTTP store flow', function (): void {
     expect($producto->refresh()->stock)->toBe(7);
 });
 
+it('stores whitespace-only pedido observations as null through the admin HTTP store flow', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.paredes.blank-observations@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Sandwich Observaciones Blank',
+        'categoria' => 'desayuno',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => 12.50,
+    ]);
+
+    $this->actingAs($user)->post(route('admin.pedidos.store'), [
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'metodo_pago' => 'efectivo',
+        'observaciones' => " \t\n ",
+        'productos' => [
+            [
+                'producto_id' => $producto->id,
+                'cantidad' => 1,
+            ],
+        ],
+    ])->assertRedirect();
+
+    $this->assertDatabaseHas('pedidos', [
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'observaciones' => null,
+    ]);
+});
+
+it('trims non-empty pedido observations through the admin HTTP store flow', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.paredes.trimmed-observations@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Sandwich Observaciones Trimmed',
+        'categoria' => 'desayuno',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => 12.50,
+    ]);
+
+    $this->actingAs($user)->post(route('admin.pedidos.store'), [
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'metodo_pago' => 'efectivo',
+        'observaciones' => "  Leave at reception \n",
+        'productos' => [
+            [
+                'producto_id' => $producto->id,
+                'cantidad' => 1,
+            ],
+        ],
+    ])->assertRedirect();
+
+    $this->assertDatabaseHas('pedidos', [
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'observaciones' => 'Leave at reception',
+    ]);
+});
+
 it('creates a pedido through the trabajador HTTP store flow', function (): void {
     $user = User::factory()->create([
         'rol' => 'trabajador',

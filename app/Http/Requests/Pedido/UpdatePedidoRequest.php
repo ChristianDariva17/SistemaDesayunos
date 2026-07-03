@@ -8,6 +8,19 @@ use Illuminate\Foundation\Http\FormRequest;
 
 final class UpdatePedidoRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('observaciones') || ! is_string($this->input('observaciones'))) {
+            return;
+        }
+
+        $observaciones = trim($this->input('observaciones'));
+
+        $this->merge([
+            'observaciones' => $observaciones === '' ? null : $observaciones,
+        ]);
+    }
+
     public function authorize(): bool
     {
         return true;

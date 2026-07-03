@@ -250,6 +250,48 @@ it('updates a pedido through the admin HTTP flow and restores stock on cancel', 
     expect($producto->refresh()->stock)->toBe(6);
 });
 
+it('stores whitespace-only pedido observations as null through the admin HTTP update flow', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    [$pedido] = createPedidoForStatusTransitionTest('pendiente');
+
+    $this->actingAs($user)
+        ->from(route('admin.pedidos.edit', $pedido))
+        ->patch(route('admin.pedidos.update', $pedido), [
+            'estado' => 'pendiente',
+            'observaciones' => " \t\n ",
+        ])
+        ->assertRedirect(route('admin.pedidos.show', $pedido));
+
+    $this->assertDatabaseHas('pedidos', [
+        'id' => $pedido->id,
+        'estado' => 'pendiente',
+        'observaciones' => null,
+    ]);
+});
+
+it('trims non-empty pedido observations through the admin HTTP update flow', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    [$pedido] = createPedidoForStatusTransitionTest('pendiente');
+
+    $this->actingAs($user)
+        ->from(route('admin.pedidos.edit', $pedido))
+        ->patch(route('admin.pedidos.update', $pedido), [
+            'estado' => 'pendiente',
+            'observaciones' => "  Leave at reception \n",
+        ])
+        ->assertRedirect(route('admin.pedidos.show', $pedido));
+
+    $this->assertDatabaseHas('pedidos', [
+        'id' => $pedido->id,
+        'estado' => 'pendiente',
+        'observaciones' => 'Leave at reception',
+    ]);
+});
+
 it('rejects pedido reactivation when a stale loaded product would oversell stock', function (): void {
     $user = User::factory()->create([
         'rol' => 'administrador',

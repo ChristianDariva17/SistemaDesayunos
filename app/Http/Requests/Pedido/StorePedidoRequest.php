@@ -10,23 +10,30 @@ final class StorePedidoRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
-        if (! $this->has('productos') || ! is_array($this->input('productos'))) {
-            return;
+        $normalized = [];
+
+        if ($this->has('observaciones') && is_string($this->input('observaciones'))) {
+            $observaciones = trim($this->input('observaciones'));
+            $normalized['observaciones'] = $observaciones === '' ? null : $observaciones;
         }
 
-        $productos = array_map(static function (mixed $producto): mixed {
-            if (! is_array($producto)) {
+        if ($this->has('productos') && is_array($this->input('productos'))) {
+            $normalized['productos'] = array_map(static function (mixed $producto): mixed {
+                if (! is_array($producto)) {
+                    return $producto;
+                }
+
+                if (array_key_exists('producto_id', $producto) && ! array_key_exists('id', $producto)) {
+                    $producto['id'] = $producto['producto_id'];
+                }
+
                 return $producto;
-            }
+            }, $this->input('productos'));
+        }
 
-            if (array_key_exists('producto_id', $producto) && ! array_key_exists('id', $producto)) {
-                $producto['id'] = $producto['producto_id'];
-            }
-
-            return $producto;
-        }, $this->input('productos'));
-
-        $this->merge(['productos' => $productos]);
+        if ($normalized !== []) {
+            $this->merge($normalized);
+        }
     }
 
     public function authorize(): bool
