@@ -368,11 +368,18 @@ class ProductoController extends Controller
     public function actualizarStock(Request $request, Producto $producto)
     {
         try {
+            if (is_string($request->input('motivo'))) {
+                $request->merge([
+                    'motivo' => $this->normalizeManualStockMotivo($request->input('motivo')),
+                ]);
+            }
+
             $validated = $request->validate([
                 'cantidad' => 'required|integer|min:0',
                 'tipo' => 'required|in:incrementar,decrementar,establecer',
                 'motivo' => 'nullable|string|max:255'
             ]);
+            $motivo = $this->normalizeManualStockMotivo($validated['motivo'] ?? null);
 
             DB::beginTransaction();
 
@@ -411,7 +418,7 @@ class ProductoController extends Controller
                 stockAnterior: (int) $stockAnterior,
                 stockNuevo: (int) $producto->stock,
                 user: $request->user(),
-                motivo: $validated['motivo'] ?? 'Manual stock adjustment',
+                motivo: $motivo,
             );
 
             DB::commit();
@@ -421,7 +428,7 @@ class ProductoController extends Controller
                 'stock_anterior' => $stockAnterior,
                 'stock_nuevo' => $producto->stock,
                 'tipo' => $validated['tipo'],
-                'motivo' => $validated['motivo'] ?? 'No especificado'
+                'motivo' => $motivo ?? 'No especificado'
             ]);
 
             return redirect()->back()
@@ -442,6 +449,18 @@ class ProductoController extends Controller
         }
     }
 
+    private function normalizeManualStockMotivo(mixed $motivo): ?string
+    {
+        if (! is_string($motivo)) {
+            return null;
+        }
+
+        $normalized = preg_replace('/^[\s\p{Z}\x{FEFF}]+|[\s\p{Z}\x{FEFF}]+$/u', '', $motivo);
+        $normalized = $normalized ?? $motivo;
+
+        return $normalized === '' ? null : $normalized;
+    }
+
     private function registerManualStockAdjustment(
         Producto $producto,
         int $stockAnterior,
@@ -460,7 +479,7 @@ class ProductoController extends Controller
             stockAnterior: $stockAnterior,
             stockNuevo: $stockNuevo,
             user: $user,
-            motivo: $motivo ?: 'Manual stock adjustment',
+            motivo: $motivo,
         );
     }
 

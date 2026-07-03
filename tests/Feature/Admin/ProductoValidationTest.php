@@ -1169,6 +1169,145 @@ it('records an ajuste stock movement when the manual stock endpoint changes stoc
     ]);
 });
 
+it('normalizes blank manual stock motivo values to null', function (string $motivo): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Pan integral',
+        'descripcion' => 'Original',
+        'categoria' => 'desayuno',
+        'precio' => 6.50,
+        'stock' => 10,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.show', $producto))
+        ->patch(route('admin.productos.actualizar-stock', $producto), [
+            'tipo' => 'incrementar',
+            'cantidad' => 1,
+            'motivo' => $motivo,
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'tipo' => StockMovimiento::TIPO_AJUSTE,
+        'stock_anterior' => 10,
+        'stock_nuevo' => 11,
+        'motivo' => null,
+    ]);
+})->with([
+    'ASCII blank' => [" \t\n "],
+    'Unicode and NBSP blank' => ["\u{FEFF}\u{00A0}\u{2003}"],
+]);
+
+it('stores omitted manual stock motivo as null', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Medialunas',
+        'descripcion' => 'Original',
+        'categoria' => 'desayuno',
+        'precio' => 8.50,
+        'stock' => 10,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.show', $producto))
+        ->patch(route('admin.productos.actualizar-stock', $producto), [
+            'tipo' => 'incrementar',
+            'cantidad' => 1,
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'tipo' => StockMovimiento::TIPO_AJUSTE,
+        'stock_anterior' => 10,
+        'stock_nuevo' => 11,
+        'motivo' => null,
+    ]);
+});
+
+it('trims manual stock motivo values before persistence', function (string $motivo, string $expectedMotivo): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Tostadas',
+        'descripcion' => 'Original',
+        'categoria' => 'desayuno',
+        'precio' => 7.25,
+        'stock' => 10,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.show', $producto))
+        ->patch(route('admin.productos.actualizar-stock', $producto), [
+            'tipo' => 'incrementar',
+            'cantidad' => 1,
+            'motivo' => $motivo,
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'tipo' => StockMovimiento::TIPO_AJUSTE,
+        'stock_anterior' => 10,
+        'stock_nuevo' => 11,
+        'motivo' => $expectedMotivo,
+    ]);
+})->with([
+    'normal trimmed value' => ['  Cycle count correction  ', 'Cycle count correction'],
+    'Unicode-edge trimmed value' => ["\u{FEFF}\u{00A0}Inventory count correction\u{2003}\u{00A0}", 'Inventory count correction'],
+]);
+
+it('validates manual stock motivo max length after trimming unicode whitespace', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Cafe molido',
+        'descripcion' => 'Original',
+        'categoria' => 'bebida',
+        'precio' => 12.00,
+        'stock' => 10,
+        'estado' => 'activo',
+    ]);
+    $motivo = str_repeat('x', 255);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.show', $producto))
+        ->patch(route('admin.productos.actualizar-stock', $producto), [
+            'tipo' => 'incrementar',
+            'cantidad' => 1,
+            'motivo' => "\u{00A0}" . $motivo . "\u{2003}",
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'tipo' => StockMovimiento::TIPO_AJUSTE,
+        'stock_anterior' => 10,
+        'stock_nuevo' => 11,
+        'motivo' => $motivo,
+    ]);
+});
+
 it('validates manual stock decrements against the reloaded product stock', function (): void {
     $admin = User::factory()->create([
         'rol' => 'administrador',
