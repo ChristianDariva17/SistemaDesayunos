@@ -100,6 +100,106 @@ it('stores trimmed producto nombre on create', function (): void {
     ]);
 });
 
+it('stores blank producto descripcion as null on create', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto descripcion en blanco',
+            'descripcion' => "\t  \n",
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.index'));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'nombre' => 'Producto descripcion en blanco',
+        'descripcion' => null,
+    ]);
+});
+
+it('stores unicode blank producto descripcion as null on create', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto descripcion unicode en blanco',
+            'descripcion' => "\u{00A0}\u{2003}",
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.index'));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'nombre' => 'Producto descripcion unicode en blanco',
+        'descripcion' => null,
+    ]);
+});
+
+it('stores trimmed producto descripcion on create', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto descripcion normalizada',
+            'descripcion' => '  Descripcion de prueba  ',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.index'));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'nombre' => 'Producto descripcion normalizada',
+        'descripcion' => 'Descripcion de prueba',
+    ]);
+});
+
+it('trims unicode whitespace around producto descripcion on create', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto descripcion unicode normalizada',
+            'descripcion' => "\u{00A0}Descripcion de prueba\u{2003}",
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.index'));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'nombre' => 'Producto descripcion unicode normalizada',
+        'descripcion' => 'Descripcion de prueba',
+    ]);
+});
+
 it('requires categoria when creating a producto', function (): void {
     $admin = User::factory()->create([
         'rol' => 'administrador',
@@ -301,6 +401,142 @@ it('stores trimmed producto nombre on update', function (): void {
     $this->assertDatabaseHas('productos', [
         'id' => $producto->id,
         'nombre' => 'Producto nombre actualizado',
+    ]);
+});
+
+it('stores blank producto descripcion as null on update', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Producto descripcion editable',
+        'descripcion' => 'Producto de prueba',
+        'categoria' => 'bebida',
+        'precio' => 12.50,
+        'stock' => 5,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.edit', $producto))
+        ->put(route('admin.productos.update', $producto), [
+            'nombre' => 'Producto descripcion editable',
+            'descripcion' => '   ',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'id' => $producto->id,
+        'descripcion' => null,
+    ]);
+});
+
+it('stores unicode blank producto descripcion as null on update', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Producto descripcion unicode editable',
+        'descripcion' => 'Producto de prueba',
+        'categoria' => 'bebida',
+        'precio' => 12.50,
+        'stock' => 5,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.edit', $producto))
+        ->put(route('admin.productos.update', $producto), [
+            'nombre' => 'Producto descripcion unicode editable',
+            'descripcion' => "\u{00A0}\u{2003}",
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'id' => $producto->id,
+        'descripcion' => null,
+    ]);
+});
+
+it('stores trimmed producto descripcion on update', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Producto descripcion para normalizar',
+        'descripcion' => 'Producto de prueba',
+        'categoria' => 'bebida',
+        'precio' => 12.50,
+        'stock' => 5,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.edit', $producto))
+        ->put(route('admin.productos.update', $producto), [
+            'nombre' => 'Producto descripcion para normalizar',
+            'descripcion' => '  Descripcion actualizada  ',
+            'categoria' => 'bebida',
+            'precio' => 13.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'id' => $producto->id,
+        'descripcion' => 'Descripcion actualizada',
+    ]);
+});
+
+it('trims unicode whitespace around producto descripcion on update', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Producto descripcion unicode para normalizar',
+        'descripcion' => 'Producto de prueba',
+        'categoria' => 'bebida',
+        'precio' => 12.50,
+        'stock' => 5,
+        'estado' => 'activo',
+    ]);
+
+    $response = $this->actingAs($admin)
+        ->from(route('admin.productos.edit', $producto))
+        ->put(route('admin.productos.update', $producto), [
+            'nombre' => 'Producto descripcion unicode para normalizar',
+            'descripcion' => "\u{00A0}Descripcion actualizada\u{2003}",
+            'categoria' => 'bebida',
+            'precio' => 13.50,
+            'stock' => 5,
+            'estado' => 'activo',
+        ]);
+
+    $response->assertRedirect(route('admin.productos.show', $producto));
+    $response->assertSessionHasNoErrors();
+
+    $this->assertDatabaseHas('productos', [
+        'id' => $producto->id,
+        'descripcion' => 'Descripcion actualizada',
     ]);
 });
 

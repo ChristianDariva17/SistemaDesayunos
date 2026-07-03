@@ -13,6 +13,7 @@ final class StoreProductoRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $this->normalizeRequiredString('nombre');
+        $this->normalizeNullableString('descripcion');
         $this->normalizeCategory();
         $this->normalizeIdentifier('codigo_barras');
         $this->normalizeIdentifier('sku');
@@ -58,6 +59,30 @@ final class StoreProductoRequest extends FormRequest
         $this->merge([
             'categoria' => $value === '' ? null : $value,
         ]);
+    }
+
+    private function normalizeNullableString(string $field): void
+    {
+        if (! $this->has($field)) {
+            return;
+        }
+
+        $value = $this->input($field);
+
+        if (! is_string($value)) {
+            return;
+        }
+
+        $value = $this->trimUnicodeWhitespace($value);
+
+        $this->merge([
+            $field => $value === '' ? null : $value,
+        ]);
+    }
+
+    private function trimUnicodeWhitespace(string $value): string
+    {
+        return preg_replace('/^[\s\p{Z}\x{FEFF}]+|[\s\p{Z}\x{FEFF}]+$/u', '', $value) ?? trim($value);
     }
 
     private function normalizeIdentifier(string $field): void
