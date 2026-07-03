@@ -12,6 +12,7 @@ final class UpdateProductoRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        $this->normalizeRequiredString('nombre');
         $this->normalizeCategory();
         $this->normalizeIdentifier('codigo_barras');
         $this->normalizeIdentifier('sku');
@@ -21,6 +22,23 @@ final class UpdateProductoRequest extends FormRequest
                 'stock_minimo' => 0,
             ]);
         }
+    }
+
+    private function normalizeRequiredString(string $field): void
+    {
+        if (! $this->has($field)) {
+            return;
+        }
+
+        $value = $this->input($field);
+
+        if (! is_string($value)) {
+            return;
+        }
+
+        $this->merge([
+            $field => trim($value),
+        ]);
     }
 
     private function normalizeCategory(): void
