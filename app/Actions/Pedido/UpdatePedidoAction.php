@@ -12,15 +12,26 @@ use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 
 final class UpdatePedidoAction
 {
+    /**
+     * @var array<string, array<int, string>>
+     */
+    private const ALLOWED_STATUS_TRANSITIONS = [
+        'pendiente' => ['procesando', 'cancelado'],
+        'procesando' => ['completado', 'cancelado'],
+        'completado' => [],
+        'cancelado' => ['pendiente'],
+    ];
+
     public function __construct(
         private readonly RegisterStockMovementAction $registerStockMovement,
     ) {}
 
     /**
-     * @param array{estado:string,observaciones?:string|null} $data
+     * @param  array{estado:string,observaciones?:string|null}  $data
      */
     public function handle(array $data, Pedido $pedido, ?int $userId = null): Pedido
     {
@@ -31,6 +42,8 @@ final class UpdatePedidoAction
                 ->findOrFail($pedido->getKey());
 
             $estadoAnterior = $pedido->estado;
+            $this->validateStatusTransition($estadoAnterior, $data['estado']);
+
             $user = $userId === null ? null : User::find($userId);
 
             if ($data['estado'] === 'cancelado' && $estadoAnterior !== 'cancelado') {
@@ -52,6 +65,26 @@ final class UpdatePedidoAction
 
             return $pedido->refresh();
         });
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    private function validateStatusTransition(string $currentStatus, string $nextStatus): void
+    {
+        if ($currentStatus === $nextStatus) {
+            return;
+        }
+
+        $allowedNextStatuses = self::ALLOWED_STATUS_TRANSITIONS[$currentStatus] ?? [];
+
+        if (in_array($nextStatus, $allowedNextStatuses, true)) {
+            return;
+        }
+
+        throw ValidationException::withMessages([
+            'estado' => "The pedido status cannot transition from {$currentStatus} to {$nextStatus}.",
+        ]);
     }
 
     private function restoreStock(Pedido $pedido, ?User $user): void

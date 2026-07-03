@@ -17,6 +17,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Exception;
 
 class PedidoController extends Controller
@@ -140,14 +141,7 @@ class PedidoController extends Controller
      */
     public function show(Pedido $pedido)
     {
-        $pedido->load([
-            'cliente',
-            'empleado:id,nombre,rol_operativo,estado',
-            'productos' => function ($query) {
-                $query->select('productos.id', 'productos.nombre', 'productos.imagen')
-                    ->withPivot('cantidad', 'precio_unitario', 'subtotal');
-            }
-        ]);
+        $pedido->loadDetails();
 
         return view('admin.pedidos.show', compact('pedido'));
     }
@@ -158,7 +152,7 @@ class PedidoController extends Controller
     public function edit(Pedido $pedido)
     {
         // ✅ Cargar relaciones con validación
-        $pedido->load(['cliente', 'empleado', 'productos']);
+        $pedido->loadDetails();
 
         // Obtener listas completas
         $clientes = Cliente::orderBy('nombre')->get();
@@ -180,6 +174,8 @@ class PedidoController extends Controller
 
             return redirect()->route('admin.pedidos.show', $pedido)
                 ->with('success', "✅ Pedido actualizado exitosamente");
+        } catch (ValidationException $e) {
+            throw $e;
         } catch (Exception $e) {
             Log::error('Error al actualizar pedido', [
                 'pedido_id' => $pedido->id,
@@ -296,6 +292,11 @@ class PedidoController extends Controller
                 'message' => 'Estado cambiado a: ' . ucfirst($request->estado),
                 'nuevo_estado' => $request->estado
             ]);
+        } catch (ValidationException $e) {
+            return response()->json([
+                'message' => $e->getMessage(),
+                'errors' => $e->errors(),
+            ], 422);
         } catch (Exception $e) {
             $status = str_contains($e->getMessage(), 'Stock insuficiente') ? 400 : 500;
 
@@ -311,8 +312,9 @@ class PedidoController extends Controller
      */
     public function imprimir(Pedido $pedido)
     {
-        $pedido->load(['cliente', 'empleado', 'productos']);
-        return view('pedidos.ticket', compact('pedido'));
+        $pedido->loadDetails();
+
+        return view('admin.pedidos.show', compact('pedido'));
     }
 
     /**

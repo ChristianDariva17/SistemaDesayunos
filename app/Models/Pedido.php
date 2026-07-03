@@ -6,8 +6,11 @@ namespace App\Models;
 
 use App\Actions\Stock\RegisterStockMovementAction;
 use Exception;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -15,6 +18,8 @@ use Illuminate\Support\Str;
 class Pedido extends Model
 {
     use HasFactory;
+
+    public const PRODUCTOS_PIVOT_COLUMNS = ['cantidad', 'precio_unitario', 'subtotal'];
 
     protected $fillable = [
         'numero_pedido',
@@ -34,21 +39,31 @@ class Pedido extends Model
         'hora' => 'string',
     ];
 
-    public function productos()
+    public function productos(): BelongsToMany
     {
         return $this->belongsToMany(Producto::class, 'pedido_producto')
-                    ->withPivot('cantidad', 'precio_unitario', 'subtotal')
+                    ->withPivot(self::PRODUCTOS_PIVOT_COLUMNS)
                     ->withTimestamps();
+    }
+
+    public function scopeWithDetails(Builder $query): Builder
+    {
+        return $query->with(['cliente', 'empleado', 'productos']);
+    }
+
+    public function loadDetails(): self
+    {
+        return $this->load(['cliente', 'empleado', 'productos']);
     }
 
 
     // Relación con Empleado (User)
-    public function empleado()
+    public function empleado(): BelongsTo
     {
         return $this->belongsTo(Empleado::class, 'empleado_id');
     }
 
-    public function cliente()
+    public function cliente(): BelongsTo
     {
         return $this->belongsTo(Cliente::class);
     }

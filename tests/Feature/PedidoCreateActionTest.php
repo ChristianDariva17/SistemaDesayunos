@@ -9,6 +9,7 @@ use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 it('creates a pedido through the shared create action and persists stock changes', function (): void {
     $user = User::factory()->create([
@@ -440,4 +441,74 @@ it('exposes subtotal through the product to pedidos pivot relationship', functio
     expect((int) $pedidoFromProduct->pivot->cantidad)->toBe(3)
         ->and((float) $pedidoFromProduct->pivot->precio_unitario)->toBe(12.5)
         ->and((float) $pedidoFromProduct->pivot->subtotal)->toBe(37.5);
+});
+
+it('keeps pedido product relationships typed and exposes canonical pivot fields', function (): void {
+    $pedido = new Pedido();
+    $producto = new Producto();
+
+    expect($pedido->productos())->toBeInstanceOf(BelongsToMany::class)
+        ->and($producto->pedidos())->toBeInstanceOf(BelongsToMany::class)
+        ->and(Pedido::PRODUCTOS_PIVOT_COLUMNS)->toBe(['cantidad', 'precio_unitario', 'subtotal']);
+});
+
+it('loads pedido details through the shared helper with canonical product pivot data', function (): void {
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.paredes.details@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Sandwich',
+        'categoria' => 'desayuno',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => 12.50,
+    ]);
+
+    $pedido = Pedido::create([
+        'numero_pedido' => 'PED-202607-DETAIL',
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'metodo_pago' => 'efectivo',
+        'fecha' => '2026-07-02',
+        'hora' => '08:30:00',
+        'total' => 37.50,
+        'estado' => 'pendiente',
+        'observaciones' => null,
+    ]);
+
+    $pedido->productos()->attach($producto->id, [
+        'cantidad' => 3,
+        'precio_unitario' => 12.50,
+        'subtotal' => 37.50,
+    ]);
+
+    $loadedPedido = Pedido::query()
+        ->whereKey($pedido->id)
+        ->withDetails()
+        ->firstOrFail();
+
+    expect($loadedPedido->relationLoaded('cliente'))->toBeTrue()
+        ->and($loadedPedido->relationLoaded('empleado'))->toBeTrue()
+        ->and($loadedPedido->relationLoaded('productos'))->toBeTrue()
+        ->and($loadedPedido->productos)->toHaveCount(1)
+        ->and((int) $loadedPedido->productos->first()->pivot->cantidad)->toBe(3)
+        ->and((float) $loadedPedido->productos->first()->pivot->precio_unitario)->toBe(12.5)
+        ->and((float) $loadedPedido->productos->first()->pivot->subtotal)->toBe(37.5);
+
+    $reloadedPedido = $pedido->fresh();
+    $reloadedPedido->loadDetails();
+
+    expect($reloadedPedido->relationLoaded('cliente'))->toBeTrue()
+        ->and($reloadedPedido->relationLoaded('empleado'))->toBeTrue()
+        ->and($reloadedPedido->relationLoaded('productos'))->toBeTrue();
 });

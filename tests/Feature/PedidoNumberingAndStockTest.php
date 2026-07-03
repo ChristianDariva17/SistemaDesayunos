@@ -769,3 +769,76 @@ it('renders pedido detail pages with canonical fecha hora and pivot product data
     $workerResponse->assertSee('S/ 6.50');
     $workerResponse->assertSee('S/ 19.50');
 });
+
+it('renders admin pedido edit page with pivot product data after loading details', function (): void {
+    $cliente = pedidoTestCliente([
+        'nombre' => 'Edit',
+        'apellido' => 'Cliente',
+    ]);
+    $empleado = pedidoTestEmpleado([
+        'nombre' => 'Edit Worker',
+    ]);
+    $producto = pedidoTestProducto([
+        'nombre' => 'Combo Edit Contract',
+        'precio' => 99.00,
+        'stock' => 8,
+    ]);
+    $pedido = pedidoTestPedido($cliente, $empleado, [
+        'numero_pedido' => 'PED-202606-EDIT-CONTRACT',
+        'total' => 19.50,
+    ]);
+
+    $pedido->productos()->attach($producto->id, [
+        'cantidad' => 3,
+        'precio_unitario' => 6.50,
+        'subtotal' => 19.50,
+    ]);
+
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('admin.pedidos.edit', $pedido));
+
+    $response->assertOk();
+    $response->assertSee('Combo Edit Contract');
+    $response->assertSee('value="3"', false);
+    $response->assertSee('S/ 6.50');
+    $response->assertSee('S/ 19.50');
+});
+
+it('renders admin pedido print page with pivot product data after loading details', function (): void {
+    $cliente = pedidoTestCliente([
+        'nombre' => 'Print',
+        'apellido' => 'Cliente',
+    ]);
+    $empleado = pedidoTestEmpleado([
+        'nombre' => 'Print Worker',
+    ]);
+    $producto = pedidoTestProducto([
+        'nombre' => 'Combo Print Contract',
+        'precio' => 99.00,
+    ]);
+    $pedido = pedidoTestPedido($cliente, $empleado, [
+        'numero_pedido' => 'PED-202606-PRINT-CONTRACT',
+        'total' => 19.50,
+    ]);
+
+    $pedido->productos()->attach($producto->id, [
+        'cantidad' => 3,
+        'precio_unitario' => 6.50,
+        'subtotal' => 19.50,
+    ]);
+
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $response = $this->actingAs($admin)->get(route('admin.pedidos.imprimir', $pedido));
+
+    $response->assertOk();
+    $response->assertSee('Combo Print Contract');
+    $response->assertSee('3');
+    $response->assertSee('S/ 6.50');
+    $response->assertSee('S/ 19.50');
+});

@@ -1,10 +1,13 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Support\InventoryLimits;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Producto extends Model
@@ -48,10 +51,10 @@ class Producto extends Model
      * Un producto puede estar en muchos pedidos
      * Relación Many-to-Many con Pedido
      */
-    public function pedidos()
+    public function pedidos(): BelongsToMany
     {
         return $this->belongsToMany(Pedido::class, 'pedido_producto')
-            ->withPivot('cantidad', 'precio_unitario', 'subtotal')
+            ->withPivot(Pedido::PRODUCTOS_PIVOT_COLUMNS)
             ->withTimestamps();
     }
 

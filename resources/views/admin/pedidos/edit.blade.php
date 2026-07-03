@@ -336,7 +336,7 @@
                                                            value="{{ $producto->pivot->cantidad }}"
                                                            min="1"
                                                            data-index="{{ $index }}"
-                                                           data-precio="{{ $producto->precio }}"
+                                                           data-precio="{{ $producto->pivot->precio_unitario }}"
                                                            data-stock="{{ $producto->stock + $producto->pivot->cantidad }}"
                                                            data-cantidad-original="{{ $producto->pivot->cantidad }}">
                                                     <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="plus" data-index="{{ $index }}">
@@ -348,12 +348,12 @@
                                                 </small>
                                             </td>
                                             <td class="text-end">
-                                                <strong class="text-success">S/ {{ number_format($producto->precio, 2) }}</strong>
+                                                <strong class="text-success">S/ {{ number_format($producto->pivot->precio_unitario, 2) }}</strong>
                                                 <small class="text-muted d-block">c/u</small>
                                             </td>
                                             <td class="text-end">
                                                 <strong class="fs-5 subtotal-producto" data-index="{{ $index }}">
-                                                    S/ {{ number_format($producto->pivot->cantidad * $producto->precio, 2) }}
+                                                    S/ {{ number_format($producto->pivot->subtotal, 2) }}
                                                 </strong>
                                             </td>
                                             <td class="text-center">
@@ -771,10 +771,10 @@
                 index: {{ $index }},
                 producto_id: {{ $producto->id }},
                 nombre: '{{ $producto->nombre }}',
-                precio: {{ $producto->precio }},
+                precio: {{ $producto->pivot->precio_unitario }},
                 cantidad: {{ $producto->pivot->cantidad }},
                 stock: {{ $producto->stock + $producto->pivot->cantidad }},
-                subtotal: {{ $producto->pivot->cantidad * $producto->precio }},
+                subtotal: {{ $producto->pivot->subtotal }},
                 pivot_id: {{ $producto->pivot->id }}
             });
         @endforeach

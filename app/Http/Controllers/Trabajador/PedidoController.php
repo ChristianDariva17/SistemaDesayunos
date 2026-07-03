@@ -138,14 +138,7 @@ class PedidoController extends Controller
      */
     public function show(Pedido $pedido)
     {
-        $pedido->load([
-            'cliente',
-            'empleado:id,nombre,rol_operativo,estado',
-            'productos' => function ($query) {
-                $query->select('productos.id', 'productos.nombre', 'productos.imagen')
-                    ->withPivot('cantidad', 'precio_unitario', 'subtotal');
-            }
-        ]);
+        $pedido->loadDetails();
 
         return view('trabajador.pedidos.show', compact('pedido'));
     }
@@ -156,7 +149,7 @@ class PedidoController extends Controller
     public function edit(Pedido $pedido)
     {
         // ✅ Cargar relaciones con validación
-        $pedido->load(['cliente', 'empleado', 'productos']);
+        $pedido->loadDetails();
 
         // Obtener listas completas
         $clientes = Cliente::orderBy('nombre')->get();
@@ -270,7 +263,7 @@ class PedidoController extends Controller
      */
     public function imprimir(Pedido $pedido)
     {
-        $pedido->load(['cliente', 'empleado', 'productos']);
+        $pedido->loadDetails();
         return view('pedidos.ticket', compact('pedido'));
     }
 

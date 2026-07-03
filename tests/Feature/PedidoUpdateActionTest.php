@@ -9,6 +9,172 @@ use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
+use Illuminate\Validation\ValidationException;
+
+it('rejects completed pedido regression to pending status', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    [$pedido] = createPedidoForStatusTransitionTest('completado');
+
+    expect(fn (): mixed => app(UpdatePedidoAction::class)->handle([
+        'estado' => 'pendiente',
+        'observaciones' => 'Invalid completed regression',
+    ], $pedido, $user->id))->toThrow(
+        ValidationException::class,
+        'The pedido status cannot transition from completado to pendiente.',
+    );
+
+    $this->assertDatabaseHas('pedidos', [
+        'id' => $pedido->id,
+        'estado' => 'completado',
+        'observaciones' => null,
+    ]);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('rejects pending pedido transition directly to completed status', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    [$pedido] = createPedidoForStatusTransitionTest('pendiente');
+
+    expect(fn (): mixed => app(UpdatePedidoAction::class)->handle([
+        'estado' => 'completado',
+        'observaciones' => 'Invalid lifecycle skip',
+    ], $pedido, $user->id))->toThrow(
+        ValidationException::class,
+        'The pedido status cannot transition from pendiente to completado.',
+    );
+
+    $this->assertDatabaseHas('pedidos', [
+        'id' => $pedido->id,
+        'estado' => 'pendiente',
+        'observaciones' => null,
+    ]);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('allows sequential pedido lifecycle transitions', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    [$pedido] = createPedidoForStatusTransitionTest('pendiente');
+
+    $updatedPedido = app(UpdatePedidoAction::class)->handle([
+        'estado' => 'procesando',
+        'observaciones' => 'Pedido is being prepared',
+    ], $pedido, $user->id);
+
+    expect($updatedPedido->estado)->toBe('procesando')
+        ->and($updatedPedido->observaciones)->toBe('Pedido is being prepared');
+
+    $completedPedido = app(UpdatePedidoAction::class)->handle([
+        'estado' => 'completado',
+        'observaciones' => 'Pedido completed',
+    ], $updatedPedido, $user->id);
+
+    expect($completedPedido->estado)->toBe('completado')
+        ->and($completedPedido->observaciones)->toBe('Pedido completed');
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('enforces the pedido status transition matrix', function (string $currentStatus, string $nextStatus, bool $allowed): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    [$pedido] = createPedidoForStatusTransitionTest($currentStatus);
+
+    $payload = [
+        'estado' => $nextStatus,
+        'observaciones' => "Transition {$currentStatus} to {$nextStatus}",
+    ];
+
+    if (! $allowed) {
+        expect(fn (): mixed => app(UpdatePedidoAction::class)->handle($payload, $pedido, $user->id))->toThrow(
+            ValidationException::class,
+            "The pedido status cannot transition from {$currentStatus} to {$nextStatus}.",
+        );
+
+        $this->assertDatabaseHas('pedidos', [
+            'id' => $pedido->id,
+            'estado' => $currentStatus,
+            'observaciones' => null,
+        ]);
+        $this->assertDatabaseCount('stock_movimientos', 0);
+
+        return;
+    }
+
+    app(UpdatePedidoAction::class)->handle($payload, $pedido, $user->id);
+
+    $this->assertDatabaseHas('pedidos', [
+        'id' => $pedido->id,
+        'estado' => $nextStatus,
+        'observaciones' => "Transition {$currentStatus} to {$nextStatus}",
+    ]);
+
+    $expectedStockMovements = $currentStatus === 'procesando' && $nextStatus === 'cancelado' ? 1 : 0;
+    $this->assertDatabaseCount('stock_movimientos', $expectedStockMovements);
+})->with([
+    'processing to pending is rejected' => ['procesando', 'pendiente', false],
+    'processing to cancelled is allowed' => ['procesando', 'cancelado', true],
+    'cancelled to processing is rejected' => ['cancelado', 'procesando', false],
+    'cancelled to completed is rejected' => ['cancelado', 'completado', false],
+    'completed to processing is rejected' => ['completado', 'procesando', false],
+    'completed to cancelled is rejected' => ['completado', 'cancelado', false],
+    'pending same-status update is a no-op transition' => ['pendiente', 'pendiente', true],
+    'processing same-status update is a no-op transition' => ['procesando', 'procesando', true],
+    'completed same-status update is a no-op transition' => ['completado', 'completado', true],
+]);
+
+it('rejects admin ajax cambiar-estado when transition is disallowed', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    [$pedido] = createPedidoForStatusTransitionTest('pendiente');
+
+    $response = $this->actingAs($user)
+        ->patchJson(route('admin.pedidos.cambiar-estado', $pedido), [
+            'estado' => 'completado',
+        ]);
+
+    $response->assertStatus(422)
+        ->assertJsonValidationErrors('estado')
+        ->assertJsonPath('errors.estado.0', 'The pedido status cannot transition from pendiente to completado.');
+
+    $this->assertDatabaseHas('pedidos', [
+        'id' => $pedido->id,
+        'estado' => 'pendiente',
+    ]);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('redirects back with validation errors when admin update receives a disallowed transition', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    [$pedido] = createPedidoForStatusTransitionTest('procesando');
+
+    $response = $this->actingAs($user)
+        ->from(route('admin.pedidos.edit', $pedido))
+        ->patch(route('admin.pedidos.update', $pedido), [
+            'estado' => 'pendiente',
+            'observaciones' => 'Invalid status regression through the web form',
+        ]);
+
+    $response->assertRedirect(route('admin.pedidos.edit', $pedido));
+    $response->assertSessionHasErrors([
+        'estado' => 'The pedido status cannot transition from procesando to pendiente.',
+    ]);
+
+    $this->assertDatabaseHas('pedidos', [
+        'id' => $pedido->id,
+        'estado' => 'procesando',
+        'observaciones' => null,
+    ]);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
 
 it('updates a pedido through the admin HTTP flow and restores stock on cancel', function (): void {
     $user = User::factory()->create([
@@ -57,8 +223,8 @@ it('updates a pedido through the admin HTTP flow and restores stock on cancel', 
     $response = $this->actingAs($user)
         ->from(route('admin.pedidos.edit', $pedido))
         ->patch(route('admin.pedidos.update', $pedido), [
-        'estado' => 'cancelado',
-        'observaciones' => 'Pedido cancelado por prueba',
+            'estado' => 'cancelado',
+            'observaciones' => 'Pedido cancelado por prueba',
         ]);
 
     $response->assertRedirect(route('admin.pedidos.show', $pedido));
@@ -448,3 +614,52 @@ it('records stock movements when deleting a non-cancelled pedido restores stock'
         'motivo' => 'Pedido deletion stock restoration',
     ]);
 });
+
+/**
+ * @return array{0: Pedido, 1: Producto}
+ */
+function createPedidoForStatusTransitionTest(string $estado): array
+{
+    $suffix = str_replace('.', '', uniqid('', true));
+
+    $cliente = Cliente::create([
+        'nombre' => 'Laura',
+        'apellido' => 'Diaz',
+        'email' => "laura.diaz.status.{$suffix}@example.com",
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Carlos Perez',
+        'rol_operativo' => 'cocinero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => "Cafe {$suffix}",
+        'categoria' => 'bebida',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => 5.00,
+    ]);
+
+    $pedido = Pedido::create([
+        'numero_pedido' => "PED-STATUS-{$suffix}",
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'metodo_pago' => 'efectivo',
+        'fecha' => '2026-06-01',
+        'hora' => '08:30:00',
+        'total' => 10.00,
+        'estado' => $estado,
+        'observaciones' => null,
+    ]);
+
+    $pedido->productos()->attach($producto->id, [
+        'cantidad' => 2,
+        'precio_unitario' => 5.00,
+        'subtotal' => 10.00,
+    ]);
+
+    return [$pedido, $producto];
+}
