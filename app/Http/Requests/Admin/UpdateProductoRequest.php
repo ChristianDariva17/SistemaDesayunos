@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace App\Http\Requests\Admin;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Unique;
 
 final class UpdateProductoRequest extends FormRequest
 {
@@ -45,7 +47,7 @@ final class UpdateProductoRequest extends FormRequest
     }
 
     /**
-     * @return array<string, array<int, string>>
+     * @return array<string, array<int, string|Unique>>
      */
     public function rules(): array
     {
@@ -60,13 +62,13 @@ final class UpdateProductoRequest extends FormRequest
                 'nullable',
                 'string',
                 'max:50',
-                'unique:productos,codigo_barras,' . ($producto?->getKey() ?? 'NULL'),
+                Rule::unique('productos', 'codigo_barras')->ignore($producto?->getKey()),
             ],
             'sku' => [
                 'nullable',
                 'string',
                 'max:50',
-                'unique:productos,sku,' . ($producto?->getKey() ?? 'NULL'),
+                Rule::unique('productos', 'sku')->ignore($producto?->getKey()),
             ],
             'stock' => ['required', 'integer', 'min:0', 'max:999999'],
             'stock_minimo' => ['nullable', 'integer', 'min:0', 'max:999999'],
