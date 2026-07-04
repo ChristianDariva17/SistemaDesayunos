@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Pedido;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 final class StorePedidoRequest extends FormRequest
 {
@@ -42,15 +43,15 @@ final class StorePedidoRequest extends FormRequest
     }
 
     /**
-     * @return array<string, array<int, string>|string>
+     * @return array<string, array<int, mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'cliente_id' => ['required', 'exists:clientes,id'],
-            'empleado_id' => ['required', 'exists:empleados,id'],
+            'cliente_id' => ['required', Rule::exists('clientes', 'id')->where('estado', 'activo')],
+            'empleado_id' => ['required', Rule::exists('empleados', 'id')->where('estado', 'activo')],
             'productos' => ['required', 'array', 'min:1'],
-            'productos.*.id' => ['required', 'distinct', 'exists:productos,id'],
+            'productos.*.id' => ['required', 'distinct', Rule::exists('productos', 'id')->where('estado', 'activo')],
             'productos.*.cantidad' => ['required', 'integer', 'min:1'],
             'metodo_pago' => ['nullable', 'in:efectivo,tarjeta,transferencia,otro'],
             'observaciones' => ['nullable', 'string', 'max:500'],

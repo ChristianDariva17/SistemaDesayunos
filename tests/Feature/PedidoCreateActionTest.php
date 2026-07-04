@@ -10,6 +10,7 @@ use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Validation\ValidationException;
 
 it('creates a pedido through the shared create action and persists stock changes', function (): void {
     $user = User::factory()->create([
@@ -536,8 +537,8 @@ it('exposes subtotal through the product to pedidos pivot relationship', functio
 });
 
 it('keeps pedido product relationships typed and exposes canonical pivot fields', function (): void {
-    $pedido = new Pedido();
-    $producto = new Producto();
+    $pedido = new Pedido;
+    $producto = new Producto;
 
     expect($pedido->productos())->toBeInstanceOf(BelongsToMany::class)
         ->and($producto->pedidos())->toBeInstanceOf(BelongsToMany::class)
@@ -603,4 +604,161 @@ it('loads pedido details through the shared helper with canonical product pivot 
     expect($reloadedPedido->relationLoaded('cliente'))->toBeTrue()
         ->and($reloadedPedido->relationLoaded('empleado'))->toBeTrue()
         ->and($reloadedPedido->relationLoaded('productos'))->toBeTrue();
+});
+
+it('rejects pedido creation with inactive cliente', function (): void {
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.inactive.cliente@example.com',
+        'estado' => 'inactivo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Sandwich',
+        'categoria' => 'desayuno',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => 12.50,
+    ]);
+
+    expect(fn () => app(CreatePedidoAction::class)->handle([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'productos' => [['id' => $producto->id, 'cantidad' => 1]],
+    ]))->toThrow(ValidationException::class);
+});
+
+it('rejects pedido creation with inactive empleado', function (): void {
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.inactive.empleado@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'inactivo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Sandwich',
+        'categoria' => 'desayuno',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => 12.50,
+    ]);
+
+    expect(fn () => app(CreatePedidoAction::class)->handle([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'productos' => [['id' => $producto->id, 'cantidad' => 1]],
+    ]))->toThrow(ValidationException::class);
+});
+
+it('rejects pedido creation with inactive producto', function (): void {
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.inactive.producto@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Sandwich',
+        'categoria' => 'desayuno',
+        'stock' => 10,
+        'estado' => 'inactivo',
+        'precio' => 12.50,
+    ]);
+
+    expect(fn () => app(CreatePedidoAction::class)->handle([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'productos' => [['id' => $producto->id, 'cantidad' => 1]],
+    ]))->toThrow(ValidationException::class);
+
+    expect($producto->refresh()->stock)->toBe(10);
+});
+
+it('rejects pedido creation with non-positive cantidad before persisting pivot rows', function (): void {
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.invalid.quantity@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Sandwich',
+        'categoria' => 'desayuno',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => 12.50,
+    ]);
+
+    expect(fn () => app(CreatePedidoAction::class)->handle([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'productos' => [['id' => $producto->id, 'cantidad' => 0]],
+    ]))->toThrow(ValidationException::class);
+
+    $this->assertDatabaseMissing('pedido_producto', [
+        'producto_id' => $producto->id,
+        'cantidad' => 0,
+    ]);
+});
+
+it('rejects pedido creation with a negative product price before persisting pivot rows', function (): void {
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.invalid.price@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Sandwich',
+        'categoria' => 'desayuno',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => -1,
+    ]);
+
+    expect(fn () => app(CreatePedidoAction::class)->handle([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'productos' => [['id' => $producto->id, 'cantidad' => 1]],
+    ]))->toThrow(ValidationException::class);
+
+    $this->assertDatabaseMissing('pedido_producto', [
+        'producto_id' => $producto->id,
+        'precio_unitario' => -1,
+    ]);
 });

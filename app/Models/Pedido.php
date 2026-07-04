@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class Pedido extends Model
 {
@@ -31,7 +32,7 @@ class Pedido extends Model
         'impuesto',
         'total',
         'estado',
-        'observaciones'
+        'observaciones',
     ];
 
     protected $casts = [
@@ -42,8 +43,8 @@ class Pedido extends Model
     public function productos(): BelongsToMany
     {
         return $this->belongsToMany(Producto::class, 'pedido_producto')
-                    ->withPivot(self::PRODUCTOS_PIVOT_COLUMNS)
-                    ->withTimestamps();
+            ->withPivot(self::PRODUCTOS_PIVOT_COLUMNS)
+            ->withTimestamps();
     }
 
     public function scopeWithDetails(Builder $query): Builder
@@ -55,7 +56,6 @@ class Pedido extends Model
     {
         return $this->load(['cliente', 'empleado', 'productos']);
     }
-
 
     // Relación con Empleado (User)
     public function empleado(): BelongsTo
@@ -95,11 +95,12 @@ class Pedido extends Model
         array $data,
         ?RegisterStockMovementAction $registerStockMovement = null,
         ?User $user = null,
-    ): self
-    {
+    ): self {
         $registerStockMovement ??= app(RegisterStockMovementAction::class);
 
         return DB::transaction(function () use ($data, $registerStockMovement, $user): self {
+            static::validateActiveEntities($data);
+
             $pedido = static::create([
                 'cliente_id' => $data['cliente_id'],
                 'empleado_id' => $data['empleado_id'],
@@ -122,12 +123,15 @@ class Pedido extends Model
     public function duplicarConProductos(
         ?RegisterStockMovementAction $registerStockMovement = null,
         ?User $user = null,
-    ): self
-    {
+    ): self {
         $registerStockMovement ??= app(RegisterStockMovementAction::class);
 
         return DB::transaction(function () use ($registerStockMovement, $user): self {
             $this->loadMissing('productos');
+            static::validateActiveEntities([
+                'cliente_id' => (int) $this->cliente_id,
+                'empleado_id' => (int) $this->empleado_id,
+            ]);
 
             $nuevoPedido = $this->replicate(['numero_pedido']);
             $nuevoPedido->estado = 'pendiente';
@@ -146,8 +150,7 @@ class Pedido extends Model
         iterable $productos,
         ?RegisterStockMovementAction $registerStockMovement = null,
         ?User $user = null,
-    ): float
-    {
+    ): float {
         $total = 0;
 
         foreach ($productos as $productoData) {
@@ -161,7 +164,26 @@ class Pedido extends Model
                 ? (int) $productoData->pivot->cantidad
                 : (int) $productoData['cantidad'];
 
+            if ($producto->estado !== 'activo') {
+                throw ValidationException::withMessages([
+                    'productos' => "The producto {$producto->nombre} is not active.",
+                ]);
+            }
+
+            if ($cantidad <= 0) {
+                throw ValidationException::withMessages([
+                    'productos' => 'Pedido product cantidad must be greater than 0.',
+                ]);
+            }
+
             $precioUnitario = (float) $producto->precio;
+
+            if ($precioUnitario < 0) {
+                throw ValidationException::withMessages([
+                    'productos' => "The producto {$producto->nombre} has an invalid negative price.",
+                ]);
+            }
+
             $subtotal = $cantidad * $precioUnitario;
 
             $stockAnterior = (int) $producto->stock;
@@ -197,5 +219,25 @@ class Pedido extends Model
         }
 
         return $total;
+    }
+
+    /**
+     * @param  array{cliente_id:int,empleado_id:int}  $data
+     *
+     * @throws ValidationException
+     */
+    private static function validateActiveEntities(array $data): void
+    {
+        if (! Cliente::query()->whereKey($data['cliente_id'])->where('estado', 'activo')->exists()) {
+            throw ValidationException::withMessages([
+                'cliente_id' => 'The selected cliente must be active.',
+            ]);
+        }
+
+        if (! Empleado::query()->whereKey($data['empleado_id'])->where('estado', 'activo')->exists()) {
+            throw ValidationException::withMessages([
+                'empleado_id' => 'The selected empleado must be active.',
+            ]);
+        }
     }
 }

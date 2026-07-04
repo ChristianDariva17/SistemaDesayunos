@@ -8,13 +8,14 @@ use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
+use Illuminate\Validation\ValidationException;
 
 function createPedidoDuplicationFixture(int $stock = 10, float $originalPrice = 10.00): array
 {
     $cliente = Cliente::create([
         'nombre' => 'Ana',
         'apellido' => 'Paredes',
-        'email' => 'ana.paredes.duplication.' . uniqid() . '@example.com',
+        'email' => 'ana.paredes.duplication.'.uniqid().'@example.com',
         'estado' => 'activo',
     ]);
 
@@ -33,7 +34,7 @@ function createPedidoDuplicationFixture(int $stock = 10, float $originalPrice = 
     ]);
 
     $pedido = Pedido::create([
-        'numero_pedido' => 'PED-202606-DUP' . substr(uniqid(), -3),
+        'numero_pedido' => 'PED-202606-DUP'.substr(uniqid(), -3),
         'cliente_id' => $cliente->id,
         'empleado_id' => $empleado->id,
         'metodo_pago' => 'efectivo',
@@ -113,6 +114,40 @@ it('rolls back duplication when product stock is insufficient', function (): voi
     $this->assertDatabaseCount('stock_movimientos', 0);
 
     expect($producto->refresh()->stock)->toBe(1);
+});
+
+it('rejects pedido duplication with inactive cliente before creating a duplicate', function (): void {
+    [$pedido, $producto] = createPedidoDuplicationFixture();
+
+    Cliente::query()->whereKey($pedido->cliente_id)->update([
+        'estado' => 'inactivo',
+    ]);
+
+    expect(fn (): Pedido => $pedido->duplicarConProductos())
+        ->toThrow(ValidationException::class);
+
+    $this->assertDatabaseCount('pedidos', 1);
+    $this->assertDatabaseCount('pedido_producto', 1);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+
+    expect($producto->refresh()->stock)->toBe(10);
+});
+
+it('rejects pedido duplication with inactive empleado before creating a duplicate', function (): void {
+    [$pedido, $producto] = createPedidoDuplicationFixture();
+
+    Empleado::query()->whereKey($pedido->empleado_id)->update([
+        'estado' => 'inactivo',
+    ]);
+
+    expect(fn (): Pedido => $pedido->duplicarConProductos())
+        ->toThrow(ValidationException::class);
+
+    $this->assertDatabaseCount('pedidos', 1);
+    $this->assertDatabaseCount('pedido_producto', 1);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+
+    expect($producto->refresh()->stock)->toBe(10);
 });
 
 it('duplicates a pedido through the admin HTTP flow', function (): void {
