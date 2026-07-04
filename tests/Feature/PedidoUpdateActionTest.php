@@ -657,6 +657,132 @@ it('records stock movements when deleting a non-cancelled pedido restores stock'
     ]);
 });
 
+it('records stock movements when trabajador deletes a non-cancelled pedido', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'trabajador',
+    ]);
+
+    $cliente = Cliente::create([
+        'nombre' => 'Laura',
+        'apellido' => 'Diaz',
+        'email' => 'laura.diaz.worker.destroy@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Carlos Perez',
+        'rol_operativo' => 'cocinero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Cafe Worker',
+        'categoria' => 'bebida',
+        'stock' => 4,
+        'estado' => 'activo',
+        'precio' => 5.00,
+    ]);
+
+    $pedido = Pedido::create([
+        'numero_pedido' => 'PED-202606-WORKER-DESTROY',
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'metodo_pago' => 'efectivo',
+        'fecha' => '2026-06-01',
+        'hora' => '08:30:00',
+        'total' => 10.00,
+        'estado' => 'pendiente',
+        'observaciones' => null,
+    ]);
+
+    $pedido->productos()->attach($producto->id, [
+        'cantidad' => 2,
+        'precio_unitario' => 5.00,
+        'subtotal' => 10.00,
+    ]);
+
+    $response = $this->actingAs($user)
+        ->from(route('trabajador.pedidos.show', $pedido))
+        ->delete(route('trabajador.pedidos.destroy', $pedido));
+
+    $response->assertRedirect(route('trabajador.pedidos.index'));
+
+    $this->assertDatabaseMissing('pedidos', [
+        'id' => $pedido->id,
+    ]);
+    $this->assertDatabaseHas('productos', [
+        'id' => $producto->id,
+        'stock' => 6,
+    ]);
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'pedido_id' => null,
+        'pedido_numero' => 'PED-202606-WORKER-DESTROY',
+        'user_id' => $user->id,
+        'tipo' => StockMovimiento::TIPO_CANCELACION,
+        'cantidad' => 2,
+        'stock_anterior' => 4,
+        'stock_nuevo' => 6,
+        'motivo' => 'Pedido deletion stock restoration',
+    ]);
+});
+
+it('deletes a cancelled pedido without restoring stock or recording stock movements', function (string $role, string $routePrefix): void {
+    $user = User::factory()->create([
+        'rol' => $role,
+    ]);
+
+    [$pedido, $producto] = createPedidoForStatusTransitionTest('cancelado');
+    $initialStock = (int) $producto->stock;
+
+    $response = $this->actingAs($user)
+        ->from(route("{$routePrefix}.pedidos.show", $pedido))
+        ->delete(route("{$routePrefix}.pedidos.destroy", $pedido));
+
+    $response->assertRedirect(route("{$routePrefix}.pedidos.index"));
+
+    $this->assertDatabaseMissing('pedidos', [
+        'id' => $pedido->id,
+    ]);
+    $this->assertDatabaseHas('productos', [
+        'id' => $producto->id,
+        'stock' => $initialStock,
+    ]);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+
+    expect($producto->refresh()->stock)->toBe($initialStock);
+})->with([
+    'admin' => ['administrador', 'admin'],
+    'trabajador' => ['trabajador', 'trabajador'],
+]);
+
+it('blocks completed pedido deletion in admin and trabajador flows', function (string $role, string $routePrefix): void {
+    $user = User::factory()->create([
+        'rol' => $role,
+    ]);
+
+    [$pedido, $producto] = createPedidoForStatusTransitionTest('completado');
+    $initialStock = (int) $producto->stock;
+
+    $response = $this->actingAs($user)
+        ->from(route("{$routePrefix}.pedidos.show", $pedido))
+        ->delete(route("{$routePrefix}.pedidos.destroy", $pedido));
+
+    $response->assertRedirect(route("{$routePrefix}.pedidos.show", $pedido));
+    $response->assertSessionHas('error', '❌ No se puede eliminar un pedido completado');
+
+    $this->assertDatabaseHas('pedidos', [
+        'id' => $pedido->id,
+        'estado' => 'completado',
+    ]);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+
+    expect($producto->refresh()->stock)->toBe($initialStock);
+})->with([
+    'admin' => ['administrador', 'admin'],
+    'trabajador' => ['trabajador', 'trabajador'],
+]);
+
 /**
  * @return array{0: Pedido, 1: Producto}
  */

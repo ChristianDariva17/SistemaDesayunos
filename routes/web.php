@@ -261,6 +261,9 @@ Route::prefix('trabajador')->name('trabajador.')->middleware(['auth', 'valid.rol
     Route::post('pedidos/{pedido}/duplicar', [TrabajadorPedidoController::class, 'duplicar'])
          ->name('pedidos.duplicar');
 
+    Route::delete('pedidos/{pedido}', [TrabajadorPedidoController::class, 'destroy'])
+         ->name('pedidos.destroy');
+
     Route::get('pedidos/{pedido}', [TrabajadorPedidoController::class, 'show'])
          ->name('pedidos.show');
 

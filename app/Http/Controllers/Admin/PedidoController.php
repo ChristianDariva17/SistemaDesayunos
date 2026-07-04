@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Pedido\CreatePedidoAction;
+use App\Actions\Pedido\DeletePedidoAction;
 use App\Actions\Pedido\UpdatePedidoAction;
 use App\Actions\Stock\RegisterStockMovementAction;
 use App\Http\Controllers\Controller;
@@ -12,10 +13,9 @@ use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\Empleado;
 use App\Models\Cliente;
-use App\Models\StockMovimiento;
 use App\Models\User;
+use DomainException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 use Exception;
@@ -190,37 +190,14 @@ class PedidoController extends Controller
     /**
      * Eliminar pedido
      */
-    public function destroy(Pedido $pedido, RegisterStockMovementAction $registerStockMovement)
+    public function destroy(Pedido $pedido, DeletePedidoAction $deletePedidoAction)
     {
-        DB::beginTransaction();
         try {
-            $pedido = Pedido::query()
-                ->with('productos')
-                ->lockForUpdate()
-                ->findOrFail($pedido->getKey());
-
-            if ($pedido->estado === 'completado') {
-                DB::rollBack();
-
-                return redirect()->back()
-                    ->with('error', '❌ No se puede eliminar un pedido completado');
-            }
-
-            $numero_pedido = $pedido->numero_pedido;
             $user = auth()->user();
-
-            // Restaurar stock si no estaba cancelado
-            if ($pedido->estado !== 'cancelado') {
-                $this->restoreStockForDeletedPedido(
-                    $pedido,
-                    $registerStockMovement,
-                    $user instanceof User ? $user : null,
-                );
-            }
-
-            $pedido->delete();
-
-            DB::commit();
+            $numero_pedido = $deletePedidoAction->handle(
+                $pedido,
+                $user instanceof User ? $user : null,
+            );
 
             Log::warning('Pedido eliminado', [
                 'numero_pedido' => $numero_pedido,
@@ -229,9 +206,10 @@ class PedidoController extends Controller
 
             return redirect()->route('admin.pedidos.index')
                 ->with('success', "🗑️ Pedido {$numero_pedido} eliminado exitosamente");
+        } catch (DomainException $e) {
+            return redirect()->back()
+                ->with('error', '❌ ' . $e->getMessage());
         } catch (Exception $e) {
-            DB::rollBack();
-
             Log::error('Error al eliminar pedido', [
                 'pedido_id' => $pedido->id,
                 'error' => $e->getMessage()
@@ -239,38 +217,6 @@ class PedidoController extends Controller
 
             return redirect()->back()
                 ->with('error', '❌ Error al eliminar el pedido');
-        }
-    }
-
-    private function restoreStockForDeletedPedido(
-        Pedido $pedido,
-        RegisterStockMovementAction $registerStockMovement,
-        ?User $user,
-    ): void
-    {
-        foreach ($pedido->productos as $producto) {
-            $lockedProducto = Producto::query()
-                ->lockForUpdate()
-                ->findOrFail($producto->getKey());
-
-            $cantidad = (int) $producto->pivot->cantidad;
-            $stockAnterior = (int) $lockedProducto->stock;
-            $stockNuevo = $stockAnterior + $cantidad;
-
-            $lockedProducto->update([
-                'stock' => $stockNuevo,
-            ]);
-
-            $registerStockMovement->handle(
-                producto: $lockedProducto,
-                tipo: StockMovimiento::TIPO_CANCELACION,
-                cantidad: $cantidad,
-                stockAnterior: $stockAnterior,
-                stockNuevo: $stockNuevo,
-                pedido: $pedido,
-                user: $user,
-                motivo: 'Pedido deletion stock restoration',
-            );
         }
     }
 

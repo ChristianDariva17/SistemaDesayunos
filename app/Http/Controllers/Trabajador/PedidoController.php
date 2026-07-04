@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Trabajador;
 
 use App\Actions\Pedido\CreatePedidoAction;
+use App\Actions\Pedido\DeletePedidoAction;
 use App\Actions\Pedido\UpdatePedidoAction;
 use App\Actions\Stock\RegisterStockMovementAction;
 use App\Http\Controllers\Controller;
@@ -12,8 +13,9 @@ use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\Empleado;
 use App\Models\Cliente;
+use App\Models\User;
+use DomainException;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Exception;
 
@@ -185,27 +187,14 @@ class PedidoController extends Controller
     /**
      * Eliminar pedido
      */
-    public function destroy(Pedido $pedido)
+    public function destroy(Pedido $pedido, DeletePedidoAction $deletePedidoAction)
     {
-        if ($pedido->estado === 'completado') {
-            return redirect()->back()
-                ->with('error', '❌ No se puede eliminar un pedido completado');
-        }
-
-        DB::beginTransaction();
         try {
-            $numero_pedido = $pedido->numero_pedido;
-
-            // Restaurar stock si no estaba cancelado
-            if ($pedido->estado !== 'cancelado') {
-                foreach ($pedido->productos as $producto) {
-                    $producto->increment('stock', $producto->pivot->cantidad);
-                }
-            }
-
-            $pedido->delete();
-
-            DB::commit();
+            $user = auth()->user();
+            $numero_pedido = $deletePedidoAction->handle(
+                $pedido,
+                $user instanceof User ? $user : null,
+            );
 
             Log::warning('Pedido eliminado', [
                 'numero_pedido' => $numero_pedido,
@@ -214,9 +203,10 @@ class PedidoController extends Controller
 
             return redirect()->route('trabajador.pedidos.index')
                 ->with('success', "🗑️ Pedido {$numero_pedido} eliminado exitosamente");
+        } catch (DomainException $e) {
+            return redirect()->back()
+                ->with('error', '❌ ' . $e->getMessage());
         } catch (Exception $e) {
-            DB::rollBack();
-
             Log::error('Error al eliminar pedido', [
                 'pedido_id' => $pedido->id,
                 'error' => $e->getMessage()
