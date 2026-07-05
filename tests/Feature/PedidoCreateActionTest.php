@@ -8,6 +8,7 @@ use App\Models\Empleado;
 use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
+use App\Models\StockReservation;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Validation\ValidationException;
@@ -204,6 +205,71 @@ it('rolls back pedido creation when product stock is insufficient', function ():
 
     expect($productoConStock->refresh()->stock)->toBe(10)
         ->and($productoSinStock->refresh()->stock)->toBe(1);
+});
+
+it('rejects pedido creation when active reservations leave insufficient available stock', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'trabajador',
+    ]);
+
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.paredes.reserved@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $producto = Producto::create([
+        'nombre' => 'Reserved Sandwich',
+        'categoria' => 'desayuno',
+        'stock' => 5,
+        'estado' => 'activo',
+        'precio' => 12.50,
+    ]);
+
+    $reservedPedido = Pedido::create([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'metodo_pago' => 'efectivo',
+        'fecha' => '2026-07-04',
+        'hora' => '08:30:00',
+        'total' => 0,
+        'estado' => 'pendiente',
+        'observaciones' => null,
+    ]);
+
+    StockReservation::reserve($producto, $reservedPedido, 4);
+
+    expect(fn () => app(CreatePedidoAction::class)->handle([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'metodo_pago' => 'efectivo',
+        'observaciones' => 'Pedido con stock reservado',
+        'productos' => [
+            [
+                'id' => $producto->id,
+                'cantidad' => 2,
+            ],
+        ],
+    ], $user->id))->toThrow(Exception::class, 'Stock insuficiente para Reserved Sandwich. Disponible: 1');
+
+    $this->assertDatabaseMissing('pedidos', [
+        'observaciones' => 'Pedido con stock reservado',
+    ]);
+    $this->assertDatabaseMissing('pedido_producto', [
+        'producto_id' => $producto->id,
+        'cantidad' => 2,
+    ]);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+
+    expect($producto->refresh()->stock)->toBe(5)
+        ->and($producto->availableStock())->toBe(1);
 });
 
 it('creates a pedido through the admin HTTP store flow', function (): void {

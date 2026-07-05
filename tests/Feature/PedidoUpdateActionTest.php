@@ -8,6 +8,7 @@ use App\Models\Empleado;
 use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
+use App\Models\StockReservation;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
 
@@ -428,6 +429,31 @@ it('reserves stock again when a cancelled pedido is reactivated successfully', f
     ]);
 
     expect($producto->refresh()->stock)->toBe(3);
+});
+
+it('rejects pedido reactivation when active reservations leave insufficient available stock', function (): void {
+    $user = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    [$pedido, $producto] = createPedidoForStatusTransitionTest('cancelado');
+    $reservedPedido = createPedidoForStatusTransitionTest('pendiente')[0];
+
+    StockReservation::reserve($producto, $reservedPedido, 9);
+
+    expect(fn (): mixed => app(UpdatePedidoAction::class)->handle([
+        'estado' => 'pendiente',
+        'observaciones' => 'Intento de reactivacion con reserva activa',
+    ], $pedido, $user->id))->toThrow(Exception::class, "Stock insuficiente para {$producto->nombre}");
+
+    $this->assertDatabaseHas('pedidos', [
+        'id' => $pedido->id,
+        'estado' => 'cancelado',
+        'observaciones' => null,
+    ]);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+
+    expect($producto->refresh()->stock)->toBe(10)
+        ->and($producto->availableStock())->toBe(1);
 });
 
 it('does not apply cancel stock restoration twice when the same pedido is updated again from a stale model', function (): void {

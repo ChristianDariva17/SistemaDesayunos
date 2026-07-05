@@ -4,14 +4,17 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use App\Support\InventoryLimits;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Producto extends Model
 {
+    use Auditable;
     use HasFactory;
 
     /**
@@ -19,7 +22,6 @@ class Producto extends Model
      * CONFIGURACIÓN DEL MODELO
      * ==========================================
      */
-
     protected $fillable = [
         'nombre',
         'descripcion',
@@ -40,6 +42,18 @@ class Producto extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    /**
+     * @return array<int, string>
+     */
+    protected function auditableAttributes(): array
+    {
+        return [
+            'precio',
+            'stock',
+            'estado',
+        ];
+    }
 
     /**
      * ==========================================
@@ -63,6 +77,30 @@ class Producto extends Model
         return $this->hasMany(StockMovimiento::class);
     }
 
+    public function stockReservations(): HasMany
+    {
+        return $this->hasMany(StockReservation::class);
+    }
+
+    public function activeStockReservations(): HasMany
+    {
+        return $this->stockReservations()->where('status', StockReservation::STATUS_ACTIVE);
+    }
+
+    public function priceHistories(): HasMany
+    {
+        return $this->hasMany(ProductoPriceHistory::class);
+    }
+
+    public function save(array $options = []): bool
+    {
+        if (! $this->requiresAtomicPriceHistorySave()) {
+            return parent::save($options);
+        }
+
+        return DB::transaction(fn (): bool => parent::save($options));
+    }
+
     /**
      * ==========================================
      * ACCESSORS (Atributos Calculados)
@@ -75,7 +113,7 @@ class Producto extends Model
      */
     public function getPrecioFormateadoAttribute(): string
     {
-        return 'S/ ' . number_format($this->precio, 2);
+        return 'S/ '.number_format($this->precio, 2);
     }
 
     /**
@@ -184,7 +222,7 @@ class Producto extends Model
         return $query->withCount([
             'pedidos as total_vendido' => function ($query) {
                 $query->select(\DB::raw('SUM(pedido_producto.cantidad)'));
-            }
+            },
         ])
             ->orderBy('total_vendido', 'desc')
             ->limit($limit);
@@ -201,7 +239,7 @@ class Producto extends Model
      */
     public function tieneImagen(): bool
     {
-        return !empty($this->imagen) && \Storage::disk('public')->exists($this->imagen);
+        return ! empty($this->imagen) && \Storage::disk('public')->exists($this->imagen);
     }
 
     /**
@@ -210,7 +248,7 @@ class Producto extends Model
     public function getImagenUrl(): string
     {
         if ($this->tieneImagen()) {
-            return asset('storage/' . $this->imagen);
+            return asset('storage/'.$this->imagen);
         }
 
         return asset('images/no-image.png');
@@ -223,6 +261,7 @@ class Producto extends Model
     {
         if ($this->stock >= $cantidad) {
             $this->decrement('stock', $cantidad);
+
             return true;
         }
 
@@ -237,8 +276,76 @@ class Producto extends Model
         $this->increment('stock', $cantidad);
     }
 
-    public static function boot()
+    public function activeReservedStock(): int
     {
-        parent::boot();
+        return (int) $this->activeStockReservations()->sum('cantidad');
+    }
+
+    public function availableStock(): int
+    {
+        return max(0, (int) $this->stock - $this->activeReservedStock());
+    }
+
+    public function reserveStockForPedido(Pedido $pedido, int $cantidad): StockReservation
+    {
+        return StockReservation::reserve($this, $pedido, $cantidad);
+    }
+
+    protected static function booted(): void
+    {
+        static::created(function (self $producto): void {
+            $producto->recordInitialPriceHistory();
+        });
+
+        static::updated(function (self $producto): void {
+            if (! $producto->wasChanged('precio')) {
+                return;
+            }
+
+            $oldPrice = self::normalizePrice($producto->getOriginal('precio'));
+            $newPrice = self::normalizePrice($producto->precio);
+
+            if ($oldPrice === $newPrice) {
+                return;
+            }
+
+            $producto->recordPriceChangeHistory($newPrice);
+        });
+    }
+
+    private function recordInitialPriceHistory(): void
+    {
+        $this->priceHistories()->create([
+            'precio' => self::normalizePrice($this->precio),
+            'effective_from' => $this->created_at ?? now(),
+            'effective_to' => null,
+        ]);
+    }
+
+    private function recordPriceChangeHistory(string $newPrice): void
+    {
+        $effectiveFrom = now();
+
+        $this->priceHistories()
+            ->whereNull('effective_to')
+            ->update([
+                'effective_to' => $effectiveFrom,
+            ]);
+
+        $this->priceHistories()->create([
+            'precio' => $newPrice,
+            'effective_from' => $effectiveFrom,
+            'effective_to' => null,
+        ]);
+    }
+
+    private function requiresAtomicPriceHistorySave(): bool
+    {
+        return ! $this->exists || $this->isDirty('precio');
+    }
+
+    private static function normalizePrice(mixed $price): string
+    {
+        return number_format((float) $price, 2, '.', '');
     }
 }

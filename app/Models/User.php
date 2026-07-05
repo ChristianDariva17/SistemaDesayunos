@@ -30,6 +30,16 @@ class User extends Authenticatable
         return $this->hasMany(StockMovimiento::class);
     }
 
+    public function audits(): HasMany
+    {
+        return $this->hasMany(Audit::class);
+    }
+
+    public function dailyCashClosures(): HasMany
+    {
+        return $this->hasMany(DailyCashClosure::class, 'closed_by_user_id');
+    }
+
     // Agregar estos métodos al final de la clase
     public function esAdministrador(): bool
     {

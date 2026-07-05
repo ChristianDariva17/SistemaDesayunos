@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Actions\Stock\RegisterStockMovementAction;
+use App\Models\Concerns\Auditable;
 use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -18,6 +19,7 @@ use Illuminate\Validation\ValidationException;
 
 class Pedido extends Model
 {
+    use Auditable;
     use HasFactory;
 
     public const PRODUCTOS_PIVOT_COLUMNS = ['cantidad', 'precio_unitario', 'subtotal'];
@@ -38,7 +40,22 @@ class Pedido extends Model
     protected $casts = [
         'fecha' => 'date',
         'hora' => 'string',
+        'total' => 'decimal:2',
     ];
+
+    /**
+     * @return array<int, string>
+     */
+    protected function auditableAttributes(): array
+    {
+        return [
+            'cliente_id',
+            'empleado_id',
+            'metodo_pago',
+            'total',
+            'estado',
+        ];
+    }
 
     public function productos(): BelongsToMany
     {
@@ -71,6 +88,11 @@ class Pedido extends Model
     public function stockMovimientos(): HasMany
     {
         return $this->hasMany(StockMovimiento::class);
+    }
+
+    public function stockReservations(): HasMany
+    {
+        return $this->hasMany(StockReservation::class);
     }
 
     public static function generarNumeroPedido(): string
@@ -187,9 +209,10 @@ class Pedido extends Model
             $subtotal = $cantidad * $precioUnitario;
 
             $stockAnterior = (int) $producto->stock;
+            $availableStock = $producto->availableStock();
 
-            if ($stockAnterior < $cantidad) {
-                throw new Exception("Stock insuficiente para {$producto->nombre}. Disponible: {$stockAnterior}");
+            if ($availableStock < $cantidad) {
+                throw new Exception("Stock insuficiente para {$producto->nombre}. Disponible: {$availableStock}");
             }
 
             $stockNuevo = $stockAnterior - $cantidad;

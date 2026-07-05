@@ -122,8 +122,9 @@ final class UpdatePedidoAction
                 ->findOrFail($producto->getKey());
             $cantidad = (int) $producto->pivot->cantidad;
             $stockAnterior = (int) $lockedProducto->stock;
+            $availableStock = $lockedProducto->availableStock();
 
-            if ($stockAnterior < $cantidad) {
+            if ($availableStock < $cantidad) {
                 throw new Exception("Stock insuficiente para {$producto->nombre}");
             }
 
