@@ -243,16 +243,20 @@
                                 {{-- IMAGEN --}}
                                 <td class="text-center">
                                     @if($producto->imagen)
-                                        <img 
-                                            src="{{ asset('storage/' . $producto->imagen) }}" 
-                                            alt="{{ $producto->nombre }}" 
-                                            class="rounded shadow-sm"
-                                            width="50"
-                                            height="50"
-                                            style="object-fit: cover; cursor: pointer;"
-                                            data-bs-toggle="modal"
-                                            data-bs-target="#imageModal{{ $producto->id }}"
-                                        >
+                                        <button type="button"
+                                                class="btn p-0 border-0 bg-transparent"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#imageModal{{ $producto->id }}"
+                                                aria-label="Ver imagen de {{ $producto->nombre }}">
+                                            <img
+                                                src="{{ asset('storage/' . $producto->imagen) }}"
+                                                alt="{{ $producto->nombre }}"
+                                                class="rounded shadow-sm"
+                                                width="50"
+                                                height="50"
+                                                style="object-fit: cover; cursor: pointer;"
+                                            >
+                                        </button>
                                     @else
                                         <div class="bg-secondary bg-opacity-10 rounded d-inline-flex align-items-center justify-content-center" 
                                              style="width: 50px; height: 50px;">
@@ -324,6 +328,7 @@
                                             type="checkbox" 
                                             role="switch" 
                                             data-producto-id="{{ $producto->id }}"
+                                            aria-label="Cambiar estado de {{ $producto->nombre }}"
                                             {{ $producto->estado == 'activo' ? 'checked' : '' }}
                                             title="Cambiar estado"
                                             style="cursor: pointer; width: 3rem; height: 1.5rem;"
@@ -337,24 +342,27 @@
                                         {{-- Ver --}}
                                         <a href="{{ route('admin.productos.show', $producto) }}" 
                                            class="btn btn-sm btn-outline-info" 
+                                           aria-label="Ver detalles de {{ $producto->nombre }}"
                                            title="Ver detalles">
-                                            <i class="fas fa-eye"></i>
+                                             <i class="fas fa-eye" aria-hidden="true"></i>
                                         </a>
 
                                         {{-- Editar --}}
                                         <a href="{{ route('admin.productos.edit', $producto) }}" 
                                            class="btn btn-sm btn-outline-primary" 
+                                           aria-label="Editar {{ $producto->nombre }}"
                                            title="Editar">
-                                            <i class="fas fa-edit"></i>
+                                             <i class="fas fa-edit" aria-hidden="true"></i>
                                         </a>
 
                                         {{-- ✅ Actualizar Stock --}}
-                                        <button type="button" 
-                                                class="btn btn-sm btn-outline-warning" 
-                                                data-bs-toggle="modal" 
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-warning"
+                                                data-bs-toggle="modal"
                                                 data-bs-target="#stockModal{{ $producto->id }}"
+                                                aria-label="Actualizar stock de {{ $producto->nombre }}"
                                                 title="Actualizar stock">
-                                            <i class="fas fa-boxes"></i>
+                                             <i class="fas fa-boxes" aria-hidden="true"></i>
                                         </button>
 
                                         {{-- ✅ Duplicar --}}
@@ -364,9 +372,10 @@
                                               onsubmit="return confirm('¿Duplicar este producto?')">
                                             @csrf
                                             <button type="submit" 
-                                                    class="btn btn-sm btn-outline-secondary" 
-                                                    title="Duplicar producto">
-                                                <i class="fas fa-copy"></i>
+                                                    class="btn btn-sm btn-outline-secondary"
+                                                     aria-label="Duplicar {{ $producto->nombre }}"
+                                                     title="Duplicar producto">
+                                                 <i class="fas fa-copy" aria-hidden="true"></i>
                                             </button>
                                         </form>
 
@@ -378,9 +387,10 @@
                                             @csrf
                                             @method('DELETE')
                                             <button type="submit" 
-                                                    class="btn btn-sm btn-outline-danger" 
-                                                    title="Eliminar">
-                                                <i class="fas fa-trash"></i>
+                                                    class="btn btn-sm btn-outline-danger"
+                                                     aria-label="Eliminar {{ $producto->nombre }}"
+                                                     title="Eliminar">
+                                                 <i class="fas fa-trash" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                     </x-table-actions>
@@ -587,11 +597,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Mostrar notificación de éxito
                     const alert = document.createElement('div');
                     alert.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3';
+                    alert.setAttribute('role', 'alert');
+                    alert.setAttribute('aria-live', 'assertive');
                     alert.style.zIndex = '9999';
                     alert.innerHTML = `
-                        <i class="fas fa-check-circle me-2"></i>
+                        <i class="fas fa-check-circle me-2" aria-hidden="true"></i>
                         ${data.message}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar alerta"></button>
                     `;
                     document.body.appendChild(alert);
                     

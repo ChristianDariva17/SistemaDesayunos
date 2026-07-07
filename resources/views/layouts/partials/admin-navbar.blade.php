@@ -1,9 +1,9 @@
             {{-- Navbar Superior --}}
-            <nav class="navbar navbar-expand-lg navbar-custom">
+            <nav class="navbar navbar-expand-lg navbar-custom" aria-label="Barra superior de administración">
                 <div class="container-fluid">
                     {{-- Toggle Sidebar Button --}}
-                    <button id="sidebarToggle" type="button">
-                        <i class="fas fa-bars"></i>
+                    <button id="sidebarToggle" type="button" aria-label="Alternar menú lateral" aria-controls="sidebar-wrapper">
+                        <i class="fas fa-bars" aria-hidden="true"></i>
                     </button>
 
                     {{-- Breadcrumb --}}
@@ -18,9 +18,9 @@
                     <div class="ms-auto d-flex align-items-center gap-3">
                         {{-- Notificaciones --}}
                         <div class="dropdown">
-                            <button class="btn btn-light position-relative" type="button" data-bs-toggle="dropdown">
-                                <i class="fas fa-bell"></i>
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 10px;">
+                            <button class="btn btn-light position-relative" type="button" data-bs-toggle="dropdown" aria-label="Ver notificaciones">
+                                <i class="fas fa-bell" aria-hidden="true"></i>
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 10px;" aria-live="polite">
                                     {{ $pedidosPendientes ?? 0 }}
                                 </span>
                             </button>
@@ -28,11 +28,11 @@
                                 <li><h6 class="dropdown-header">Notificaciones</h6></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="{{ route('admin.pedidos.index') }}">
-                                    <i class="fas fa-shopping-cart text-danger"></i>
+                                    <i class="fas fa-shopping-cart text-danger" aria-hidden="true"></i>
                                     {{ $pedidosPendientes ?? 0 }} pedidos pendientes
                                 </a></li>
                                 <li><a class="dropdown-item" href="{{ route('admin.productos.index') }}">
-                                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                                    <i class="fas fa-exclamation-triangle text-warning" aria-hidden="true"></i>
                                     {{ $stockBajo ?? 0 }} productos con stock bajo
                                 </a></li>
                             </ul>
@@ -41,9 +41,9 @@
                         {{-- User Dropdown --}}
                         @auth
                         <div class="dropdown user-dropdown">
-                            <div class="user-avatar" data-bs-toggle="dropdown" aria-expanded="false">
+                            <button type="button" class="user-avatar" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Abrir menú de usuario">
                                 {{ strtoupper(substr(Auth::user()->name, 0, 1)) }}
-                            </div>
+                            </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow">
                                 <li><h6 class="dropdown-header">{{ Auth::user()->name }}</h6></li>
                                 <li><hr class="dropdown-divider"></li>

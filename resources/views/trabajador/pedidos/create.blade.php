@@ -231,6 +231,7 @@
     </style>
 </head>
 <body>
+<a href="#main-content" class="visually-hidden-focusable">Saltar al contenido principal</a>
 
 {{-- ============================================
     NAVBAR SUPERIOR
@@ -264,7 +265,7 @@
 {{-- ============================================
     CONTENIDO PRINCIPAL
 ============================================= --}}
-<div class="container-fluid py-4">
+<main id="main-content" class="container-fluid py-4" tabindex="-1">
     
     {{-- ============================================
         ENCABEZADO
@@ -304,7 +305,7 @@
                     </ul>
                 </div>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar alerta"></button>
         </div>
     @endif
 
@@ -476,17 +477,17 @@
                     <div class="text-center">
                         <i class="fas fa-calculator fa-3x mb-3 opacity-75"></i>
                         <h5 class="mb-2">Total del Pedido</h5>
-                        <div class="total-amount mb-3">
+                        <div class="total-amount mb-3" aria-live="polite">
                             S/ <span id="totalResumen">0.00</span>
                         </div>
                         <div class="d-flex justify-content-around text-center">
                             <div>
                                 <small class="d-block opacity-75">Productos</small>
-                                <strong class="fs-4"><span id="cantidadProductos">0</span></strong>
+                                <strong class="fs-4"><span id="cantidadProductos" aria-live="polite">0</span></strong>
                             </div>
                             <div>
                                 <small class="d-block opacity-75">Unidades</small>
-                                <strong class="fs-4"><span id="cantidadUnidades">0</span></strong>
+                                <strong class="fs-4"><span id="cantidadUnidades" aria-live="polite">0</span></strong>
                             </div>
                         </div>
                     </div>
@@ -537,7 +538,7 @@
 
     </form>
 
-</div>
+</main>
 
 {{-- ============================================
     SCRIPTS JAVASCRIPT
@@ -569,6 +570,7 @@
                 <select name="productos[${contadorProductos}][producto_id]" 
                         class="form-select form-select-sm producto-select" 
                         data-index="${contadorProductos}" 
+                        aria-label="Producto de la fila ${contadorProductos + 1}"
                         required>
                     <option value="">Seleccione un producto</option>
                     ${productos.map(p => `
@@ -583,6 +585,7 @@
                        name="productos[${contadorProductos}][cantidad]" 
                        class="form-control form-control-sm text-center cantidad-input" 
                        data-index="${contadorProductos}" 
+                       aria-label="Cantidad de la fila ${contadorProductos + 1}"
                        min="1" 
                        value="1" 
                        required>
@@ -601,8 +604,9 @@
             <td class="text-center">
                 <button type="button" 
                         class="btn btn-sm btn-danger btn-eliminar" 
-                        data-index="${contadorProductos}">
-                    <i class="fas fa-trash"></i>
+                        data-index="${contadorProductos}"
+                        aria-label="Eliminar producto de la fila ${contadorProductos + 1}">
+                    <i class="fas fa-trash" aria-hidden="true"></i>
                 </button>
             </td>
         `;

@@ -18,7 +18,7 @@
     $iconClass = $icon ?? ($icons[$type] ?? $icons['info']);
 @endphp
 
-<div {{ $attributes->class(['alert', 'alert-'.$alertType, 'alert-dismissible fade show' => $dismissible]) }} role="alert">
+<div {{ $attributes->class(['alert', 'alert-'.$alertType, 'alert-dismissible fade show' => $dismissible]) }} role="alert" aria-live="assertive">
     <div class="d-flex align-items-center">
         <i class="{{ $iconClass }} fa-2x me-3" aria-hidden="true"></i>
         <div>

@@ -744,8 +744,8 @@
                     </td>
                     <td class="text-center">
                         <div class="input-group input-group-sm" style="max-width: 120px; margin: 0 auto;">
-                            <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="minus" data-index="${producto.index}">
-                                <i class="fas fa-minus"></i>
+                            <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="minus" data-index="${producto.index}" aria-label="Reducir cantidad de la fila ${producto.index + 1}">
+                                <i class="fas fa-minus" aria-hidden="true"></i>
                             </button>
                             <input type="number" 
                                    class="form-control text-center cantidad-input" 
@@ -753,9 +753,10 @@
                                    value="${producto.cantidad}"
                                    min="1"
                                    max="${producto.stock}"
-                                   data-index="${producto.index}">
-                            <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="plus" data-index="${producto.index}">
-                                <i class="fas fa-plus"></i>
+                                   data-index="${producto.index}"
+                                   aria-label="Cantidad de la fila ${producto.index + 1}">
+                            <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="plus" data-index="${producto.index}" aria-label="Aumentar cantidad de la fila ${producto.index + 1}">
+                                <i class="fas fa-plus" aria-hidden="true"></i>
                             </button>
                         </div>
                         <small class="text-muted d-block mt-1">Stock: ${producto.stock}</small>
@@ -772,10 +773,11 @@
                     <td class="text-center">
                         <button type="button" 
                                 class="btn btn-sm btn-outline-danger btn-eliminar-producto"
-                                data-index="${producto.index}"
-                                data-bs-toggle="tooltip"
-                                title="Eliminar">
-                            <i class="fas fa-trash"></i>
+                                 data-index="${producto.index}"
+                                 data-bs-toggle="tooltip"
+                                 aria-label="Eliminar producto de la fila ${producto.index + 1}"
+                                 title="Eliminar">
+                            <i class="fas fa-trash" aria-hidden="true"></i>
                         </button>
                     </td>
                 </tr>

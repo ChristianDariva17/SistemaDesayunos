@@ -235,6 +235,7 @@
     </style>
 </head>
 <body>
+<a href="#main-content" class="visually-hidden-focusable">Saltar al contenido principal</a>
 
 {{-- ============================================
     NAVBAR SUPERIOR
@@ -268,7 +269,7 @@
 {{-- ============================================
     CONTENIDO PRINCIPAL
 ============================================= --}}
-<div class="container-fluid py-4">
+<main id="main-content" class="container-fluid py-4" tabindex="-1">
     
     {{-- ============================================
         ENCABEZADO
@@ -308,7 +309,7 @@
                     </ul>
                 </div>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar alerta"></button>
         </div>
     @endif
 
@@ -331,7 +332,7 @@
                     <p class="mb-0 small">Por favor, selecciona un nuevo cliente antes de guardar los cambios.</p>
                 </div>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar alerta"></button>
         </div>
     @endif
 
@@ -354,7 +355,7 @@
                     <p class="mb-0 small">Puedes asignar un nuevo empleado o dejarlo sin asignar.</p>
                 </div>
             </div>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar alerta"></button>
         </div>
     @endif
 
@@ -524,9 +525,10 @@
                                         <tr class="producto-row" id="producto-{{ $index }}">
                                             <td>
                                                 <select name="productos[{{ $index }}][producto_id]" 
-                                                        class="form-select form-select-sm producto-select" 
-                                                        data-index="{{ $index }}" 
-                                                        required>
+                                                         class="form-select form-select-sm producto-select"
+                                                         data-index="{{ $index }}"
+                                                         aria-label="Producto de la fila {{ $index + 1 }}"
+                                                         required>
                                                     <option value="">Seleccione un producto</option>
                                                     @foreach($productos as $p)
                                                         <option value="{{ $p->id }}" 
@@ -540,9 +542,10 @@
                                             <td>
                                                 <input type="number" 
                                                        name="productos[{{ $index }}][cantidad]" 
-                                                       class="form-control form-control-sm text-center cantidad-input" 
-                                                       data-index="{{ $index }}" 
-                                                       min="1" 
+                                                        class="form-control form-control-sm text-center cantidad-input"
+                                                        data-index="{{ $index }}"
+                                                        aria-label="Cantidad de la fila {{ $index + 1 }}"
+                                                        min="1"
                                                        value="{{ $producto->pivot->cantidad }}" 
                                                        required>
                                             </td>
@@ -559,9 +562,10 @@
                                             </td>
                                             <td class="text-center">
                                                 <button type="button" 
-                                                        class="btn btn-sm btn-danger btn-eliminar" 
-                                                        data-index="{{ $index }}">
-                                                    <i class="fas fa-trash"></i>
+                                                         class="btn btn-sm btn-danger btn-eliminar"
+                                                         data-index="{{ $index }}"
+                                                         aria-label="Eliminar {{ $producto->nombre }} del pedido">
+                                                    <i class="fas fa-trash" aria-hidden="true"></i>
                                                 </button>
                                             </td>
                                         </tr>
@@ -602,17 +606,17 @@
                     <div class="text-center">
                         <i class="fas fa-calculator fa-3x mb-3 opacity-75"></i>
                         <h5 class="mb-2">Total del Pedido</h5>
-                        <div class="total-amount mb-3">
+                        <div class="total-amount mb-3" aria-live="polite">
                             S/ <span id="totalResumen">{{ number_format($pedido->total, 2) }}</span>
                         </div>
                         <div class="d-flex justify-content-around text-center">
                             <div>
                                 <small class="d-block opacity-75">Productos</small>
-                                <strong class="fs-4"><span id="cantidadProductos">{{ $pedido->productos->count() }}</span></strong>
+                                <strong class="fs-4"><span id="cantidadProductos" aria-live="polite">{{ $pedido->productos->count() }}</span></strong>
                             </div>
                             <div>
                                 <small class="d-block opacity-75">Unidades</small>
-                                <strong class="fs-4"><span id="cantidadUnidades">{{ $pedido->productos->sum('pivot.cantidad') }}</span></strong>
+                                <strong class="fs-4"><span id="cantidadUnidades" aria-live="polite">{{ $pedido->productos->sum('pivot.cantidad') }}</span></strong>
                             </div>
                         </div>
                     </div>
@@ -655,7 +659,7 @@
 
     </form>
 
-</div>
+</main>
 
 {{-- ============================================
     SCRIPTS JAVASCRIPT
@@ -703,6 +707,7 @@
                 <select name="productos[${contadorProductos}][producto_id]" 
                         class="form-select form-select-sm producto-select" 
                         data-index="${contadorProductos}" 
+                        aria-label="Producto de la fila ${contadorProductos + 1}"
                         required>
                     <option value="">Seleccione un producto</option>
                     ${productos.map(p => `
@@ -717,6 +722,7 @@
                        name="productos[${contadorProductos}][cantidad]" 
                        class="form-control form-control-sm text-center cantidad-input" 
                        data-index="${contadorProductos}" 
+                       aria-label="Cantidad de la fila ${contadorProductos + 1}"
                        min="1" 
                        value="1" 
                        required>
@@ -735,8 +741,9 @@
             <td class="text-center">
                 <button type="button" 
                         class="btn btn-sm btn-danger btn-eliminar" 
-                        data-index="${contadorProductos}">
-                    <i class="fas fa-trash"></i>
+                        data-index="${contadorProductos}"
+                        aria-label="Eliminar producto de la fila ${contadorProductos + 1}">
+                    <i class="fas fa-trash" aria-hidden="true"></i>
                 </button>
             </td>
         `;

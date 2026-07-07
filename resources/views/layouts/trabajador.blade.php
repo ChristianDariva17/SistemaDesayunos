@@ -247,13 +247,14 @@
     @stack('styles')
 </head>
 <body>
+<a href="#main-content" class="visually-hidden-focusable">Saltar al contenido principal</a>
 
 @include('layouts.partials.trabajador-navbar')
 
 {{-- ============================================
     CONTENIDO PRINCIPAL
 ============================================= --}}
-<main class="container-fluid py-4">
+<main id="main-content" class="container-fluid py-4" tabindex="-1">
     @yield('content')
 </main>
 

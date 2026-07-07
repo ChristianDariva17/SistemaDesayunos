@@ -1,7 +1,7 @@
 {{-- ============================================
     NAVBAR SUPERIOR
 ============================================= --}}
-<nav class="navbar navbar-top mb-4">
+<nav class="navbar navbar-top mb-4" aria-label="Barra superior de trabajador">
     <div class="container-fluid">
         <span class="navbar-brand mb-0 h1">
             <i class="fas fa-utensils"></i>

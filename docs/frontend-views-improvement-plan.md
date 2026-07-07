@@ -263,14 +263,14 @@ Acceptance checklist:
 
 ### Priority Fixes
 
-- [ ] Add accessible names to icon-only buttons.
-- [ ] Use native `<button>` elements for interactive controls.
-- [ ] Add `<main id="main-content">` to layouts.
-- [ ] Add a skip link to bypass repeated navigation.
-- [ ] Standardize alert/toast rendering with `role="alert"` or `aria-live`.
-- [ ] Add labels or `aria-label` to dynamic quantity inputs.
-- [ ] Ensure destructive actions have clear labels and confirmation text.
-- [ ] Preserve visible keyboard focus states.
+- [x] Add accessible names to icon-only buttons.
+- [x] Use native `<button>` elements for interactive controls.
+- [x] Add `<main id="main-content">` to layouts.
+- [x] Add a skip link to bypass repeated navigation.
+- [x] Standardize alert/toast rendering with `role="alert"` or `aria-live`.
+- [x] Add labels or `aria-label` to dynamic quantity inputs.
+- [x] Ensure destructive actions have clear labels and confirmation text.
+- [x] Preserve visible keyboard focus states.
 
 ### Example Skip Link
 
@@ -367,6 +367,14 @@ Goal: make the interface more usable with keyboard and assistive technology.
 - Add landmarks and skip link.
 - Standardize alerts and dynamic status messages.
 - Fix labels on dynamic form controls.
+
+Completed in Slice 5:
+
+- [x] Shared admin and worker layouts expose skip links and `main-content` landmarks.
+- [x] Admin navigation icon-only controls and product table action controls have accessible names.
+- [x] Shared alerts and order totals expose alert/live-region semantics.
+- [x] Admin and worker order quantity controls expose generated accessible labels.
+- [x] Shared focus-visible styles preserve keyboard focus indication.
 
 ### Slice 6: Table and Modal Performance
 

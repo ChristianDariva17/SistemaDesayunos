@@ -1,11 +1,11 @@
         {{-- ==========================================
             SIDEBAR
             ========================================== --}}
-        <div id="sidebar-wrapper">
+        <aside id="sidebar-wrapper" aria-label="Navegación de administración">
             {{-- Brand / Logo --}}
             <div class="sidebar-brand">
                 <div class="sidebar-brand-icon">
-                    <i class="fas fa-utensils"></i>
+                    <i class="fas fa-utensils" aria-hidden="true"></i>
                 </div>
                 <a href="{{ url('/') }}" class="sidebar-brand-text">
                     Caldos & Desayunos
@@ -14,13 +14,14 @@
             </div>
 
             {{-- Navegación --}}
+            <nav aria-label="Menú principal de administración">
             <ul class="sidebar-nav">
                 <li class="nav-heading">Menú Principal</li>
 
                 {{-- Dashboard/Home --}}
                 <li>
                     <a href="{{ url('dashboard') }}" class="{{ request()->is('dashboard') ? 'active' : '' }}">
-                        <i class="fas fa-tachometer-alt"></i>
+                        <i class="fas fa-tachometer-alt" aria-hidden="true"></i>
                         <span>Panel de Control</span>
                     </a>
                 </li>
@@ -30,7 +31,7 @@
                 {{-- Productos --}}
                 <li>
                     <a href="{{ route('admin.productos.index') }}" class="{{ request()->is('productos*') ? 'active' : '' }}">
-                        <i class="fas fa-box"></i>
+                        <i class="fas fa-box" aria-hidden="true"></i>
                         <span>Productos</span>
                         @if($stockBajo > 0)
                             <span class="badge badge-sidebar bg-warning">{{ $stockBajo }}</span>
@@ -41,7 +42,7 @@
                 {{-- Clientes --}}
                 <li>
                     <a href="{{ route('admin.clientes.index') }}" class="{{ request()->is('clientes*') ? 'active' : '' }}">
-                        <i class="fas fa-users"></i>
+                        <i class="fas fa-users" aria-hidden="true"></i>
                         <span>Clientes</span>
                     </a>
                 </li>
@@ -49,7 +50,7 @@
                 {{-- Pedidos --}}
                 <li>
                     <a href="{{ route('admin.pedidos.index') }}" class="{{ request()->is('pedidos*') ? 'active' : '' }}">
-                        <i class="fas fa-shopping-cart"></i>
+                        <i class="fas fa-shopping-cart" aria-hidden="true"></i>
                         <span>Pedidos</span>
                         @if($pedidosPendientes > 0)
                             <span class="badge badge-sidebar bg-danger">{{ $pedidosPendientes }}</span>
@@ -60,7 +61,7 @@
                 {{-- Empleados --}}
                 <li>
                     <a href="{{ route('admin.empleados.index') }}" class="{{ request()->is('empleados*') ? 'active' : '' }}">
-                        <i class="fas fa-user-tie"></i>
+                        <i class="fas fa-user-tie" aria-hidden="true"></i>
                         <span>Empleados</span>
                     </a>
                 </li>
@@ -70,7 +71,7 @@
                 {{-- Reportes --}}
                 <li>
                     <a href="{{ route('admin.reportes.index') }}" class="{{ request()->is('reportes*') ? 'active' : '' }}">
-                        <i class="fas fa-chart-line"></i>
+                        <i class="fas fa-chart-line" aria-hidden="true"></i>
                         <span>Reportes</span>
                     </a>
                 </li>
@@ -82,7 +83,7 @@
                 <li>
                     <a href="{{ route('logout') }}" 
                        onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                        <i class="fas fa-sign-out-alt"></i>
+                        <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
                         <span>Cerrar Sesión</span>
                     </a>
                     <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
@@ -91,6 +92,7 @@
                 </li>
                 @endauth
             </ul>
+            </nav>
 
             {{-- User Info Footer --}}
             @auth
@@ -106,4 +108,4 @@
                 </div>
             </div>
             @endauth
-        </div>
+        </aside>

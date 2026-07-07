@@ -370,6 +370,7 @@
             cursor: pointer;
             transition: all 0.3s ease;
             border: 2px solid white;
+            padding: 0;
             box-shadow: var(--shadow-sm);
         }
 
@@ -552,6 +553,8 @@
     @stack('styles')
 </head>
 <body>
+    <a href="#main-content" class="visually-hidden-focusable">Saltar al contenido principal</a>
+
     <div id="flash-messages"
          class="d-none"
          data-success="{{ session('success') }}"
@@ -571,9 +574,9 @@
             @include('layouts.partials.admin-navbar')
 
             {{-- Contenido de la Página --}}
-            <div class="content-wrapper fade-in">
+            <main id="main-content" class="content-wrapper fade-in" tabindex="-1">
                 @yield('content')
-            </div>
+            </main>
 
         </div>
     </div>

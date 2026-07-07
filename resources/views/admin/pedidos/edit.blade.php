@@ -327,8 +327,8 @@
                                             </td>
                                             <td class="text-center">
                                                 <div class="input-group input-group-sm" style="max-width: 120px; margin: 0 auto;">
-                                                    <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="minus" data-index="{{ $index }}">
-                                                        <i class="fas fa-minus"></i>
+                                                    <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="minus" data-index="{{ $index }}" aria-label="Reducir cantidad de {{ $producto->nombre }}">
+                                                        <i class="fas fa-minus" aria-hidden="true"></i>
                                                     </button>
                                                     <input type="number" 
                                                            class="form-control text-center cantidad-input" 
@@ -338,9 +338,10 @@
                                                            data-index="{{ $index }}"
                                                            data-precio="{{ $producto->pivot->precio_unitario }}"
                                                            data-stock="{{ $producto->stock + $producto->pivot->cantidad }}"
-                                                           data-cantidad-original="{{ $producto->pivot->cantidad }}">
-                                                    <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="plus" data-index="{{ $index }}">
-                                                        <i class="fas fa-plus"></i>
+                                                           data-cantidad-original="{{ $producto->pivot->cantidad }}"
+                                                           aria-label="Cantidad de {{ $producto->nombre }}">
+                                                    <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="plus" data-index="{{ $index }}" aria-label="Aumentar cantidad de {{ $producto->nombre }}">
+                                                        <i class="fas fa-plus" aria-hidden="true"></i>
                                                     </button>
                                                 </div>
                                                 <small class="text-muted d-block mt-1">
@@ -359,10 +360,11 @@
                                             <td class="text-center">
                                                 <button type="button" 
                                                         class="btn btn-sm btn-outline-danger btn-eliminar-producto"
-                                                        data-index="{{ $index }}"
-                                                        data-bs-toggle="tooltip"
-                                                        title="Eliminar">
-                                                    <i class="fas fa-trash"></i>
+                                                         data-index="{{ $index }}"
+                                                         data-bs-toggle="tooltip"
+                                                         aria-label="Eliminar {{ $producto->nombre }} del pedido"
+                                                         title="Eliminar">
+                                                    <i class="fas fa-trash" aria-hidden="true"></i>
                                                 </button>
                                             </td>
                                         </tr>
@@ -927,8 +929,8 @@
                     </td>
                     <td class="text-center">
                         <div class="input-group input-group-sm" style="max-width: 120px; margin: 0 auto;">
-                            <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="minus" data-index="${producto.index}">
-                                <i class="fas fa-minus"></i>
+                            <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="minus" data-index="${producto.index}" aria-label="Reducir cantidad de la fila ${producto.index + 1}">
+                                <i class="fas fa-minus" aria-hidden="true"></i>
                             </button>
                             <input type="number" 
                                    class="form-control text-center cantidad-input" 
@@ -939,9 +941,10 @@
                                    data-index="${producto.index}"
                                    data-precio="${producto.precio}"
                                    data-stock="${producto.stock}"
-                                   data-cantidad-original="${producto.esNuevo ? 0 : producto.cantidad}">
-                            <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="plus" data-index="${producto.index}">
-                                <i class="fas fa-plus"></i>
+                                   data-cantidad-original="${producto.esNuevo ? 0 : producto.cantidad}"
+                                   aria-label="Cantidad de la fila ${producto.index + 1}">
+                            <button class="btn btn-outline-secondary btn-cantidad" type="button" data-action="plus" data-index="${producto.index}" aria-label="Aumentar cantidad de la fila ${producto.index + 1}">
+                                <i class="fas fa-plus" aria-hidden="true"></i>
                             </button>
                         </div>
                         <small class="text-muted d-block mt-1">Stock: <span class="stock-disponible" data-index="${producto.index}">${producto.stock}</span></small>
@@ -958,10 +961,11 @@
                     <td class="text-center">
                         <button type="button" 
                                 class="btn btn-sm btn-outline-danger btn-eliminar-producto"
-                                data-index="${producto.index}"
-                                data-bs-toggle="tooltip"
-                                title="Eliminar">
-                            <i class="fas fa-trash"></i>
+                                 data-index="${producto.index}"
+                                 data-bs-toggle="tooltip"
+                                 aria-label="Eliminar producto de la fila ${producto.index + 1}"
+                                 title="Eliminar">
+                            <i class="fas fa-trash" aria-hidden="true"></i>
                         </button>
                     </td>
                 </tr>
