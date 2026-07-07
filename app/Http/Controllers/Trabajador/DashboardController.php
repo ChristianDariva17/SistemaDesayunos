@@ -3,12 +3,10 @@
 namespace App\Http\Controllers\Trabajador;
 
 use App\Http\Controllers\Controller;
-use App\Models\Producto;
-use App\Models\Cliente;
 use App\Models\Pedido;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
+use App\Services\Reporting\DashboardSummaryService;
 
 class DashboardController extends Controller
 {
@@ -20,63 +18,19 @@ class DashboardController extends Controller
      * - No pueden modificar productos ni clientes
      * - Pueden crear y ver pedidos
      */
-    public function index()
+    public function index(DashboardSummaryService $dashboardSummary)
     {
         try {
-            // ==========================================
-            // ESTADÍSTICAS BÁSICAS (SOLO LECTURA)
-            // ==========================================
-            
-            // Productos
-            $totalProductos = Producto::count();
-            $productosActivos = Producto::where('estado', 'activo')->count();
-            $stockBajo = Producto::stockBajo()->count();
-            
-            // Clientes
-            $totalClientes = Cliente::count();
-            $clientesActivos = Cliente::where('estado', 'activo')->count();
-            
-            // Pedidos
-            $totalPedidos = Pedido::count();
-            $pedidosPendientes = Pedido::where('estado', 'pendiente')->count();
-            $pedidosCompletados = Pedido::where('estado', 'completado')->count();
-            
-            // Ventas totales
-            $totalVentas = Pedido::where('estado', 'completado')
-                ->sum('total') ?? 0;
-            
-            // Ventas del mes actual
-            $ventasMes = Pedido::where('estado', 'completado')
-                ->whereMonth('created_at', now()->month)
-                ->whereYear('created_at', now()->year)
-                ->sum('total') ?? 0;
+            $summary = $dashboardSummary->summary();
             
             // ==========================================
             // PEDIDOS DEL TRABAJADOR ACTUAL
             // ==========================================
             // Nota: Si tienes un campo 'created_by' en pedidos, 
             // puedes filtrar solo los pedidos creados por este trabajador
-            $misPedidos = Pedido::latest()
+            $misPedidos = Pedido::with('cliente')
+                ->latest()
                 ->take(10)
-                ->get();
-            
-            // ==========================================
-            // PRODUCTOS MÁS VENDIDOS (TOP 5)
-            // ==========================================
-            $productosMasVendidos = DB::table('pedido_producto')
-                ->join('productos', 'pedido_producto.producto_id', '=', 'productos.id')
-                ->join('pedidos', 'pedido_producto.pedido_id', '=', 'pedidos.id')
-                ->where('pedidos.estado', 'completado')
-                ->select(
-                    'productos.id',
-                    'productos.nombre',
-                    'productos.categoria',
-                    DB::raw('SUM(pedido_producto.cantidad) as total_vendido'),
-                    DB::raw('SUM(pedido_producto.subtotal) as ingresos')
-                )
-                ->groupBy('productos.id', 'productos.nombre', 'productos.categoria')
-                ->orderByDesc('total_vendido')
-                ->take(5)
                 ->get();
             
             // ==========================================
@@ -95,22 +49,11 @@ class DashboardController extends Controller
             // ==========================================
             // RETORNAR VISTA CON DATOS
             // ==========================================
-            return view('trabajador.dashboard', compact(
-                'totalProductos',
-                'productosActivos',
-                'stockBajo',
-                'totalClientes',
-                'clientesActivos',
-                'totalPedidos',
-                'pedidosPendientes',
-                'pedidosCompletados',
-                'totalVentas',
-                'ventasMes',
-                'misPedidos',
-                'productosMasVendidos',
-                'ultimosPedidos',
-                'trabajador'
-            ));
+            return view('trabajador.dashboard', array_merge($summary, [
+                'misPedidos' => $misPedidos,
+                'ultimosPedidos' => $ultimosPedidos,
+                'trabajador' => $trabajador,
+            ]));
             
         } catch (\Exception $e) {
             Log::error('==========================================');

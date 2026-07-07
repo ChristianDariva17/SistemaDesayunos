@@ -180,9 +180,9 @@ Direct `count`, `sum`, and dashboard queries are fine with small data. As the ap
 
 ### Acceptance Checklist
 
-- [ ] Main dashboard queries are eager-loaded where needed.
-- [ ] Report filters use indexed columns.
-- [ ] Expensive aggregate queries are cached or precomputed when necessary.
+- [x] Main dashboard queries are eager-loaded where needed.
+- [x] Report filters use indexed columns.
+- [x] Expensive aggregate queries are cached or precomputed when necessary.
 
 ## 7. Database Integrity Follow-up
 

@@ -3,64 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use App\Models\Producto;
-use App\Models\Cliente;
 use App\Models\Pedido;
-use App\Models\Empleado;
-use Illuminate\Support\Facades\DB;
+use App\Services\Reporting\DashboardSummaryService;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(DashboardSummaryService $dashboardSummary)
     {
-        // ==========================================
-        // ESTADÍSTICAS GENERALES
-        // ==========================================
-        
-        // Productos
-        $totalProductos = Producto::count();
-        $productosActivos = Producto::where('estado', 'activo')->count();
-        $stockBajo = Producto::stockBajo()->count();
-        
-        // Clientes
-        $totalClientes = Cliente::count();
-        $clientesActivos = Cliente::where('estado', 'activo')->count();
-        
-        // Pedidos
-        $totalPedidos = Pedido::count();
-        $pedidosPendientes = Pedido::where('estado', 'pendiente')->count();
-        $pedidosCompletados = Pedido::where('estado', 'completado')->count();
-        
-        // Ventas
-        $totalVentas = Pedido::where('estado', 'completado')
-            ->sum('total') ?? 0;
-        
-        $ventasMes = Pedido::where('estado', 'completado')
-            ->whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->sum('total') ?? 0;
-        
-        // Empleados
-        $totalEmpleados = Empleado::count() ?? 0;
-        
-        // ==========================================
-        // PRODUCTOS MÁS VENDIDOS
-        // ==========================================
-        $productosMasVendidos = DB::table('pedido_producto')
-            ->join('productos', 'pedido_producto.producto_id', '=', 'productos.id')
-            ->join('pedidos', 'pedido_producto.pedido_id', '=', 'pedidos.id')
-            ->where('pedidos.estado', 'completado')
-            ->select(
-                'productos.id',
-                'productos.nombre',
-                'productos.categoria',
-                DB::raw('SUM(pedido_producto.cantidad) as total_vendido'),
-                DB::raw('SUM(pedido_producto.subtotal) as ingresos')
-            )
-            ->groupBy('productos.id', 'productos.nombre', 'productos.categoria')
-            ->orderByDesc('total_vendido')
-            ->take(5)
-            ->get();
+        $summary = $dashboardSummary->summary();
         
         // ==========================================
         // ÚLTIMOS PEDIDOS
@@ -73,20 +23,8 @@ class DashboardController extends Controller
         // ==========================================
         // RETORNAR VISTA CON DATOS
         // ==========================================
-        return view('admin.dashboard', compact(
-            'totalProductos',
-            'productosActivos',
-            'stockBajo',
-            'totalClientes',
-            'clientesActivos',
-            'totalPedidos',
-            'pedidosPendientes',
-            'pedidosCompletados',
-            'totalVentas',
-            'ventasMes',
-            'totalEmpleados',
-            'productosMasVendidos',
-            'ultimosPedidos'
-        ));
+        return view('admin.dashboard', array_merge($summary, [
+            'ultimosPedidos' => $ultimosPedidos,
+        ]));
     }
 }

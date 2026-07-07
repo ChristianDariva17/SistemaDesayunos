@@ -7,13 +7,13 @@ use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Models\Producto;
 use App\Models\Pedido;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Carbon\Carbon;
-use App\Models\Cliente;
-use App\Models\Empleado;
 use App\Models\StockMovimiento;
 use App\Models\User;
+use App\Services\Reporting\DashboardSummaryService;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class ReporteController extends Controller
@@ -21,52 +21,42 @@ class ReporteController extends Controller
     /**
      * Muestra la vista principal de reportes
      */
-    public function index()
+    public function index(DashboardSummaryService $dashboardSummary)
     {
         try {
-            // Estadísticas de productos
-            $totalProductos = Producto::count();
-            $productosActivos = Producto::where('estado', 'activo')->count();
-            $stockTotal = Producto::sum('stock');
-            $stockBajo = Producto::stockMinimoBajo()->count();
-            $valorInventario = DB::table('productos')
-                ->selectRaw('SUM(precio * stock) as total')
-                ->value('total') ?? 0;
+            $summary = $dashboardSummary->summary();
+            $inventoryStats = Cache::remember(
+                'reporting.inventory-summary.v1',
+                now()->addSeconds(60),
+                fn (): array => [
+                    'stockTotal' => (int) Producto::query()->sum('stock'),
+                    'stockBajo' => Producto::stockMinimoBajo()->count(),
+                    'valorInventario' => DB::table('productos')
+                        ->selectRaw('SUM(precio * stock) as total')
+                        ->value('total') ?? 0,
+                ],
+            );
 
-            // Estadísticas de clientes
-            $totalClientes = Cliente::count();
-            $clientesActivos = Cliente::where('estado', 'activo')->count();
-
-            // Estadísticas de pedidos
-            $totalPedidos = Pedido::count();
-            $pedidosCompletados = Pedido::where('estado', 'completado')->count();
-            $pedidosPendientes = Pedido::where('estado', 'pendiente')->count();
-            $pedidosProcesando = Pedido::where('estado', 'procesando')->count();
-            $totalVentas = Pedido::where('estado', 'completado')->sum('total') ?? 0;
-            $ventasMesActual = Pedido::where('estado', 'completado')
-                ->whereYear('fecha', now()->year)
-                ->whereMonth('fecha', now()->month)
-                ->sum('total') ?? 0;
-
-            // Estadísticas de empleados
-            $totalEmpleados = Empleado::count() ?? 0;
+            $pedidosProcesando = Pedido::query()
+                ->where('estado', 'procesando')
+                ->count();
 
             // Preparar array
             $estadisticas = [
-                'totalProductos' => $totalProductos,
-                'productosActivos' => $productosActivos,
-                'stockTotal' => $stockTotal,
-                'stockBajo' => $stockBajo,
-                'valorInventario' => $valorInventario,
-                'totalClientes' => $totalClientes,
-                'clientesActivos' => $clientesActivos,
-                'totalPedidos' => $totalPedidos,
-                'pedidosCompletados' => $pedidosCompletados,
-                'pedidosPendientes' => $pedidosPendientes,
+                'totalProductos' => $summary['totalProductos'],
+                'productosActivos' => $summary['productosActivos'],
+                'stockTotal' => $inventoryStats['stockTotal'],
+                'stockBajo' => $inventoryStats['stockBajo'],
+                'valorInventario' => $inventoryStats['valorInventario'],
+                'totalClientes' => $summary['totalClientes'],
+                'clientesActivos' => $summary['clientesActivos'],
+                'totalPedidos' => $summary['totalPedidos'],
+                'pedidosCompletados' => $summary['pedidosCompletados'],
+                'pedidosPendientes' => $summary['pedidosPendientes'],
                 'pedidosProcesando' => $pedidosProcesando,
-                'totalVentas' => $totalVentas,
-                'ventasMesActual' => $ventasMesActual,
-                'totalEmpleados' => $totalEmpleados,
+                'totalVentas' => $summary['totalVentas'],
+                'ventasMesActual' => $summary['ventasMes'],
+                'totalEmpleados' => $summary['totalEmpleados'],
             ];
 
             return view('admin.reportes.index', compact('estadisticas'));
@@ -234,11 +224,11 @@ class ReporteController extends Controller
         }
 
         if (!empty($validated['fecha_inicio'])) {
-            $query->whereDate('created_at', '>=', $validated['fecha_inicio']);
+            $query->where('created_at', '>=', CarbonImmutable::parse($validated['fecha_inicio'])->startOfDay());
         }
 
         if (!empty($validated['fecha_fin'])) {
-            $query->whereDate('created_at', '<=', $validated['fecha_fin']);
+            $query->where('created_at', '<=', CarbonImmutable::parse($validated['fecha_fin'])->endOfDay());
         }
 
         $movimientos = $query
