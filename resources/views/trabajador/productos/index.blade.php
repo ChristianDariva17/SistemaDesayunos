@@ -495,7 +495,7 @@
                 {{-- TABLA DE PRODUCTOS --}}
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0 responsive-card-table">
                             <thead class="table-light">
                                 <tr>
                                     <th class="text-center" width="80">Imagen</th>
@@ -511,13 +511,14 @@
                                 @forelse($productos as $producto)
                                 <tr>
                                     {{-- IMAGEN --}}
-                                    <td class="text-center">
+                                    <td class="text-center" data-label="Imagen">
                                         @if($producto->imagen)
                                             <img src="{{ asset('storage/' . $producto->imagen) }}" 
                                                  alt="{{ $producto->nombre }}" 
                                                  class="rounded shadow-sm" 
                                                  width="50" 
                                                  height="50" 
+                                                 loading="lazy"
                                                  style="object-fit: cover;">
                                         @else
                                             <div class="bg-secondary bg-opacity-10 rounded d-inline-flex align-items-center justify-content-center" 
@@ -528,7 +529,7 @@
                                     </td>
 
                                     {{-- PRODUCTO --}}
-                                    <td>
+                                    <td data-label="Producto">
                                         <div class="d-flex flex-column">
                                             <span class="fw-bold text-dark">{{ $producto->nombre }}</span>
                                             @if($producto->descripcion)
@@ -547,7 +548,7 @@
                                     </td>
 
                                     {{-- CATEGORÍA --}}
-                                    <td class="text-center">
+                                    <td class="text-center" data-label="Categoría">
                                         @if($producto->categoria)
                                             <span class="badge bg-info">
                                                 {{ ucfirst($producto->categoria) }}
@@ -558,7 +559,7 @@
                                     </td>
 
                                     {{-- STOCK --}}
-                                    <td class="text-center">
+                                    <td class="text-center" data-label="Stock">
                                         @if($producto->stock == 0)
                                             <span class="badge bg-danger">
                                                 <i class="fas fa-times-circle me-1"></i>Sin stock
@@ -575,14 +576,14 @@
                                     </td>
 
                                     {{-- PRECIO --}}
-                                    <td class="text-center">
+                                    <td class="text-center" data-label="Precio">
                                         <strong class="text-success">
                                             S/ {{ number_format($producto->precio, 2) }}
                                         </strong>
                                     </td>
 
                                     {{-- ESTADO --}}
-                                    <td class="text-center">
+                                    <td class="text-center" data-label="Estado">
                                         @if($producto->estado == 'activo')
                                             <span class="badge bg-success">
                                                 <i class="fas fa-check me-1"></i>Activo
@@ -595,7 +596,7 @@
                                     </td>
 
                                     {{-- ACCIONES --}}
-                                    <td class="text-center">
+                                    <td class="text-center" data-label="Acciones">
                                         <a href="{{ route('trabajador.productos.show', $producto) }}" 
                                            class="btn btn-sm btn-outline-primary">
                                             <i class="fas fa-eye me-1"></i>Ver

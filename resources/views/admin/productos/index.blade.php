@@ -225,7 +225,7 @@
         {{-- ========================================== --}}
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 responsive-card-table">
                     <thead class="bg-light">
                         <tr>
                             <th class="text-center" width="80">Imagen</th>
@@ -241,22 +241,26 @@
                         @forelse($productos as $producto)
                             <tr>
                                 {{-- IMAGEN --}}
-                                <td class="text-center">
-                                    @if($producto->imagen)
-                                        <button type="button"
-                                                class="btn p-0 border-0 bg-transparent"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#imageModal{{ $producto->id }}"
-                                                aria-label="Ver imagen de {{ $producto->nombre }}">
-                                            <img
-                                                src="{{ asset('storage/' . $producto->imagen) }}"
-                                                alt="{{ $producto->nombre }}"
-                                                class="rounded shadow-sm"
-                                                width="50"
-                                                height="50"
-                                                style="object-fit: cover; cursor: pointer;"
-                                            >
-                                        </button>
+                                <td class="text-center" data-label="Imagen">
+                                     @if($producto->imagen)
+                                         <button type="button"
+                                                 class="btn p-0 border-0 bg-transparent"
+                                                 data-bs-toggle="modal"
+                                                 data-bs-target="#productImageModal"
+                                                 data-product-image-src="{{ asset('storage/' . $producto->imagen) }}"
+                                                 data-product-image-alt="{{ $producto->nombre }}"
+                                                 data-product-image-title="{{ $producto->nombre }}"
+                                                 aria-label="Ver imagen de {{ $producto->nombre }}">
+                                             <img
+                                                 src="{{ asset('storage/' . $producto->imagen) }}"
+                                                 alt="{{ $producto->nombre }}"
+                                                 class="rounded shadow-sm"
+                                                 width="50"
+                                                 height="50"
+                                                 loading="lazy"
+                                                 style="object-fit: cover; cursor: pointer;"
+                                             >
+                                         </button>
                                     @else
                                         <div class="bg-secondary bg-opacity-10 rounded d-inline-flex align-items-center justify-content-center" 
                                              style="width: 50px; height: 50px;">
@@ -266,7 +270,7 @@
                                 </td>
 
                                 {{-- PRODUCTO --}}
-                                <td>
+                                <td data-label="Producto">
                                     <div class="d-flex flex-column">
                                         <span class="fw-bold text-dark">{{ $producto->nombre }}</span>
                                         @if($producto->descripcion)
@@ -285,7 +289,7 @@
                                 </td>
 
                                 {{-- CATEGORÍA --}}
-                                <td class="text-center">
+                                <td class="text-center" data-label="Categoría">
                                     @if($producto->categoria)
                                         <span class="badge bg-info bg-opacity-10 text-info border border-info">
                                             {{ ucfirst($producto->categoria) }}
@@ -296,7 +300,7 @@
                                 </td>
 
                                 {{-- STOCK --}}
-                                <td class="text-center">
+                                <td class="text-center" data-label="Stock">
                                     @if($producto->stock == 0)
                                         <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">
                                             <i class="fas fa-times-circle me-1"></i>
@@ -316,12 +320,12 @@
                                 </td>
 
                                 {{-- PRECIO --}}
-                                <td class="text-center">
+                                <td class="text-center" data-label="Precio">
                                     <span class="fw-bold text-dark">S/ {{ number_format($producto->precio, 2) }}</span>
                                 </td>
 
                                 {{-- ✅ ESTADO CON TOGGLE --}}
-                                <td class="text-center">
+                                <td class="text-center" data-label="Estado">
                                     <div class="form-check form-switch d-flex justify-content-center">
                                         <input 
                                             class="form-check-input toggle-estado" 
@@ -337,7 +341,7 @@
                                 </td>
 
                                 {{-- ACCIONES --}}
-                                <td class="text-center">
+                                <td class="text-center" data-label="Acciones">
                                     <x-table-actions label="Acciones de producto">
                                         {{-- Ver --}}
                                         <a href="{{ route('admin.productos.show', $producto) }}" 
@@ -357,11 +361,14 @@
 
                                         {{-- ✅ Actualizar Stock --}}
                                         <button type="button"
-                                                class="btn btn-sm btn-outline-warning"
-                                                data-bs-toggle="modal"
-                                                data-bs-target="#stockModal{{ $producto->id }}"
-                                                aria-label="Actualizar stock de {{ $producto->nombre }}"
-                                                title="Actualizar stock">
+                                                 class="btn btn-sm btn-outline-warning"
+                                                 data-bs-toggle="modal"
+                                                 data-bs-target="#productStockModal"
+                                                 data-product-stock-action="{{ route('admin.productos.actualizar-stock', $producto) }}"
+                                                 data-product-stock-name="{{ $producto->nombre }}"
+                                                 data-product-stock-current="{{ $producto->stock }}"
+                                                 aria-label="Actualizar stock de {{ $producto->nombre }}"
+                                                 title="Actualizar stock">
                                              <i class="fas fa-boxes" aria-hidden="true"></i>
                                         </button>
 
@@ -396,83 +403,6 @@
                                     </x-table-actions>
                                 </td>
                             </tr>
-
-                            {{-- ✅ MODAL ACTUALIZAR STOCK --}}
-                            <div class="modal fade" id="stockModal{{ $producto->id }}" tabindex="-1" aria-labelledby="stockModalLabel{{ $producto->id }}" aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <form action="{{ route('admin.productos.actualizar-stock', $producto) }}" method="POST">
-                                            @csrf
-                                            @method('PATCH')
-                                            <div class="modal-header bg-warning bg-opacity-10">
-                                                <h5 class="modal-title" id="stockModalLabel{{ $producto->id }}">
-                                                    <i class="fas fa-boxes me-2"></i>
-                                                    Actualizar Stock - {{ $producto->nombre }}
-                                                </h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body">
-                                                <div class="alert alert-info">
-                                                    <i class="fas fa-info-circle me-2"></i>
-                                                    Stock actual: <strong>{{ $producto->stock }} unidades</strong>
-                                                </div>
-
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Tipo de Operación</label>
-                                                    <select name="tipo" class="form-select" required>
-                                                        <option value="incrementar">➕ Incrementar (Agregar stock)</option>
-                                                        <option value="decrementar">➖ Decrementar (Restar stock)</option>
-                                                        <option value="establecer">🔢 Establecer (Stock exacto)</option>
-                                                    </select>
-                                                </div>
-
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Cantidad</label>
-                                                    <input type="number" 
-                                                           name="cantidad" 
-                                                           class="form-control" 
-                                                           min="0" 
-                                                           required 
-                                                           placeholder="Ingrese cantidad">
-                                                </div>
-
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Motivo (Opcional)</label>
-                                                    <textarea name="motivo" 
-                                                              class="form-control" 
-                                                              rows="2" 
-                                                              placeholder="Ej: Compra, Ajuste de inventario, etc."></textarea>
-                                                </div>
-                                            </div>
-                                            <div class="modal-footer">
-                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                                                <button type="submit" class="btn btn-warning">
-                                                    <i class="fas fa-save me-2"></i>Actualizar Stock
-                                                </button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {{-- MODAL IMAGEN --}}
-                            @if($producto->imagen)
-                                <div class="modal fade" id="imageModal{{ $producto->id }}" tabindex="-1" aria-hidden="true">
-                                    <div class="modal-dialog modal-dialog-centered">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title">{{ $producto->nombre }}</h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                            </div>
-                                            <div class="modal-body text-center">
-                                                <img src="{{ asset('storage/' . $producto->imagen) }}" 
-                                                     alt="{{ $producto->nombre }}" 
-                                                     class="img-fluid rounded">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endif
 
                         @empty
                             <tr>
@@ -516,6 +446,81 @@
                 </div>
             </div>
         @endif
+    </div>
+</div>
+
+{{-- Reusable product stock modal --}}
+<div class="modal fade" id="productStockModal" tabindex="-1" aria-labelledby="productStockModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="productStockModalForm" action="#" method="POST" data-reset-on-show="true">
+                @csrf
+                @method('PATCH')
+                <div class="modal-header bg-warning bg-opacity-10">
+                    <h5 class="modal-title" id="productStockModalLabel">
+                        <i class="fas fa-boxes me-2" aria-hidden="true"></i>
+                        Actualizar Stock
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info" role="status" aria-live="polite">
+                        <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
+                        Stock actual: <strong><span id="productStockModalCurrent">0</span> unidades</strong>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="productStockModalType" class="form-label fw-bold">Tipo de Operación</label>
+                        <select id="productStockModalType" name="tipo" class="form-select" required>
+                            <option value="incrementar">➕ Incrementar (Agregar stock)</option>
+                            <option value="decrementar">➖ Decrementar (Restar stock)</option>
+                            <option value="establecer">🔢 Establecer (Stock exacto)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="productStockModalQuantity" class="form-label fw-bold">Cantidad</label>
+                        <input type="number"
+                               id="productStockModalQuantity"
+                               name="cantidad"
+                               class="form-control"
+                               min="0"
+                               required
+                               placeholder="Ingrese cantidad">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="productStockModalReason" class="form-label fw-bold">Motivo (Opcional)</label>
+                        <textarea id="productStockModalReason"
+                                  name="motivo"
+                                  class="form-control"
+                                  rows="2"
+                                  placeholder="Ej: Compra, Ajuste de inventario, etc."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save me-2" aria-hidden="true"></i>Actualizar Stock
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{{-- Reusable product image modal --}}
+<div class="modal fade" id="productImageModal" tabindex="-1" aria-labelledby="productImageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="productImageModalLabel">Imagen del producto</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body text-center">
+                <img id="productImageModalImg" src="" alt="" class="img-fluid rounded" loading="lazy">
+            </div>
+        </div>
     </div>
 </div>
 

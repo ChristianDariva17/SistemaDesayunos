@@ -299,7 +299,7 @@
     <div class="card-body p-0">
         @if($pedidos->count() > 0)
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 responsive-card-table">
                     <thead class="table-light">
                         <tr>
                             <th>N° Pedido</th>
@@ -315,7 +315,7 @@
                         @foreach($pedidos as $pedido)
                         <tr>
                             {{-- N° Pedido --}}
-                            <td>
+                            <td data-label="N° Pedido">
                                 <div class="d-flex flex-column">
                                     <strong class="text-primary">#{{ $pedido->numero_pedido }}</strong>
                                     <small class="text-muted">
@@ -326,7 +326,7 @@
                             </td>
 
                             {{-- Cliente --}}
-                            <td>
+                            <td data-label="Cliente">
                                 @if($pedido->cliente)
                                     <div class="d-flex align-items-center">
                                         <div class="avatar-circle-sm me-2 {{ 'avatar-' . strtolower(substr($pedido->cliente->nombre, 0, 1)) }}">
@@ -347,7 +347,7 @@
                             </td>
 
                             {{-- Empleado --}}
-                            <td>
+                            <td data-label="Empleado">
                                 @if($pedido->empleado)
                                     <div class="d-flex align-items-center">
                                         <i class="fas fa-user-tie text-muted me-2"></i>
@@ -361,7 +361,7 @@
                             </td>
 
                             {{-- Fecha & Hora --}}
-                            <td>
+                            <td data-label="Fecha & Hora">
                                 <div class="d-flex flex-column">
                                     <span>
                                         <i class="fas fa-calendar text-muted me-1"></i>
@@ -375,17 +375,17 @@
                             </td>
 
                             {{-- Total --}}
-                            <td class="text-end">
+                            <td class="text-end" data-label="Total">
                                 <div class="d-flex flex-column align-items-end">
                                     <strong class="text-success fs-5">S/ {{ number_format($pedido->total, 2) }}</strong>
                                     <small class="text-muted">
-                                        {{ $pedido->productos->count() }} productos
+                                        {{ $pedido->productos_count }} productos
                                     </small>
                                 </div>
                             </td>
 
                             {{-- Estado --}}
-                            <td class="text-center">
+                            <td class="text-center" data-label="Estado">
                                 @switch($pedido->estado)
                                     @case('pendiente')
                                         <span class="badge bg-warning">
@@ -415,7 +415,7 @@
                             </td>
 
                             {{-- Acciones --}}
-                            <td class="text-center">
+                            <td class="text-center" data-label="Acciones">
                                 <div class="btn-group" role="group">
                                     <a href="{{ route('admin.pedidos.show', $pedido->id) }}" 
                                        class="btn btn-sm btn-outline-info"

@@ -380,9 +380,10 @@ Completed in Slice 5:
 
 Goal: reduce DOM weight and improve list scalability.
 
-- Replace per-row modals with reusable modals.
-- Verify eager loading for relationships shown in loops.
-- Improve mobile table/card behavior.
+- [x] Replace per-row admin product image and stock modals with one reusable modal per behavior, populated from trigger `data-*` attributes.
+- [x] Verify eager loading for relationships shown in loops; admin/worker order indexes now eager-load rendered customer/employee fields and use `withCount('productos')` for product totals.
+- [x] Improve mobile table/card behavior for admin product/order and worker product/order listing tables with shared responsive card-table CSS.
+- [x] Add focused regression coverage for reusable product modals and order product counts.
 
 ### Slice 7: Functional Enhancements
 

@@ -102,6 +102,54 @@ window.showToast = function(icon, title) {
     });
 }
 
+export function resetProductStockModalForm(form) {
+    if (form) {
+        form.reset();
+    }
+}
+
+export function registerProductStockModalHandlers(productStockModal, documentRef = document) {
+    if (!productStockModal) {
+        return;
+    }
+
+    productStockModal.addEventListener('show.bs.modal', (event) => {
+        const trigger = event.relatedTarget;
+        const form = documentRef.getElementById('productStockModalForm');
+        const title = documentRef.getElementById('productStockModalLabel');
+        const current = documentRef.getElementById('productStockModalCurrent');
+
+        if (!trigger || !form || !title || !current) {
+            return;
+        }
+
+        resetProductStockModalForm(form);
+        form.action = trigger.dataset.productStockAction ?? '#';
+        title.textContent = `Actualizar Stock - ${trigger.dataset.productStockName ?? ''}`.trim();
+        current.textContent = trigger.dataset.productStockCurrent ?? '0';
+    });
+
+    productStockModal.addEventListener('hidden.bs.modal', () => {
+        const form = documentRef.getElementById('productStockModalForm');
+        const title = documentRef.getElementById('productStockModalLabel');
+        const current = documentRef.getElementById('productStockModalCurrent');
+
+        resetProductStockModalForm(form);
+
+        if (form) {
+            form.action = '#';
+        }
+
+        if (title) {
+            title.textContent = 'Actualizar Stock';
+        }
+
+        if (current) {
+            current.textContent = '0';
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     const sidebarToggle = document.getElementById('sidebarToggle');
     const wrapper = document.getElementById('wrapper');
@@ -169,4 +217,32 @@ document.addEventListener('DOMContentLoaded', () => {
                 : '0 2px 4px rgba(0,0,0,0.05)';
         });
     }
+
+    const productImageModal = document.getElementById('productImageModal');
+    if (productImageModal) {
+        productImageModal.addEventListener('show.bs.modal', (event) => {
+            const trigger = event.relatedTarget;
+            const image = document.getElementById('productImageModalImg');
+            const title = document.getElementById('productImageModalLabel');
+
+            if (!trigger || !image || !title) {
+                return;
+            }
+
+            image.src = trigger.dataset.productImageSrc ?? '';
+            image.alt = trigger.dataset.productImageAlt ?? '';
+            title.textContent = trigger.dataset.productImageTitle ?? 'Imagen del producto';
+        });
+
+        productImageModal.addEventListener('hidden.bs.modal', () => {
+            const image = document.getElementById('productImageModalImg');
+
+            if (image) {
+                image.src = '';
+                image.alt = '';
+            }
+        });
+    }
+
+    registerProductStockModalHandlers(document.getElementById('productStockModal'), document);
 });

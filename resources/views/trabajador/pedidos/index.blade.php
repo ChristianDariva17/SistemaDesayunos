@@ -491,7 +491,7 @@
                     {{-- TABLA DE PEDIDOS --}}
                     <div class="card-body p-0">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
+                            <table class="table table-hover align-middle mb-0 responsive-card-table">
                                 <thead class="table-light">
                                     <tr>
                                         <th width="10%">N° Pedido</th>
@@ -507,7 +507,7 @@
                                     @forelse($pedidos as $pedido)
                                     <tr>
                                         {{-- N° PEDIDO --}}
-                                        <td>
+                                        <td data-label="N° Pedido">
                                             <strong class="text-primary">#{{ $pedido->numero_pedido }}</strong>
                                             <br>
                                             <small class="text-muted">
@@ -516,7 +516,7 @@
                                         </td>
 
                                         {{-- CLIENTE --}}
-                                        <td>
+                                        <td data-label="Cliente">
                                             @if($pedido->cliente)
                                             <div class="d-flex align-items-center">
                                                 <div class="bg-info bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-2"
@@ -540,7 +540,7 @@
                                         </td>
 
                                         {{-- EMPLEADO --}}
-                                        <td>
+                                        <td data-label="Empleado">
                                             @if($pedido->empleado)
                                             <i class="fas fa-user-tie text-primary me-1"></i>
                                             {{ $pedido->empleado->nombre }}
@@ -550,7 +550,7 @@
                                         </td>
 
                                         {{-- FECHA & HORA --}}
-                                        <td>
+                                        <td data-label="Fecha & Hora">
                                             <i class="far fa-calendar text-danger me-1"></i>
                                             {{ \Carbon\Carbon::parse($pedido->fecha)->format('d/m/Y') }}
                                             <br>
@@ -561,18 +561,18 @@
                                         </td>
 
                                         {{-- TOTAL --}}
-                                        <td class="text-center">
+                                        <td class="text-center" data-label="Total">
                                             <strong class="text-success fs-6">
                                                 S/ {{ number_format($pedido->total, 2) }}
                                             </strong>
                                             <br>
                                             <small class="text-muted">
-                                                {{ $pedido->productos->count() }} productos
+                                                {{ $pedido->productos_count }} productos
                                             </small>
                                         </td>
 
                                         {{-- ESTADO --}}
-                                        <td class="text-center">
+                                        <td class="text-center" data-label="Estado">
                                             @switch($pedido->estado)
                                             @case('pendiente')
                                             <span class="badge bg-warning">
@@ -602,7 +602,7 @@
                                         </td>
 
                                         {{-- ACCIONES --}}
-                                        <td class="text-center">
+                                        <td class="text-center" data-label="Acciones">
                                             <a href="{{ route('trabajador.pedidos.show', $pedido) }}"
                                                 class="btn btn-sm btn-outline-info">
                                                 <i class="fas fa-eye me-1"></i>Ver

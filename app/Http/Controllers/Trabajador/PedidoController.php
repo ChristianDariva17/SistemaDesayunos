@@ -42,8 +42,10 @@ class PedidoController extends Controller
                 ->sum('total'),
         ];
 
-        // Load canonical employee fields.
-        $query = Pedido::query()->with(['empleado:id,nombre,rol_operativo', 'cliente:id,nombre,apellido']);
+        // Load only relationships and counts rendered by the index table.
+        $query = Pedido::query()
+            ->with(['empleado:id,nombre,rol_operativo', 'cliente:id,nombre,apellido,email'])
+            ->withCount('productos');
 
         if ($request->filled('search')) {
             $search = $request->get('search');
