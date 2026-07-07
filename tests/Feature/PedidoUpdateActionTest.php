@@ -10,6 +10,7 @@ use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\StockReservation;
 use App\Models\User;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\ValidationException;
 
 it('rejects completed pedido regression to pending status', function (): void {
@@ -175,6 +176,12 @@ it('redirects back with validation errors when admin update receives a disallowe
         'observaciones' => null,
     ]);
     $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('does not expose trabajador pedido update or status-change routes', function (): void {
+    expect(Route::has('trabajador.pedidos.edit'))->toBeFalse()
+        ->and(Route::has('trabajador.pedidos.update'))->toBeFalse()
+        ->and(Route::has('trabajador.pedidos.cambiar-estado'))->toBeFalse();
 });
 
 it('updates a pedido through the admin HTTP flow and restores stock on cancel', function (): void {

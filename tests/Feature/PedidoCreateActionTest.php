@@ -90,7 +90,7 @@ it('creates a pedido through the shared create action and persists stock changes
     expect($producto->refresh()->stock)->toBe(7);
 });
 
-it('creates salida stock movements when creating a pedido directly through the model', function (): void {
+it('creates salida stock movements when creating a pedido directly through the action', function (): void {
     $cliente = Cliente::create([
         'nombre' => 'Ana',
         'apellido' => 'Paredes',
@@ -112,7 +112,7 @@ it('creates salida stock movements when creating a pedido directly through the m
         'precio' => 12.50,
     ]);
 
-    $pedido = Pedido::crearConProductos([
+    $pedido = app(CreatePedidoAction::class)->handle([
         'cliente_id' => $cliente->id,
         'empleado_id' => $empleado->id,
         'metodo_pago' => 'efectivo',
@@ -137,6 +137,60 @@ it('creates salida stock movements when creating a pedido directly through the m
     ]);
 
     expect($producto->refresh()->stock)->toBe(7);
+});
+
+it('calculates pedido totals with decimal cents and stores stable historical item prices', function (): void {
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.paredes.money@example.com',
+        'estado' => 'activo',
+    ]);
+
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $cafe = Producto::create([
+        'nombre' => 'Decimal Cafe',
+        'categoria' => 'bebida',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => '0.10',
+    ]);
+
+    $pan = Producto::create([
+        'nombre' => 'Decimal Pan',
+        'categoria' => 'panaderia',
+        'stock' => 10,
+        'estado' => 'activo',
+        'precio' => '0.20',
+    ]);
+
+    $pedido = app(CreatePedidoAction::class)->handle([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'metodo_pago' => 'efectivo',
+        'productos' => [
+            ['id' => $cafe->id, 'cantidad' => 3],
+            ['id' => $pan->id, 'cantidad' => 2],
+        ],
+    ])->load('productos');
+
+    $cafe->update(['precio' => '9.99']);
+    $pan->update(['precio' => '8.88']);
+
+    $reloadedPedido = $pedido->fresh()->load('productos');
+    $cafeLine = $reloadedPedido->productos->firstWhere('id', $cafe->id);
+    $panLine = $reloadedPedido->productos->firstWhere('id', $pan->id);
+
+    expect($reloadedPedido->total)->toBe('0.70')
+        ->and((string) $cafeLine->pivot->precio_unitario)->toBe('0.10')
+        ->and((string) $cafeLine->pivot->subtotal)->toBe('0.30')
+        ->and((string) $panLine->pivot->precio_unitario)->toBe('0.20')
+        ->and((string) $panLine->pivot->subtotal)->toBe('0.40');
 });
 
 it('rolls back pedido creation when product stock is insufficient', function (): void {

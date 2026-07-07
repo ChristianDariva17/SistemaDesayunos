@@ -2,10 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Actions\Pedido\DuplicatePedidoAction;
 use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\Pedido;
 use App\Models\Producto;
+use App\Models\StockReservation;
 use App\Models\StockMovimiento;
 use App\Models\User;
 use Illuminate\Validation\ValidationException;
@@ -61,7 +63,7 @@ it('duplicates a pedido with a fresh number, pending state, stock reservation, a
         'precio' => 12.50,
     ]);
 
-    $duplicatedPedido = $pedido->duplicarConProductos();
+    $duplicatedPedido = app(DuplicatePedidoAction::class)->handle($pedido);
 
     expect($duplicatedPedido->id)->not->toBe($pedido->id)
         ->and($duplicatedPedido->numero_pedido)->not->toBe($pedido->numero_pedido)
@@ -106,7 +108,7 @@ it('duplicates a pedido with a fresh number, pending state, stock reservation, a
 it('rolls back duplication when product stock is insufficient', function (): void {
     [$pedido, $producto] = createPedidoDuplicationFixture(stock: 1);
 
-    expect(fn (): Pedido => $pedido->duplicarConProductos())
+    expect(fn (): Pedido => app(DuplicatePedidoAction::class)->handle($pedido))
         ->toThrow(Exception::class, 'Stock insuficiente para Sandwich');
 
     $this->assertDatabaseCount('pedidos', 1);
@@ -116,6 +118,51 @@ it('rolls back duplication when product stock is insufficient', function (): voi
     expect($producto->refresh()->stock)->toBe(1);
 });
 
+it('rejects pedido duplication when a product is inactive', function (): void {
+    [$pedido, $producto] = createPedidoDuplicationFixture();
+
+    $producto->update([
+        'estado' => 'inactivo',
+    ]);
+
+    expect(fn (): Pedido => app(DuplicatePedidoAction::class)->handle($pedido))
+        ->toThrow(ValidationException::class);
+
+    $this->assertDatabaseCount('pedidos', 1);
+    $this->assertDatabaseCount('pedido_producto', 1);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+
+    expect($producto->refresh()->stock)->toBe(10);
+});
+
+it('rejects pedido duplication when active reservations leave insufficient available stock', function (): void {
+    [$pedido, $producto] = createPedidoDuplicationFixture();
+
+    $reservedPedido = Pedido::create([
+        'numero_pedido' => 'PED-202606-DUPRSV'.substr(uniqid(), -3),
+        'cliente_id' => $pedido->cliente_id,
+        'empleado_id' => $pedido->empleado_id,
+        'metodo_pago' => 'efectivo',
+        'fecha' => '2026-06-01',
+        'hora' => '09:00:00',
+        'total' => 0,
+        'estado' => 'pendiente',
+        'observaciones' => 'Reserved pedido',
+    ]);
+    StockReservation::reserve($producto, $reservedPedido, 9);
+
+    expect(fn (): Pedido => app(DuplicatePedidoAction::class)->handle($pedido))
+        ->toThrow(Exception::class, 'Stock insuficiente para Sandwich. Disponible: 1');
+
+    $this->assertDatabaseCount('pedidos', 2);
+    $this->assertDatabaseCount('pedido_producto', 1);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+    $this->assertDatabaseCount('stock_reservations', 1);
+
+    expect($producto->refresh()->stock)->toBe(10)
+        ->and($producto->availableStock())->toBe(1);
+});
+
 it('rejects pedido duplication with inactive cliente before creating a duplicate', function (): void {
     [$pedido, $producto] = createPedidoDuplicationFixture();
 
@@ -123,7 +170,7 @@ it('rejects pedido duplication with inactive cliente before creating a duplicate
         'estado' => 'inactivo',
     ]);
 
-    expect(fn (): Pedido => $pedido->duplicarConProductos())
+    expect(fn (): Pedido => app(DuplicatePedidoAction::class)->handle($pedido))
         ->toThrow(ValidationException::class);
 
     $this->assertDatabaseCount('pedidos', 1);
@@ -140,7 +187,7 @@ it('rejects pedido duplication with inactive empleado before creating a duplicat
         'estado' => 'inactivo',
     ]);
 
-    expect(fn (): Pedido => $pedido->duplicarConProductos())
+    expect(fn (): Pedido => app(DuplicatePedidoAction::class)->handle($pedido))
         ->toThrow(ValidationException::class);
 
     $this->assertDatabaseCount('pedidos', 1);
