@@ -221,10 +221,10 @@ Create shared shells for admin and worker pages.
 
 Acceptance checklist:
 
-- [ ] Admin dashboard extends a shared admin layout.
-- [ ] Worker dashboard extends a shared worker layout.
-- [ ] Navbar/sidebar are partials or components.
-- [ ] No repeated full HTML document shells in child views.
+- [x] Admin dashboard extends a shared admin layout.
+- [x] Worker dashboard extends a shared worker layout.
+- [x] Navbar/sidebar are partials or components.
+- [x] No repeated full HTML document shells in child views.
 
 ### 3. Move CSS/JS to Vite
 
