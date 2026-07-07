@@ -39,11 +39,11 @@ it('stores a daily cash closure snapshot from completed pedidos for the business
         ->and($closure->payment_method_totals)->toBe([
             'efectivo' => [
                 'count' => 2,
-                'total' => 120.25,
+                'total' => '120.25',
             ],
             'tarjeta' => [
                 'count' => 1,
-                'total' => 50.75,
+                'total' => '50.75',
             ],
         ]);
 
@@ -109,7 +109,23 @@ it('keeps stored closure totals as a snapshot when pedidos change later', functi
         ->and($closure->payment_method_totals)->toBe([
             'efectivo' => [
                 'count' => 1,
-                'total' => 25,
+                'total' => '25.00',
+            ],
+        ]);
+});
+
+it('matches daily closure totals to completed order decimal totals exactly', function (): void {
+    createClosurePedido('PED-CLOSE-DEC1', '2026-07-04', 'completado', 0.10, 'efectivo');
+    createClosurePedido('PED-CLOSE-DEC2', '2026-07-04', 'completado', 0.20, 'efectivo');
+    createClosurePedido('PED-CLOSE-DEC3', '2026-07-04', 'pendiente', 0.30, 'efectivo');
+
+    $closure = app(CloseDailyCashRegisterAction::class)->handle('2026-07-04', null);
+
+    expect($closure->total_revenue)->toBe('0.30')
+        ->and($closure->payment_method_totals)->toBe([
+            'efectivo' => [
+                'count' => 2,
+                'total' => '0.30',
             ],
         ]);
 });
