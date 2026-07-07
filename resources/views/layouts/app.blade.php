@@ -600,9 +600,6 @@
                     <a href="{{ route('admin.productos.index') }}" class="{{ request()->is('productos*') ? 'active' : '' }}">
                         <i class="fas fa-box"></i>
                         <span>Productos</span>
-                        @php
-                            $stockBajo = \App\Models\Producto::where('stock', '<', 10)->count();
-                        @endphp
                         @if($stockBajo > 0)
                             <span class="badge badge-sidebar bg-warning">{{ $stockBajo }}</span>
                         @endif
@@ -622,9 +619,6 @@
                     <a href="{{ route('admin.pedidos.index') }}" class="{{ request()->is('pedidos*') ? 'active' : '' }}">
                         <i class="fas fa-shopping-cart"></i>
                         <span>Pedidos</span>
-                        @php
-                            $pedidosPendientes = \App\Models\Pedido::where('estado', 'pendiente')->count();
-                        @endphp
                         @if($pedidosPendientes > 0)
                             <span class="badge badge-sidebar bg-danger">{{ $pedidosPendientes }}</span>
                         @endif

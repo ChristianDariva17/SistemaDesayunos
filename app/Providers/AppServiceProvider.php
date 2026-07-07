@@ -12,7 +12,9 @@ use App\Policies\DailyCashClosurePolicy;
 use App\Policies\EmpleadoPolicy;
 use App\Policies\PedidoPolicy;
 use App\Policies\ProductoPolicy;
+use App\View\Composers\AppLayoutComposer;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -35,5 +37,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Cliente::class, ClientePolicy::class);
         Gate::policy(Empleado::class, EmpleadoPolicy::class);
         Gate::policy(DailyCashClosure::class, DailyCashClosurePolicy::class);
+
+        View::composer('layouts.app', AppLayoutComposer::class);
     }
 }
