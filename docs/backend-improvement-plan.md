@@ -1,0 +1,244 @@
+# Backend Improvement Plan
+
+This document defines the recommended backend and database improvements for SistemaDesayunos. The current foundation is strong: database constraints, product price history, business auditing, stock reservations, daily cash closures, and tests already protect key flows. The next work should focus on authorization, cleaner business boundaries, money correctness, concurrency, and operational visibility.
+
+## Quick Path
+
+1. Implement real Laravel Policies for critical resources.
+2. Move order write logic out of models/controllers into dedicated Actions.
+3. Convert monetary fields from floating-point types to `DECIMAL(10,2)` or integer cents.
+4. Add concurrency and rollback tests for stock, reservations, orders, and daily closures.
+5. Add structured observability for business-critical operations.
+
+## Priority Summary
+
+| Priority | Area | Goal |
+|---|---|---|
+| Critical | Authorization | Ensure every sensitive action is checked by policy, not only by routes or roles. |
+| Critical | Money storage | Remove floating-point risk from prices, totals, and payment calculations. |
+| High | Order architecture | Keep controllers and models thinner by moving use cases into Actions. |
+| High | Concurrency | Prove stock and cash flows remain correct under simultaneous operations. |
+| Medium | Observability | Make production incidents easier to diagnose. |
+| Medium | Reporting | Avoid slow dashboards as data grows. |
+| Later | Domain modules | Separate inventory, orders, audit, and reporting boundaries more clearly. |
+
+## 1. Authorization Hardening
+
+### Problem
+
+Route middleware and role checks help, but they are not enough. Sensitive operations should be authorized at the resource/action level.
+
+### Recommended Work
+
+- Create Policies for:
+  - `Pedido`
+  - `Producto`
+  - `Cliente`
+  - `Empleado`
+  - `DailyCashClosure`
+- Replace generic `authorize(): true` in Form Requests with contextual checks.
+- Call `$this->authorize(...)` inside controllers or Actions where needed.
+- Add tests proving unauthorized users cannot create, update, delete, close, or reactivate sensitive records.
+
+### Acceptance Checklist
+
+- [ ] Critical Form Requests no longer authorize blindly.
+- [ ] Policies exist for core business models.
+- [ ] Controller/Action flows enforce policies.
+- [ ] Feature tests cover allowed and denied access.
+
+## 2. Order Use Case Extraction
+
+### Problem
+
+Order logic is one of the most important parts of the system. Keeping too much orchestration inside models or controllers makes future changes risky.
+
+### Recommended Work
+
+Create focused Actions:
+
+- `CreatePedidoAction`
+- `UpdatePedidoAction`
+- `CancelPedidoAction`
+- `DuplicatePedidoAction`
+- `ReactivatePedidoAction`
+
+Each Action should own one business use case and handle:
+
+- transaction boundaries
+- stock/reservation checks
+- state transitions
+- audit-safe updates
+- domain exceptions
+
+### Acceptance Checklist
+
+- [ ] Controllers only validate, authorize, call Actions, and return responses.
+- [ ] `Pedido` model keeps relationships, casts, scopes, and small domain helpers only.
+- [ ] Stock mutations happen inside explicit transactions.
+- [ ] Existing tests still pass after refactor.
+
+## 3. Monetary Data Correctness
+
+### Problem
+
+Money should not be stored or calculated with floating-point types. Floating-point rounding errors can create incorrect totals, reports, and closures.
+
+### Recommended Work
+
+Choose one strategy:
+
+| Option | Pros | Tradeoff |
+|---|---|---|
+| `DECIMAL(10,2)` | Simple, readable, common in Laravel/MySQL apps. | Requires careful casting and validation. |
+| Integer cents | Most robust for calculations. | Requires conversion at input/output boundaries. |
+
+Recommended for this project: start with `DECIMAL(10,2)` unless the system will later support complex discounts, taxes, or multiple currencies.
+
+Fields to review:
+
+- product prices
+- order item prices
+- order totals
+- daily cash closure totals
+- payment/revenue summaries
+
+### Acceptance Checklist
+
+- [ ] No business money columns use float/double.
+- [ ] Tests cover decimal totals and rounding boundaries.
+- [ ] Historical prices remain stable after product price changes.
+- [ ] Daily closure totals match completed orders exactly.
+
+## 4. Concurrency and Rollback Testing
+
+### Problem
+
+The system already uses transactions and locks in important areas. The next step is proving those guarantees under failure and simultaneous writes.
+
+### Recommended Tests
+
+- Two simultaneous order creations against the same product cannot oversell stock.
+- Active reservations reduce available stock during order creation and reactivation.
+- Reservation release/consume/cancel operations remain idempotent.
+- Duplicate daily cash closures return a domain error, not a raw database exception.
+- If an order operation fails halfway, stock and audit records do not become inconsistent.
+
+### Acceptance Checklist
+
+- [ ] Tests cover concurrent stock pressure.
+- [ ] Tests cover transaction rollback behavior.
+- [ ] Tests cover duplicate closure race behavior.
+- [ ] Tests prove audit failures do not corrupt business operations.
+
+## 5. Observability and Business Events
+
+### Problem
+
+Auditing records what changed, but production support also needs clear operational signals when something important happens or fails.
+
+### Recommended Work
+
+- Add domain events for:
+  - order created
+  - order cancelled
+  - order completed
+  - stock reserved
+  - stock released
+  - stock consumed
+  - product price changed
+  - daily cash closure created
+- Add structured logs for failed business operations.
+- Include useful context in logs:
+  - model ID
+  - user ID
+  - business date
+  - operation name
+  - exception class/message
+
+### Acceptance Checklist
+
+- [x] Critical operations emit events or structured logs.
+- [x] Logs do not expose sensitive data.
+- [x] Failed operations are diagnosable without manually reconstructing every table.
+
+## 6. Reporting and Dashboard Scalability
+
+### Problem
+
+Direct `count`, `sum`, and dashboard queries are fine with small data. As the app grows, repeated aggregation can become slow.
+
+### Recommended Work
+
+- Review dashboard/report queries for N+1 and repeated aggregation.
+- Add indexes for common report filters:
+  - date
+  - status
+  - payment method
+  - product/category
+- Consider cached summaries or materialized daily aggregates for heavy reports.
+
+### Acceptance Checklist
+
+- [ ] Main dashboard queries are eager-loaded where needed.
+- [ ] Report filters use indexed columns.
+- [ ] Expensive aggregate queries are cached or precomputed when necessary.
+
+## 7. Database Integrity Follow-up
+
+### Problem
+
+Recent migrations improved integrity significantly. The next step is consistency and maintainability.
+
+### Recommended Work
+
+- Extract duplicated migration helper logic for check constraints if more constraint migrations are added.
+- Keep adding database-level protection for business invariants.
+- Document which invariants are enforced by app validation, database constraints, or both.
+
+### Acceptance Checklist
+
+- [ ] Repeated migration constraint helpers are centralized or intentionally accepted.
+- [ ] Every critical invariant has a clear enforcement layer.
+- [ ] Migration failures include actionable error messages when preflight checks fail.
+
+## 8. Domain Boundary Cleanup
+
+### Problem
+
+The project can become harder to change if inventory, orders, audit, and reporting keep depending directly on each other without clear boundaries.
+
+### Recommended Work
+
+Organize business logic around modules or clear namespaces:
+
+- Orders
+- Inventory
+- Products/Pricing
+- Cash Closures
+- Audit
+- Reporting
+
+This does not require a full rewrite. Start by placing new Actions and Services in clearer folders.
+
+### Acceptance Checklist
+
+- [ ] New business logic has a clear module/home.
+- [ ] Cross-module writes happen through Actions, not random model calls.
+- [ ] Tests describe business behavior, not implementation details.
+
+## Suggested Implementation Order
+
+1. Policies and authorization hardening.
+2. Money migration to `DECIMAL(10,2)`.
+3. Pedido write-flow Actions refactor.
+4. Concurrency and rollback tests.
+5. Observability with events and structured logs.
+6. Report query optimization.
+7. Domain boundary cleanup.
+
+## Recommended Next Slice
+
+Start with **Policies and authorization hardening**.
+
+Reason: the database is now much stronger, but business security still needs resource-level authorization. This improves safety without changing the user interface and creates a better foundation for every later backend refactor.
