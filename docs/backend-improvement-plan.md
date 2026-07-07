@@ -194,13 +194,13 @@ Recent migrations improved integrity significantly. The next step is consistency
 
 - Extract duplicated migration helper logic for check constraints if more constraint migrations are added.
 - Keep adding database-level protection for business invariants.
-- Document which invariants are enforced by app validation, database constraints, or both.
+- Document which invariants are enforced by app validation, database constraints, or both. See [`database-integrity-invariants.md`](database-integrity-invariants.md).
 
 ### Acceptance Checklist
 
-- [ ] Repeated migration constraint helpers are centralized or intentionally accepted.
-- [ ] Every critical invariant has a clear enforcement layer.
-- [ ] Migration failures include actionable error messages when preflight checks fail.
+- [x] Repeated migration constraint helpers are centralized or intentionally accepted.
+- [x] Every critical invariant has a clear enforcement layer.
+- [x] Migration failures include actionable error messages when preflight checks fail.
 
 ## 8. Domain Boundary Cleanup
 

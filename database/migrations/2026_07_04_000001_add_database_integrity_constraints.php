@@ -1,5 +1,9 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Support\Database\CheckConstraints;
+use App\Support\Database\MigrationPreflight;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
@@ -27,52 +31,33 @@ return new class extends Migration
 
     public function up(): void
     {
+        $this->assertRequiredColumnsExist();
         $this->assertExistingDataIsValid();
 
         Schema::table('pedidos', function (Blueprint $table): void {
             $table->index('fecha', 'pedidos_fecha_index');
         });
 
-        if (! $this->supportsCheckConstraints()) {
+        if (! CheckConstraints::supports()) {
             return;
         }
 
         foreach (self::CHECKS as $name => $definition) {
-            DB::statement(sprintf(
-                'ALTER TABLE %s ADD CONSTRAINT %s CHECK (%s)',
-                $definition['table'],
-                $name,
-                $definition['expression'],
-            ));
+            CheckConstraints::add($definition['table'], $name, $definition['expression']);
         }
     }
 
     public function down(): void
     {
-        if ($this->supportsCheckConstraints()) {
+        if (CheckConstraints::supports()) {
             foreach (array_reverse(self::CHECKS) as $name => $definition) {
-                DB::statement($this->dropConstraintSql($definition['table'], $name));
+                CheckConstraints::drop($definition['table'], $name);
             }
         }
 
         Schema::table('pedidos', function (Blueprint $table): void {
             $table->dropIndex('pedidos_fecha_index');
         });
-    }
-
-    private function supportsCheckConstraints(): bool
-    {
-        return in_array(DB::getDriverName(), ['mysql', 'pgsql', 'sqlsrv'], true);
-    }
-
-    private function dropConstraintSql(string $table, string $name): string
-    {
-        return match (DB::getDriverName()) {
-            'mysql' => "ALTER TABLE {$table} DROP CHECK {$name}",
-            'pgsql' => "ALTER TABLE {$table} DROP CONSTRAINT IF EXISTS {$name}",
-            'sqlsrv' => "ALTER TABLE {$table} DROP CONSTRAINT {$name}",
-            default => throw new RuntimeException('Unsupported database driver for check constraints.'),
-        };
     }
 
     private function assertExistingDataIsValid(): void
@@ -95,7 +80,20 @@ return new class extends Migration
         $failedChecks = array_keys(array_filter($invalidChecks));
 
         if ($failedChecks !== []) {
-            throw new RuntimeException('Cannot add integrity constraints while invalid data exists in: '.implode(', ', $failedChecks));
+            throw new RuntimeException(
+                'Cannot add integrity constraints while invalid data exists in: '.implode(', ', $failedChecks).'. '.
+                'Fix or remove the invalid rows listed above, then rerun php artisan migrate.'
+            );
         }
+    }
+
+    private function assertRequiredColumnsExist(): void
+    {
+        MigrationPreflight::assertColumnsExist([
+            'productos' => ['stock', 'precio'],
+            'pedidos' => ['fecha', 'total', 'impuesto', 'estado'],
+            'pedido_producto' => ['cantidad', 'precio_unitario', 'subtotal'],
+            'stock_movimientos' => ['tipo', 'cantidad', 'stock_anterior', 'stock_nuevo'],
+        ], basename(__FILE__));
     }
 };
