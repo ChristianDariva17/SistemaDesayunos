@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Support\RoleNormalizer;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -43,19 +44,19 @@ class User extends Authenticatable
     // Agregar estos métodos al final de la clase
     public function esAdministrador(): bool
     {
-        return $this->rol === 'administrador';
+        return RoleNormalizer::isAdministrator((string) $this->rol);
     }
 
     public function esTrabajador(): bool
     {
-        return $this->rol === 'trabajador';
+        return RoleNormalizer::normalize((string) $this->rol) === RoleNormalizer::WORKER;
     }
 
     public function getRolNombreAttribute(): string
     {
-        return match ($this->rol) {
-            'administrador' => 'Administrador',
-            'trabajador' => 'Trabajador',
+        return match (RoleNormalizer::normalize((string) $this->rol)) {
+            RoleNormalizer::ADMINISTRATOR => 'Administrador',
+            RoleNormalizer::WORKER => 'Trabajador',
             default => 'Usuario'
         };
     }

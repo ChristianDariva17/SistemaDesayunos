@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Cliente;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -60,7 +61,10 @@ final class UpdateClienteRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return true;
+        $cliente = $this->route('cliente');
+
+        return $cliente instanceof Cliente
+            && ($this->user()?->can('update', $cliente) ?? false);
     }
 
     /**
@@ -81,7 +85,7 @@ final class UpdateClienteRequest extends FormRequest
                 Rule::unique('clientes', 'email')->ignore($cliente?->getKey()),
             ],
             'direccion' => ['nullable', 'string', 'max:255'],
-            'fecha_nacimiento' => ['nullable', 'date', 'before:today', 'after:' . now()->subYears(120)->format('Y-m-d')],
+            'fecha_nacimiento' => ['nullable', 'date', 'before:today', 'after:'.now()->subYears(120)->format('Y-m-d')],
             'estado' => ['required', 'in:activo,inactivo'],
             'notas' => ['nullable', 'string', 'max:1000'],
         ];

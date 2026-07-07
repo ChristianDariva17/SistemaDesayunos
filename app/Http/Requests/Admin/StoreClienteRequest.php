@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Cliente;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class StoreClienteRequest extends FormRequest
@@ -59,7 +60,7 @@ final class StoreClienteRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('create', Cliente::class) ?? false;
     }
 
     /**
@@ -73,7 +74,7 @@ final class StoreClienteRequest extends FormRequest
             'telefono' => ['nullable', 'string', 'max:20', 'regex:/^[0-9\+\-\(\)\s]+$/'],
             'email' => ['nullable', 'email', 'max:255', 'unique:clientes,email'],
             'direccion' => ['nullable', 'string', 'max:255'],
-            'fecha_nacimiento' => ['nullable', 'date', 'before:today', 'after:' . now()->subYears(120)->format('Y-m-d')],
+            'fecha_nacimiento' => ['nullable', 'date', 'before:today', 'after:'.now()->subYears(120)->format('Y-m-d')],
             'estado' => ['required', 'in:activo,inactivo'],
             'notas' => ['nullable', 'string', 'max:1000'],
         ];

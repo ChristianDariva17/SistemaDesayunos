@@ -4,21 +4,22 @@ namespace App\Http\Controllers\Admin;
 
 use App\Actions\Pedido\CreatePedidoAction;
 use App\Actions\Pedido\DeletePedidoAction;
+use App\Actions\Pedido\DuplicatePedidoAction;
 use App\Actions\Pedido\UpdatePedidoAction;
-use App\Actions\Stock\RegisterStockMovementAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Pedido\StorePedidoRequest;
 use App\Http\Requests\Pedido\UpdatePedidoRequest;
+use App\Models\Cliente;
+use App\Models\Empleado;
 use App\Models\Pedido;
 use App\Models\Producto;
-use App\Models\Empleado;
-use App\Models\Cliente;
 use App\Models\User;
 use DomainException;
+use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
-use Exception;
 
 class PedidoController extends Controller
 {
@@ -27,6 +28,8 @@ class PedidoController extends Controller
      */
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Pedido::class);
+
         $estadisticas = [
             'total_pedidos' => Pedido::count(),
             'pendientes' => Pedido::where('estado', 'pendiente')->count(),
@@ -90,6 +93,8 @@ class PedidoController extends Controller
      */
     public function create(Request $request)
     {
+        Gate::authorize('create', Pedido::class);
+
         $productos = Producto::where('estado', 'activo')
             ->where('stock', '>', 0)
             ->orderBy('nombre')
@@ -127,12 +132,12 @@ class PedidoController extends Controller
         } catch (Exception $e) {
             Log::error('Error al crear pedido', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return redirect()->back()
                 ->withInput()
-                ->with('error', '❌ Error: ' . $e->getMessage());
+                ->with('error', '❌ Error: '.$e->getMessage());
         }
     }
 
@@ -141,6 +146,8 @@ class PedidoController extends Controller
      */
     public function show(Pedido $pedido)
     {
+        Gate::authorize('view', $pedido);
+
         $pedido->loadDetails();
 
         return view('admin.pedidos.show', compact('pedido'));
@@ -151,6 +158,8 @@ class PedidoController extends Controller
      */
     public function edit(Pedido $pedido)
     {
+        Gate::authorize('update', $pedido);
+
         // ✅ Cargar relaciones con validación
         $pedido->loadDetails();
 
@@ -173,17 +182,17 @@ class PedidoController extends Controller
             $updatePedidoAction->handle($validated, $pedido, auth()->id());
 
             return redirect()->route('admin.pedidos.show', $pedido)
-                ->with('success', "✅ Pedido actualizado exitosamente");
+                ->with('success', '✅ Pedido actualizado exitosamente');
         } catch (ValidationException $e) {
             throw $e;
         } catch (Exception $e) {
             Log::error('Error al actualizar pedido', [
                 'pedido_id' => $pedido->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()
-                ->with('error', '❌ ' . $e->getMessage());
+                ->with('error', '❌ '.$e->getMessage());
         }
     }
 
@@ -192,6 +201,8 @@ class PedidoController extends Controller
      */
     public function destroy(Pedido $pedido, DeletePedidoAction $deletePedidoAction)
     {
+        Gate::authorize('delete', $pedido);
+
         try {
             $user = auth()->user();
             $numero_pedido = $deletePedidoAction->handle(
@@ -201,18 +212,18 @@ class PedidoController extends Controller
 
             Log::warning('Pedido eliminado', [
                 'numero_pedido' => $numero_pedido,
-                'usuario' => auth()->id() ?? 'Sistema'
+                'usuario' => auth()->id() ?? 'Sistema',
             ]);
 
             return redirect()->route('admin.pedidos.index')
                 ->with('success', "🗑️ Pedido {$numero_pedido} eliminado exitosamente");
         } catch (DomainException $e) {
             return redirect()->back()
-                ->with('error', '❌ ' . $e->getMessage());
+                ->with('error', '❌ '.$e->getMessage());
         } catch (Exception $e) {
             Log::error('Error al eliminar pedido', [
                 'pedido_id' => $pedido->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()
@@ -225,8 +236,10 @@ class PedidoController extends Controller
      */
     public function cambiarEstado(Request $request, Pedido $pedido, UpdatePedidoAction $updatePedidoAction)
     {
+        Gate::authorize('changeStatus', $pedido);
+
         $request->validate([
-            'estado' => 'required|in:pendiente,procesando,completado,cancelado'
+            'estado' => 'required|in:pendiente,procesando,completado,cancelado',
         ]);
         try {
             $updatePedidoAction->handle([
@@ -235,8 +248,8 @@ class PedidoController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Estado cambiado a: ' . ucfirst($request->estado),
-                'nuevo_estado' => $request->estado
+                'message' => 'Estado cambiado a: '.ucfirst($request->estado),
+                'nuevo_estado' => $request->estado,
             ]);
         } catch (ValidationException $e) {
             return response()->json([
@@ -248,7 +261,7 @@ class PedidoController extends Controller
 
             return response()->json([
                 'success' => false,
-                'message' => $status === 400 ? $e->getMessage() : 'Error al cambiar estado'
+                'message' => $status === 400 ? $e->getMessage() : 'Error al cambiar estado',
             ], $status);
         }
     }
@@ -258,6 +271,8 @@ class PedidoController extends Controller
      */
     public function imprimir(Pedido $pedido)
     {
+        Gate::authorize('view', $pedido);
+
         $pedido->loadDetails();
 
         return view('admin.pedidos.show', compact('pedido'));
@@ -268,6 +283,8 @@ class PedidoController extends Controller
      */
     public function exportar(Request $request)
     {
+        Gate::authorize('export', Pedido::class);
+
         // Load canonical employee fields.
         $query = Pedido::with(['cliente:id,nombre,apellido', 'empleado:id,nombre,rol_operativo']);
 
@@ -279,7 +296,7 @@ class PedidoController extends Controller
             ->orderBy('hora', 'desc')
             ->get();
 
-        $filename = 'pedidos_' . now()->format('Y-m-d_His') . '.csv';
+        $filename = 'pedidos_'.now()->format('Y-m-d_His').'.csv';
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
@@ -288,7 +305,7 @@ class PedidoController extends Controller
 
         $callback = function () use ($pedidos) {
             $file = fopen('php://output', 'w');
-            fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
 
             fputcsv($file, ['Número', 'Cliente', 'Empleado', 'Rol', 'Fecha', 'Total', 'Estado']);
 
@@ -298,9 +315,9 @@ class PedidoController extends Controller
                     $pedido->cliente->nombre ?? 'Sin cliente',
                     $pedido->empleado->nombre ?? 'Sin empleado',
                     $pedido->empleado->rol_operativo ?? 'N/A',
-                    $pedido->fecha?->format('d/m/Y') . ' ' . substr((string) $pedido->hora, 0, 5),
+                    $pedido->fecha?->format('d/m/Y').' '.substr((string) $pedido->hora, 0, 5),
                     number_format($pedido->total, 2),
-                    ucfirst($pedido->estado)
+                    ucfirst($pedido->estado),
                 ]);
             }
 
@@ -313,15 +330,21 @@ class PedidoController extends Controller
     /**
      * Duplicar pedido
      */
-    public function duplicar(Pedido $pedido, RegisterStockMovementAction $registerStockMovement)
+    public function duplicar(Pedido $pedido, DuplicatePedidoAction $duplicatePedidoAction)
     {
+        Gate::authorize('duplicate', $pedido);
+
         try {
-            $nuevoPedido = $pedido->duplicarConProductos($registerStockMovement, auth()->user());
+            $user = auth()->user();
+            $nuevoPedido = $duplicatePedidoAction->handle(
+                $pedido,
+                $user instanceof User ? $user : null,
+            );
 
             return redirect()->route('admin.pedidos.show', $nuevoPedido)
                 ->with('success', "✅ Pedido duplicado: {$nuevoPedido->numero_pedido}");
         } catch (Exception $e) {
-            return redirect()->back()->with('error', '❌ ' . $e->getMessage());
+            return redirect()->back()->with('error', '❌ '.$e->getMessage());
         }
     }
 }

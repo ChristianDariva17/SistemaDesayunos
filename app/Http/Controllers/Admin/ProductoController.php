@@ -9,11 +9,12 @@ use App\Http\Requests\Admin\UpdateProductoRequest;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Exception;
 
 class ProductoController extends Controller
 {
@@ -25,13 +26,15 @@ class ProductoController extends Controller
      */
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Producto::class);
+
         $query = Producto::query();
 
         // ==========================================
         // FILTRO: BÚSQUEDA POR NOMBRE
         // ==========================================
         if ($request->filled('search')) {
-            $query->where('nombre', 'like', '%' . $request->search . '%');
+            $query->where('nombre', 'like', '%'.$request->search.'%');
         }
 
         // ==========================================
@@ -79,6 +82,8 @@ class ProductoController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create', Producto::class);
+
         return view('admin.productos.create');
     }
 
@@ -113,7 +118,7 @@ class ProductoController extends Controller
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error("Error al crear producto: " . $e->getMessage());
+            Log::error('Error al crear producto: '.$e->getMessage());
 
             return back()
                 ->withInput()
@@ -128,6 +133,8 @@ class ProductoController extends Controller
      */
     public function show(Producto $producto)
     {
+        Gate::authorize('view', $producto);
+
         // Cargar relaciones con pedidos
         $producto->loadCount('pedidos');
         $producto->load(['pedidos' => function ($query) {
@@ -147,6 +154,8 @@ class ProductoController extends Controller
      */
     public function edit(Producto $producto)
     {
+        Gate::authorize('update', $producto);
+
         return view('admin.productos.edit', compact('producto'));
     }
 
@@ -195,7 +204,7 @@ class ProductoController extends Controller
 
         } catch (Exception $e) {
             DB::rollBack();
-            Log::error("Error al actualizar producto: " . $e->getMessage());
+            Log::error('Error al actualizar producto: '.$e->getMessage());
 
             return back()
                 ->withInput()
@@ -210,6 +219,8 @@ class ProductoController extends Controller
      */
     public function destroy(Producto $producto)
     {
+        Gate::authorize('delete', $producto);
+
         try {
             $nombre = $producto->nombre;
             $productoId = $producto->id;
@@ -219,6 +230,7 @@ class ProductoController extends Controller
             // ==========================================
             if ($producto->pedidos()->exists()) {
                 $cantidadPedidos = $producto->pedidos()->count();
+
                 return redirect()->back()
                     ->with('error', "❌ No se puede eliminar '{$nombre}' porque tiene {$cantidadPedidos} pedido(s) asociado(s).");
             }
@@ -241,7 +253,7 @@ class ProductoController extends Controller
             Log::warning('Producto eliminado', [
                 'producto_id' => $productoId,
                 'nombre' => $nombre,
-                'usuario' => auth()->id() ?? 'Sistema'
+                'usuario' => auth()->id() ?? 'Sistema',
             ]);
 
             return redirect()->route('admin.productos.index')
@@ -254,7 +266,7 @@ class ProductoController extends Controller
             // Registrar el error
             Log::error('Error al eliminar producto', [
                 'producto_id' => $producto->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()
@@ -270,7 +282,7 @@ class ProductoController extends Controller
      */
     private function handleImageUpload(Request $request, ?Producto $producto = null): ?string
     {
-        if (!$request->hasFile('imagen')) {
+        if (! $request->hasFile('imagen')) {
             return null;
         }
 
@@ -291,10 +303,12 @@ class ProductoController extends Controller
      */
     public function buscar(Request $request)
     {
+        Gate::authorize('viewAny', Producto::class);
+
         try {
             $termino = $request->get('q', '');
-            
-            $productos = Producto::where('nombre', 'like', '%' . $termino . '%')
+
+            $productos = Producto::where('nombre', 'like', '%'.$termino.'%')
                 ->where('estado', 'activo')
                 ->limit(10)
                 ->get(['id', 'nombre', 'precio', 'stock', 'imagen']);
@@ -307,16 +321,16 @@ class ProductoController extends Controller
                         'nombre' => $producto->nombre,
                         'precio' => number_format($producto->precio, 2),
                         'stock' => $producto->stock,
-                        'imagen_url' => $producto->imagen ? asset('storage/' . $producto->imagen) : null,
+                        'imagen_url' => $producto->imagen ? asset('storage/'.$producto->imagen) : null,
                     ];
-                })
+                }),
             ]);
         } catch (Exception $e) {
             Log::error('Error en búsqueda de productos', ['error' => $e->getMessage()]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al buscar productos'
+                'message' => 'Error al buscar productos',
             ], 500);
         }
     }
@@ -329,32 +343,34 @@ class ProductoController extends Controller
      */
     public function toggleEstado(Producto $producto)
     {
+        Gate::authorize('toggleStatus', $producto);
+
         try {
             $estadoAnterior = $producto->estado;
             $nuevoEstado = $producto->estado === 'activo' ? 'inactivo' : 'activo';
-            
+
             $producto->update(['estado' => $nuevoEstado]);
 
             Log::info('Estado de producto cambiado', [
                 'producto_id' => $producto->id,
                 'estado_anterior' => $estadoAnterior,
-                'estado_nuevo' => $nuevoEstado
+                'estado_nuevo' => $nuevoEstado,
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => "Estado cambiado a: " . ucfirst($nuevoEstado),
-                'nuevo_estado' => $nuevoEstado
+                'message' => 'Estado cambiado a: '.ucfirst($nuevoEstado),
+                'nuevo_estado' => $nuevoEstado,
             ]);
         } catch (Exception $e) {
             Log::error('Error al cambiar estado de producto', [
                 'producto_id' => $producto->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al cambiar el estado'
+                'message' => 'Error al cambiar el estado',
             ], 500);
         }
     }
@@ -367,6 +383,8 @@ class ProductoController extends Controller
      */
     public function actualizarStock(Request $request, Producto $producto)
     {
+        Gate::forUser($request->user())->authorize('updateStock', $producto);
+
         try {
             if (is_string($request->input('motivo'))) {
                 $request->merge([
@@ -377,7 +395,7 @@ class ProductoController extends Controller
             $validated = $request->validate([
                 'cantidad' => 'required|integer|min:0',
                 'tipo' => 'required|in:incrementar,decrementar,establecer',
-                'motivo' => 'nullable|string|max:255'
+                'motivo' => 'nullable|string|max:255',
             ]);
             $motivo = $this->normalizeManualStockMotivo($validated['motivo'] ?? null);
 
@@ -428,7 +446,7 @@ class ProductoController extends Controller
                 'stock_anterior' => $stockAnterior,
                 'stock_nuevo' => $producto->stock,
                 'tipo' => $validated['tipo'],
-                'motivo' => $motivo ?? 'No especificado'
+                'motivo' => $motivo ?? 'No especificado',
             ]);
 
             return redirect()->back()
@@ -441,7 +459,7 @@ class ProductoController extends Controller
 
             Log::error('Error al actualizar stock', [
                 'producto_id' => $producto->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()
@@ -491,12 +509,14 @@ class ProductoController extends Controller
      */
     public function duplicar(Producto $producto)
     {
+        Gate::authorize('duplicate', $producto);
+
         try {
             DB::beginTransaction();
 
             // Crear copia del producto
             $nuevoProducto = $producto->replicate();
-            $nuevoProducto->nombre = $producto->nombre . ' (Copia)';
+            $nuevoProducto->nombre = $producto->nombre.' (Copia)';
             $nuevoProducto->codigo_barras = null; // Limpiar campos únicos
             $nuevoProducto->sku = null;
             $nuevoProducto->stock = 0; // Reset stock
@@ -504,7 +524,7 @@ class ProductoController extends Controller
             // Copiar imagen si existe
             if ($producto->imagen && Storage::disk('public')->exists($producto->imagen)) {
                 $extension = pathinfo($producto->imagen, PATHINFO_EXTENSION);
-                $nuevoNombre = 'productos/' . uniqid() . '.' . $extension;
+                $nuevoNombre = 'productos/'.uniqid().'.'.$extension;
                 Storage::disk('public')->copy($producto->imagen, $nuevoNombre);
                 $nuevoProducto->imagen = $nuevoNombre;
             }
@@ -515,18 +535,18 @@ class ProductoController extends Controller
 
             Log::info('Producto duplicado', [
                 'producto_original' => $producto->id,
-                'producto_nuevo' => $nuevoProducto->id
+                'producto_nuevo' => $nuevoProducto->id,
             ]);
 
             return redirect()->route('admin.productos.edit', $nuevoProducto)
-                ->with('success', "✅ Producto duplicado correctamente. Edita los detalles necesarios.");
+                ->with('success', '✅ Producto duplicado correctamente. Edita los detalles necesarios.');
 
         } catch (Exception $e) {
             DB::rollBack();
-            
+
             Log::error('Error al duplicar producto', [
                 'producto_id' => $producto->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()
@@ -542,12 +562,14 @@ class ProductoController extends Controller
      */
     public function exportar(Request $request)
     {
+        Gate::authorize('export', Producto::class);
+
         try {
             $query = Producto::query();
 
             // Aplicar los mismos filtros que en index()
             if ($request->filled('search')) {
-                $query->where('nombre', 'like', '%' . $request->search . '%');
+                $query->where('nombre', 'like', '%'.$request->search.'%');
             }
 
             if ($request->filled('categoria')) {
@@ -561,7 +583,7 @@ class ProductoController extends Controller
             $productos = $query->orderBy('nombre')->get();
 
             // Nombre del archivo
-            $filename = 'productos_' . now()->format('Y-m-d_His') . '.csv';
+            $filename = 'productos_'.now()->format('Y-m-d_His').'.csv';
 
             // Headers para descarga
             $headers = [
@@ -574,7 +596,7 @@ class ProductoController extends Controller
                 $file = fopen('php://output', 'w');
 
                 // BOM para UTF-8
-                fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
 
                 // Encabezados
                 fputcsv($file, [
@@ -587,7 +609,7 @@ class ProductoController extends Controller
                     'Código de Barras',
                     'SKU',
                     'Estado',
-                    'Fecha de Creación'
+                    'Fecha de Creación',
                 ]);
 
                 // Datos
@@ -602,7 +624,7 @@ class ProductoController extends Controller
                         $producto->codigo_barras,
                         $producto->sku,
                         ucfirst($producto->estado),
-                        $producto->created_at->format('d/m/Y H:i:s')
+                        $producto->created_at->format('d/m/Y H:i:s'),
                     ]);
                 }
 
@@ -611,14 +633,14 @@ class ProductoController extends Controller
 
             Log::info('Productos exportados', [
                 'total' => $productos->count(),
-                'usuario' => auth()->id() ?? 'Sistema'
+                'usuario' => auth()->id() ?? 'Sistema',
             ]);
 
             return response()->stream($callback, 200, $headers);
 
         } catch (Exception $e) {
             Log::error('Error al exportar productos', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()
@@ -634,6 +656,8 @@ class ProductoController extends Controller
      */
     public function estadisticas()
     {
+        Gate::authorize('viewAny', Producto::class);
+
         try {
             $estadisticas = [
                 'total' => Producto::count(),
@@ -648,22 +672,22 @@ class ProductoController extends Controller
                     ->whereNotNull('categoria')
                     ->groupBy('categoria')
                     ->orderBy('total', 'desc')
-                    ->get()
+                    ->get(),
             ];
 
             return response()->json([
                 'success' => true,
-                'estadisticas' => $estadisticas
+                'estadisticas' => $estadisticas,
             ]);
 
         } catch (Exception $e) {
             Log::error('Error al obtener estadísticas', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener estadísticas'
+                'message' => 'Error al obtener estadísticas',
             ], 500);
         }
     }

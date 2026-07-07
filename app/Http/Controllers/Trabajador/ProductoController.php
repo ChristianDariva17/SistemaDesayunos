@@ -4,10 +4,11 @@ namespace App\Http\Controllers\Trabajador;
 
 use App\Http\Controllers\Controller;
 use App\Models\Producto;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
-use Exception;
 
 class ProductoController extends Controller
 {
@@ -19,13 +20,15 @@ class ProductoController extends Controller
      */
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Producto::class);
+
         $query = Producto::query();
 
         // ==========================================
         // FILTRO: BÚSQUEDA POR NOMBRE
         // ==========================================
         if ($request->filled('search')) {
-            $query->where('nombre', 'like', '%' . $request->search . '%');
+            $query->where('nombre', 'like', '%'.$request->search.'%');
         }
 
         // ==========================================
@@ -73,6 +76,8 @@ class ProductoController extends Controller
      */
     public function show(Producto $producto)
     {
+        Gate::authorize('view', $producto);
+
         // Cargar relaciones con pedidos
         $producto->loadCount('pedidos');
         $producto->load(['pedidos' => function ($query) {
@@ -93,10 +98,12 @@ class ProductoController extends Controller
      */
     public function buscar(Request $request)
     {
+        Gate::authorize('viewAny', Producto::class);
+
         try {
             $termino = $request->get('q', '');
-            
-            $productos = Producto::where('nombre', 'like', '%' . $termino . '%')
+
+            $productos = Producto::where('nombre', 'like', '%'.$termino.'%')
                 ->where('estado', 'activo')
                 ->limit(10)
                 ->get(['id', 'nombre', 'precio', 'stock', 'imagen']);
@@ -109,20 +116,19 @@ class ProductoController extends Controller
                         'nombre' => $producto->nombre,
                         'precio' => number_format($producto->precio, 2),
                         'stock' => $producto->stock,
-                        'imagen_url' => $producto->imagen ? asset('storage/' . $producto->imagen) : null,
+                        'imagen_url' => $producto->imagen ? asset('storage/'.$producto->imagen) : null,
                     ];
-                })
+                }),
             ]);
         } catch (Exception $e) {
             Log::error('Error en búsqueda de productos', ['error' => $e->getMessage()]);
-            
+
             return response()->json([
                 'success' => false,
-                'message' => 'Error al buscar productos'
+                'message' => 'Error al buscar productos',
             ], 500);
         }
     }
-
 
     /**
      * ==========================================
@@ -132,6 +138,8 @@ class ProductoController extends Controller
      */
     public function estadisticas()
     {
+        Gate::authorize('viewAny', Producto::class);
+
         try {
             $estadisticas = [
                 'total' => Producto::count(),
@@ -146,22 +154,22 @@ class ProductoController extends Controller
                     ->whereNotNull('categoria')
                     ->groupBy('categoria')
                     ->orderBy('total', 'desc')
-                    ->get()
+                    ->get(),
             ];
 
             return response()->json([
                 'success' => true,
-                'estadisticas' => $estadisticas
+                'estadisticas' => $estadisticas,
             ]);
 
         } catch (Exception $e) {
             Log::error('Error al obtener estadísticas', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener estadísticas'
+                'message' => 'Error al obtener estadísticas',
             ], 500);
         }
     }

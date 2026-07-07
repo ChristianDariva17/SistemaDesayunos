@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Trabajador;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cliente;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Exception;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 
 class ClienteController extends Controller
 {
@@ -19,6 +19,8 @@ class ClienteController extends Controller
      */
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Cliente::class);
+
         $query = Cliente::query();
 
         // ==========================================
@@ -87,7 +89,6 @@ class ClienteController extends Controller
         ));
     }
 
-
     /**
      * ==========================================
      * MÉTODO: BUSCAR - BÚSQUEDA AJAX
@@ -96,6 +97,8 @@ class ClienteController extends Controller
      */
     public function buscar(Request $request)
     {
+        Gate::authorize('viewAny', Cliente::class);
+
         try {
             $termino = $request->get('q', '');
 
@@ -114,21 +117,21 @@ class ClienteController extends Controller
                 'clientes' => $clientes->map(function ($cliente) {
                     return [
                         'id' => $cliente->id,
-                        'nombre_completo' => trim($cliente->nombre . ' ' . $cliente->apellido),
+                        'nombre_completo' => trim($cliente->nombre.' '.$cliente->apellido),
                         'email' => $cliente->email,
-                        'telefono' => $cliente->telefono
+                        'telefono' => $cliente->telefono,
                     ];
-                })
+                }),
             ]);
 
         } catch (Exception $e) {
             Log::error('Error en búsqueda de clientes', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al buscar clientes'
+                'message' => 'Error al buscar clientes',
             ], 500);
         }
     }
@@ -142,6 +145,8 @@ class ClienteController extends Controller
      */
     public function estadisticas()
     {
+        Gate::authorize('viewAny', Cliente::class);
+
         try {
             $estadisticas = [
                 'total' => Cliente::count(),
@@ -162,22 +167,22 @@ class ClienteController extends Controller
                     ->whereYear('created_at', now()->year)
                     ->groupBy('mes')
                     ->orderBy('mes')
-                    ->get()
+                    ->get(),
             ];
 
             return response()->json([
                 'success' => true,
-                'estadisticas' => $estadisticas
+                'estadisticas' => $estadisticas,
             ]);
 
         } catch (Exception $e) {
             Log::error('Error al obtener estadísticas de clientes', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener estadísticas'
+                'message' => 'Error al obtener estadísticas',
             ], 500);
         }
     }
@@ -188,7 +193,7 @@ class ClienteController extends Controller
      * ==========================================
      * ✅ MEJORADO: Alineado con estructura de tabla
      */
-    private function getValidationRules(Cliente $cliente = null): array
+    private function getValidationRules(?Cliente $cliente = null): array
     {
         $clienteId = $cliente ? $cliente->id : null;
 
@@ -199,23 +204,23 @@ class ClienteController extends Controller
                 'nullable',
                 'string',
                 'max:20',
-                'regex:/^[0-9\+\-\(\)\s]+$/' // Permite números, +, -, (, ), espacios
+                'regex:/^[0-9\+\-\(\)\s]+$/', // Permite números, +, -, (, ), espacios
             ],
             'email' => [
                 'nullable',
                 'email',
                 'max:255',
-                'unique:clientes,email,' . $clienteId
+                'unique:clientes,email,'.$clienteId,
             ],
             'direccion' => 'nullable|string|max:255',
             'fecha_nacimiento' => [
                 'nullable',
                 'date',
                 'before:today',
-                'after:' . now()->subYears(120)->format('Y-m-d') // Máximo 120 años
+                'after:'.now()->subYears(120)->format('Y-m-d'), // Máximo 120 años
             ],
             'estado' => 'required|in:activo,inactivo',
-            'notas' => 'nullable|string|max:1000'
+            'notas' => 'nullable|string|max:1000',
         ];
     }
 
@@ -241,7 +246,7 @@ class ClienteController extends Controller
             'fecha_nacimiento.after' => 'La fecha de nacimiento no puede ser mayor a 120 años.',
             'estado.required' => 'Debes seleccionar el estado del cliente.',
             'estado.in' => 'El estado debe ser activo o inactivo.',
-            'notas.max' => 'Las notas no pueden tener más de 1000 caracteres.'
+            'notas.max' => 'Las notas no pueden tener más de 1000 caracteres.',
         ];
     }
 }

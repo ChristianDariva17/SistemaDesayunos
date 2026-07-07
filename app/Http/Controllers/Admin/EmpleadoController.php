@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\UpdateEmpleadoRequest;
 use App\Models\Empleado;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 
 class EmpleadoController extends Controller
@@ -17,6 +18,8 @@ class EmpleadoController extends Controller
      */
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Empleado::class);
+
         $query = Empleado::query();
 
         // Filtro por búsqueda (nombre y rol_operativo)
@@ -62,6 +65,8 @@ class EmpleadoController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create', Empleado::class);
+
         return view('admin.empleados.create');
     }
 
@@ -85,7 +90,7 @@ class EmpleadoController extends Controller
                 ->with('success', "✅ Empleado {$empleado->nombre} registrado correctamente");
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Error al crear empleado: " . $e->getMessage());
+            Log::error('Error al crear empleado: '.$e->getMessage());
 
             return back()
                 ->withInput()
@@ -98,6 +103,8 @@ class EmpleadoController extends Controller
      */
     public function show(Empleado $empleado)
     {
+        Gate::authorize('view', $empleado);
+
         // Cargar relación con conteo
         $empleado->loadCount('pedidos');
 
@@ -115,6 +122,8 @@ class EmpleadoController extends Controller
      */
     public function edit(Empleado $empleado)
     {
+        Gate::authorize('update', $empleado);
+
         return view('admin.empleados.edit', compact('empleado'));
     }
 
@@ -138,7 +147,7 @@ class EmpleadoController extends Controller
                 ->with('success', "✅ Empleado {$empleado->nombre} actualizado correctamente");
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Error al actualizar empleado: " . $e->getMessage());
+            Log::error('Error al actualizar empleado: '.$e->getMessage());
 
             return back()
                 ->withInput()
@@ -151,6 +160,8 @@ class EmpleadoController extends Controller
      */
     public function destroy(Empleado $empleado)
     {
+        Gate::authorize('delete', $empleado);
+
         try {
             $nombre = $empleado->nombre;
 
@@ -172,7 +183,7 @@ class EmpleadoController extends Controller
                 ->with('success', "✅ Empleado {$nombre} eliminado correctamente");
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error("Error al eliminar empleado: " . $e->getMessage());
+            Log::error('Error al eliminar empleado: '.$e->getMessage());
 
             return back()
                 ->with('error', '❌ Error al eliminar el empleado. Por favor intenta nuevamente.');
@@ -184,6 +195,8 @@ class EmpleadoController extends Controller
      */
     public function estadisticas()
     {
+        Gate::authorize('viewAny', Empleado::class);
+
         $stats = [
             'total' => Empleado::count(),
             'activos' => Empleado::where('estado', 'activo')->count(),

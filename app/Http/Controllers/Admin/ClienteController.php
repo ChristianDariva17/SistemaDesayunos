@@ -6,10 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreClienteRequest;
 use App\Http\Requests\Admin\UpdateClienteRequest;
 use App\Models\Cliente;
+use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
-use Exception;
 
 class ClienteController extends Controller
 {
@@ -21,6 +22,8 @@ class ClienteController extends Controller
      */
     public function index(Request $request)
     {
+        Gate::authorize('viewAny', Cliente::class);
+
         $query = Cliente::query();
 
         // ==========================================
@@ -96,6 +99,8 @@ class ClienteController extends Controller
      */
     public function create()
     {
+        Gate::authorize('create', Cliente::class);
+
         return view('admin.clientes.create');
     }
 
@@ -121,18 +126,18 @@ class ClienteController extends Controller
                 'cliente_id' => $cliente->id,
                 'nombre_completo' => $this->formatClienteNombre($cliente),
                 'email' => $cliente->email,
-                'usuario' => auth()->id() ?? 'Sistema'
+                'usuario' => auth()->id() ?? 'Sistema',
             ]);
 
             return redirect()->route('admin.clientes.index')
-                ->with('success', '✅ Cliente ' . $this->formatClienteNombre($cliente) . ' creado exitosamente');
+                ->with('success', '✅ Cliente '.$this->formatClienteNombre($cliente).' creado exitosamente');
 
         } catch (Exception $e) {
             DB::rollBack();
-            
+
             Log::error('Error al crear cliente', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
 
             return redirect()->back()
@@ -148,6 +153,8 @@ class ClienteController extends Controller
      */
     public function show(Cliente $cliente)
     {
+        Gate::authorize('view', $cliente);
+
         // Cargar pedidos recientes con conteo total
         $cliente->loadCount('pedidos')
             ->load(['pedidos' => function ($query) {
@@ -188,6 +195,8 @@ class ClienteController extends Controller
      */
     public function edit(Cliente $cliente)
     {
+        Gate::authorize('update', $cliente);
+
         return view('admin.clientes.edit', compact('cliente'));
     }
 
@@ -212,18 +221,18 @@ class ClienteController extends Controller
             Log::info('Cliente actualizado', [
                 'cliente_id' => $cliente->id,
                 'nombre_completo' => $this->formatClienteNombre($cliente),
-                'cambios' => $cliente->getChanges()
+                'cambios' => $cliente->getChanges(),
             ]);
 
             return redirect()->route('admin.clientes.show', $cliente)
-                ->with('success', '✅ Cliente ' . $this->formatClienteNombre($cliente) . ' actualizado correctamente');
+                ->with('success', '✅ Cliente '.$this->formatClienteNombre($cliente).' actualizado correctamente');
 
         } catch (Exception $e) {
             DB::rollBack();
-            
+
             Log::error('Error al actualizar cliente', [
                 'cliente_id' => $cliente->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()
@@ -239,6 +248,8 @@ class ClienteController extends Controller
      */
     public function destroy(Cliente $cliente)
     {
+        Gate::authorize('delete', $cliente);
+
         try {
             $nombreCompleto = $this->formatClienteNombre($cliente);
             $clienteId = $cliente->id;
@@ -248,6 +259,7 @@ class ClienteController extends Controller
             // ==========================================
             if ($cliente->pedidos()->exists()) {
                 $cantidadPedidos = $cliente->pedidos()->count();
+
                 return redirect()->back()
                     ->with('error', "❌ No se puede eliminar '{$nombreCompleto}' porque tiene {$cantidadPedidos} pedido(s) asociado(s).");
             }
@@ -264,7 +276,7 @@ class ClienteController extends Controller
                 'cliente_id' => $clienteId,
                 'nombre_completo' => $nombreCompleto,
                 'email' => $cliente->email,
-                'usuario' => auth()->id() ?? 'Sistema'
+                'usuario' => auth()->id() ?? 'Sistema',
             ]);
 
             return redirect()->route('admin.clientes.index')
@@ -272,10 +284,10 @@ class ClienteController extends Controller
 
         } catch (Exception $e) {
             DB::rollBack();
-            
+
             Log::error('Error al eliminar cliente', [
                 'cliente_id' => $cliente->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()
@@ -291,6 +303,8 @@ class ClienteController extends Controller
      */
     public function buscar(Request $request)
     {
+        Gate::authorize('viewAny', Cliente::class);
+
         try {
             $termino = $request->get('q', '');
 
@@ -311,19 +325,19 @@ class ClienteController extends Controller
                         'id' => $cliente->id,
                         'nombre_completo' => $this->formatClienteNombre($cliente),
                         'email' => $cliente->email,
-                        'telefono' => $cliente->telefono
+                        'telefono' => $cliente->telefono,
                     ];
-                })
+                }),
             ]);
 
         } catch (Exception $e) {
             Log::error('Error en búsqueda de clientes', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al buscar clientes'
+                'message' => 'Error al buscar clientes',
             ], 500);
         }
     }
@@ -336,6 +350,8 @@ class ClienteController extends Controller
      */
     public function toggleEstado(Cliente $cliente)
     {
+        Gate::authorize('toggleStatus', $cliente);
+
         try {
             $estadoAnterior = $cliente->estado;
             $nuevoEstado = $cliente->estado === 'activo' ? 'inactivo' : 'activo';
@@ -348,24 +364,24 @@ class ClienteController extends Controller
                 'nombre_completo' => $this->formatClienteNombre($cliente),
                 'estado_anterior' => $estadoAnterior,
                 'estado_nuevo' => $nuevoEstado,
-                'usuario' => auth()->id() ?? 'Sistema'
+                'usuario' => auth()->id() ?? 'Sistema',
             ]);
 
             return response()->json([
                 'success' => true,
-                'message' => "Estado cambiado a: " . ucfirst($nuevoEstado),
-                'nuevo_estado' => $nuevoEstado
+                'message' => 'Estado cambiado a: '.ucfirst($nuevoEstado),
+                'nuevo_estado' => $nuevoEstado,
             ]);
 
         } catch (Exception $e) {
             Log::error('Error al cambiar estado de cliente', [
                 'cliente_id' => $cliente->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al cambiar el estado'
+                'message' => 'Error al cambiar el estado',
             ], 500);
         }
     }
@@ -379,6 +395,8 @@ class ClienteController extends Controller
      */
     public function exportar(Request $request)
     {
+        Gate::authorize('export', Cliente::class);
+
         try {
             $query = Cliente::query();
 
@@ -400,7 +418,7 @@ class ClienteController extends Controller
             $clientes = $query->orderBy('nombre')->get();
 
             // Nombre del archivo
-            $filename = 'clientes_' . now()->format('Y-m-d_His') . '.csv';
+            $filename = 'clientes_'.now()->format('Y-m-d_His').'.csv';
 
             // Headers para descarga
             $headers = [
@@ -413,7 +431,7 @@ class ClienteController extends Controller
                 $file = fopen('php://output', 'w');
 
                 // BOM para UTF-8
-                fprintf($file, chr(0xEF) . chr(0xBB) . chr(0xBF));
+                fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
 
                 // ✅ MEJORADO: Encabezados completos según tabla
                 fputcsv($file, [
@@ -427,7 +445,7 @@ class ClienteController extends Controller
                     'Edad',
                     'Estado',
                     'Notas',
-                    'Fecha Registro'
+                    'Fecha Registro',
                 ]);
 
                 // Datos
@@ -435,7 +453,7 @@ class ClienteController extends Controller
                     // Calcular edad si tiene fecha de nacimiento
                     $edad = '';
                     if ($cliente->fecha_nacimiento) {
-                        $edad = now()->diffInYears($cliente->fecha_nacimiento) . ' años';
+                        $edad = now()->diffInYears($cliente->fecha_nacimiento).' años';
                     }
 
                     fputcsv($file, [
@@ -449,7 +467,7 @@ class ClienteController extends Controller
                         $edad,
                         ucfirst($cliente->estado),
                         $cliente->notas,
-                        $cliente->created_at->format('d/m/Y H:i:s')
+                        $cliente->created_at->format('d/m/Y H:i:s'),
                     ]);
                 }
 
@@ -458,14 +476,14 @@ class ClienteController extends Controller
 
             Log::info('Clientes exportados', [
                 'total' => $clientes->count(),
-                'usuario' => auth()->id() ?? 'Sistema'
+                'usuario' => auth()->id() ?? 'Sistema',
             ]);
 
             return response()->stream($callback, 200, $headers);
 
         } catch (Exception $e) {
             Log::error('Error al exportar clientes', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()
@@ -482,16 +500,18 @@ class ClienteController extends Controller
      */
     public function duplicar(Cliente $cliente)
     {
+        Gate::authorize('duplicate', $cliente);
+
         try {
             DB::beginTransaction();
 
             // Crear copia del cliente
             $nuevoCliente = $cliente->replicate();
             $nuevoCliente->nombre = $cliente->nombre;
-            $nuevoCliente->apellido = $cliente->apellido ? $cliente->apellido . ' (Copia)' : null;
+            $nuevoCliente->apellido = $cliente->apellido ? $cliente->apellido.' (Copia)' : null;
             $nuevoCliente->email = null; // Limpiar email único
             $nuevoCliente->telefono = null; // Limpiar teléfono
-            
+
             $nuevoCliente->save();
 
             DB::commit();
@@ -499,18 +519,18 @@ class ClienteController extends Controller
             Log::info('Cliente duplicado', [
                 'cliente_original' => $cliente->id,
                 'cliente_nuevo' => $nuevoCliente->id,
-                'usuario' => auth()->id() ?? 'Sistema'
+                'usuario' => auth()->id() ?? 'Sistema',
             ]);
 
             return redirect()->route('admin.clientes.edit', $nuevoCliente)
-                ->with('success', "✅ Cliente duplicado correctamente. Completa los datos únicos (email, teléfono).");
+                ->with('success', '✅ Cliente duplicado correctamente. Completa los datos únicos (email, teléfono).');
 
         } catch (Exception $e) {
             DB::rollBack();
-            
+
             Log::error('Error al duplicar cliente', [
                 'cliente_id' => $cliente->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return redirect()->back()
@@ -527,6 +547,8 @@ class ClienteController extends Controller
      */
     public function estadisticas()
     {
+        Gate::authorize('viewAny', Cliente::class);
+
         try {
             $estadisticas = [
                 'total' => Cliente::count(),
@@ -547,28 +569,28 @@ class ClienteController extends Controller
                     ->whereYear('created_at', now()->year)
                     ->groupBy('mes')
                     ->orderBy('mes')
-                    ->get()
+                    ->get(),
             ];
 
             return response()->json([
                 'success' => true,
-                'estadisticas' => $estadisticas
+                'estadisticas' => $estadisticas,
             ]);
 
         } catch (Exception $e) {
             Log::error('Error al obtener estadísticas de clientes', [
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Error al obtener estadísticas'
+                'message' => 'Error al obtener estadísticas',
             ], 500);
         }
     }
 
     private function formatClienteNombre(Cliente $cliente): string
     {
-        return trim($cliente->nombre . ' ' . ($cliente->apellido ?? ''));
+        return trim($cliente->nombre.' '.($cliente->apellido ?? ''));
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Middleware;
 
+use App\Support\RoleNormalizer;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class VerificarRolValido
 {
-    private const VALID_ROLES = ['administrador', 'trabajador'];
+    private const VALID_ROLES = [RoleNormalizer::ADMINISTRATOR, RoleNormalizer::WORKER];
 
     public function handle(Request $request, Closure $next): Response
     {
@@ -22,7 +23,7 @@ class VerificarRolValido
             return redirect()->route('login')->with('error', 'Debe iniciar sesión para acceder');
         }
 
-        $currentRole = $this->normalizeRole((string) $usuario->rol);
+        $currentRole = RoleNormalizer::normalize((string) $usuario->rol);
 
         if (! in_array($currentRole, self::VALID_ROLES, true)) {
             Log::warning('Unsupported role session rejected', [
@@ -42,14 +43,5 @@ class VerificarRolValido
         }
 
         return $next($request);
-    }
-
-    private function normalizeRole(string $role): string
-    {
-        return match ($role) {
-            'admin' => 'administrador',
-            'empleado' => 'trabajador',
-            default => $role,
-        };
     }
 }

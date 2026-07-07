@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Empleado;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -73,7 +74,10 @@ final class UpdateEmpleadoRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return true;
+        $empleado = $this->route('empleado');
+
+        return $empleado instanceof Empleado
+            && ($this->user()?->can('update', $empleado) ?? false);
     }
 
     /**
