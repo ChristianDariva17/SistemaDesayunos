@@ -52,19 +52,11 @@
     {{-- ALERTAS DE SESIÓN --}}
     {{-- ========================================== --}}
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <i class="fas fa-check-circle me-2"></i>
-            <strong>¡Éxito!</strong> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+        <x-alert type="success" title="¡Éxito!" icon="fas fa-check-circle" class="shadow-sm">{{ session('success') }}</x-alert>
     @endif
 
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-            <i class="fas fa-exclamation-triangle me-2"></i>
-            <strong>¡Error!</strong> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+        <x-alert type="danger" title="¡Error!" icon="fas fa-exclamation-triangle" class="shadow-sm">{{ session('error') }}</x-alert>
     @endif
 
     {{-- ========================================== --}}
@@ -341,7 +333,7 @@
 
                                 {{-- ACCIONES --}}
                                 <td class="text-center">
-                                    <div class="btn-group" role="group">
+                                    <x-table-actions label="Acciones de producto">
                                         {{-- Ver --}}
                                         <a href="{{ route('admin.productos.show', $producto) }}" 
                                            class="btn btn-sm btn-outline-info" 
@@ -391,7 +383,7 @@
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         </form>
-                                    </div>
+                                    </x-table-actions>
                                 </td>
                             </tr>
 

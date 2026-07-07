@@ -347,8 +347,9 @@ Goal: reduce duplicated page shells.
 
 Goal: standardize repeated UI.
 
-- Create components for alerts, page headers, stat cards, badges, table actions, and empty states.
-- Replace duplicated markup gradually.
+- [x] Create components for alerts, page headers, stat cards, badges, table actions, and empty states.
+- [x] Replace duplicated markup gradually in admin/worker dashboard patterns and admin product table actions/session alerts.
+- [x] Keep visual output and backend behavior unchanged; component extraction only.
 
 ### Slice 4: Asset Pipeline Cleanup
 

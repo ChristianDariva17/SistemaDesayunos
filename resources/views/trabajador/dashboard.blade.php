@@ -8,64 +8,30 @@
     {{-- ============================================
         ENCABEZADO DEL DASHBOARD
     ============================================= --}}
-    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeInDown">
-        <div>
-            <h1 class="h3 mb-1 text-gray-800">
-                <i class="fas fa-tachometer-alt text-primary me-2"></i>
-                <strong>Dashboard - Panel de Control</strong>
-            </h1>
-            <p class="text-muted mb-0">
-                <i class="far fa-chart-bar me-1"></i>
-                Resumen general del sistema
-            </p>
-        </div>
-        <div class="text-end">
-            <p class="mb-0 text-muted">
-                <i class="far fa-calendar-alt me-2"></i>
-                {{ now()->translatedFormat('l, d \d\e F \d\e Y') }}
-            </p>
-            <p class="mb-0 text-muted small">
-                <i class="far fa-clock me-1"></i>
-                {{ now()->format('h:i A') }}
-            </p>
-        </div>
-    </div>
+    <x-page-header
+        title="Dashboard - Panel de Control"
+        subtitle="Resumen general del sistema"
+        icon="fas fa-tachometer-alt"
+        subtitle-icon="far fa-chart-bar"
+        class="animate__animated animate__fadeInDown"
+    />
 
     {{-- ============================================
         ALERTA DE BIENVENIDA
     ============================================= --}}
-    <div class="alert alert-info alert-dismissible fade show mb-4 animate__animated animate__fadeIn" role="alert">
-        <div class="d-flex align-items-center">
-            <i class="fas fa-info-circle fa-2x me-3"></i>
-            <div>
-                <h5 class="alert-heading mb-1">
-                    ¡Bienvenido, {{ Auth::user()->name ?? 'Usuario' }}!
-                </h5>
-                <p class="mb-0">
-                    Este es tu panel de control del sistema de gestión <strong>Caldos & Desayunos</strong>
-                </p>
-            </div>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>
+    <x-alert type="info" :title="'¡Bienvenido, '.(Auth::user()->name ?? 'Usuario').'!'" class="mb-4 animate__animated animate__fadeIn">
+        Este es tu panel de control del sistema de gestión <strong>Caldos & Desayunos</strong>
+    </x-alert>
 
     {{-- ============================================
         ALERTAS DE SESIÓN
     ============================================= --}}
     @if(session('success'))
-        <div class="alert alert-success alert-dismissible fade show mb-4" role="alert">
-            <i class="fas fa-check-circle me-2"></i>
-            <strong>¡Éxito!</strong> {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+        <x-alert type="success" title="¡Éxito!" class="mb-4">{{ session('success') }}</x-alert>
     @endif
 
     @if(session('error'))
-        <div class="alert alert-danger alert-dismissible fade show mb-4" role="alert">
-            <i class="fas fa-exclamation-circle me-2"></i>
-            <strong>Error!</strong> {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
+        <x-alert type="danger" title="Error!" class="mb-4">{{ session('error') }}</x-alert>
     @endif
 
     {{-- ============================================
@@ -75,118 +41,55 @@
         
         {{-- Total Productos --}}
         <div class="col-xl-3 col-md-6 animate__animated animate__fadeInUp">
-            <div class="card border-left-primary shadow-sm h-100 hover-shadow">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <div class="text-xs font-weight-bold text-primary mb-2">
-                                <i class="fas fa-box me-1"></i>Total Productos
-                            </div>
-                            <div class="h4 mb-0 font-weight-bold text-gray-800">
-                                {{ $totalProductos ?? 0 }}
-                            </div>
-                            <small class="text-muted">
-                                Activos: {{ $productosActivos ?? 0 }}
-                            </small>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-box fa-3x text-primary opacity-25"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-transparent border-top-0">
-                    <a href="{{ route('trabajador.productos.index') }}" class="small text-primary text-decoration-none">
-                        Ver todos <i class="fas fa-arrow-right ms-1"></i>
-                    </a>
-                </div>
-            </div>
+            <x-stat-card
+                title="Total Productos"
+                :value="$totalProductos ?? 0"
+                subtitle="Activos: {{ $productosActivos ?? 0 }}"
+                icon="fas fa-box"
+                color="primary"
+                :href="route('trabajador.productos.index')"
+                :uppercase-title="false"
+            />
         </div>
 
         {{-- Total Clientes --}}
         <div class="col-xl-3 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
-            <div class="card border-left-success shadow-sm h-100 hover-shadow">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <div class="text-xs font-weight-bold text-success mb-2">
-                                <i class="fas fa-users me-1"></i>Total Clientes
-                            </div>
-                            <div class="h4 mb-0 font-weight-bold text-gray-800">
-                                {{ $totalClientes ?? 0 }}
-                            </div>
-                            <small class="text-muted">
-                                Activos: {{ $clientesActivos ?? 0 }}
-                            </small>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-users fa-3x text-success opacity-25"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-transparent border-top-0">
-                    <a href="{{ route('trabajador.clientes.index') }}" class="small text-success text-decoration-none">
-                        Ver todos <i class="fas fa-arrow-right ms-1"></i>
-                    </a>
-                </div>
-            </div>
+            <x-stat-card
+                title="Total Clientes"
+                :value="$totalClientes ?? 0"
+                subtitle="Activos: {{ $clientesActivos ?? 0 }}"
+                icon="fas fa-users"
+                color="success"
+                :href="route('trabajador.clientes.index')"
+                :uppercase-title="false"
+            />
         </div>
 
         {{-- Pedidos Pendientes --}}
         <div class="col-xl-3 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
-            <div class="card border-left-warning shadow-sm h-100 hover-shadow">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <div class="text-xs font-weight-bold text-warning mb-2">
-                                <i class="fas fa-clock me-1"></i>Pedidos Pendientes
-                            </div>
-                            <div class="h4 mb-0 font-weight-bold text-gray-800">
-                                {{ $pedidosPendientes ?? 0 }}
-                            </div>
-                            <small class="text-muted">
-                                Total: {{ $totalPedidos ?? 0 }}
-                            </small>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-clock fa-3x text-warning opacity-25"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-transparent border-top-0">
-                    <a href="{{ route('trabajador.pedidos.index') }}" class="small text-warning text-decoration-none">
-                        Ver todos <i class="fas fa-arrow-right ms-1"></i>
-                    </a>
-                </div>
-            </div>
+            <x-stat-card
+                title="Pedidos Pendientes"
+                :value="$pedidosPendientes ?? 0"
+                subtitle="Total: {{ $totalPedidos ?? 0 }}"
+                icon="fas fa-clock"
+                color="warning"
+                :href="route('trabajador.pedidos.index')"
+                :uppercase-title="false"
+            />
         </div>
 
         {{-- Stock Bajo --}}
         <div class="col-xl-3 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
-            <div class="card border-left-danger shadow-sm h-100 hover-shadow">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <div class="text-xs font-weight-bold text-danger mb-2">
-                                <i class="fas fa-exclamation-triangle me-1"></i>Stock Bajo
-                            </div>
-                            <div class="h4 mb-0 font-weight-bold text-gray-800">
-                                {{ $stockBajo ?? 0 }}
-                            </div>
-                            <small class="text-muted">
-                                Productos críticos
-                            </small>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-exclamation-triangle fa-3x text-danger opacity-25"></i>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-footer bg-transparent border-top-0">
-                    <a href="{{ route('trabajador.productos.index') }}?stock=bajo" class="small text-danger text-decoration-none">
-                        Ver productos <i class="fas fa-arrow-right ms-1"></i>
-                    </a>
-                </div>
-            </div>
+            <x-stat-card
+                title="Stock Bajo"
+                :value="$stockBajo ?? 0"
+                subtitle="Productos críticos"
+                icon="fas fa-exclamation-triangle"
+                color="danger"
+                :href="route('trabajador.productos.index') . '?stock=bajo'"
+                footer-text="Ver productos"
+                :uppercase-title="false"
+            />
         </div>
 
     </div>
@@ -198,50 +101,26 @@
         
         {{-- Total Ventas --}}
         <div class="col-xl-6 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.4s;">
-            <div class="card border-left-info shadow-sm h-100 hover-shadow">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <div class="text-xs font-weight-bold text-info mb-2">
-                                <i class="fas fa-dollar-sign me-1"></i>Total Ventas
-                            </div>
-                            <div class="h4 mb-0 font-weight-bold text-gray-800">
-                                S/ {{ number_format($totalVentas ?? 0, 2) }}
-                            </div>
-                            <small class="text-muted">
-                                Pedidos completados
-                            </small>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-dollar-sign fa-3x text-info opacity-25"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <x-stat-card
+                title="Total Ventas"
+                value="S/ {{ number_format($totalVentas ?? 0, 2) }}"
+                subtitle="Pedidos completados"
+                icon="fas fa-dollar-sign"
+                color="info"
+                :uppercase-title="false"
+            />
         </div>
 
         {{-- Ventas del Mes --}}
         <div class="col-xl-6 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.5s;">
-            <div class="card border-left-primary shadow-sm h-100 hover-shadow">
-                <div class="card-body">
-                    <div class="row align-items-center">
-                        <div class="col">
-                            <div class="text-xs font-weight-bold text-primary mb-2">
-                                <i class="fas fa-calendar me-1"></i>Ventas del Mes
-                            </div>
-                            <div class="h4 mb-0 font-weight-bold text-gray-800">
-                                S/ {{ number_format($ventasMes ?? 0, 2) }}
-                            </div>
-                            <small class="text-muted">
-                                {{ now()->translatedFormat('F Y') }}
-                            </small>
-                        </div>
-                        <div class="col-auto">
-                            <i class="fas fa-calendar fa-3x text-primary opacity-25"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <x-stat-card
+                title="Ventas del Mes"
+                value="S/ {{ number_format($ventasMes ?? 0, 2) }}"
+                subtitle="{{ now()->translatedFormat('F Y') }}"
+                icon="fas fa-calendar"
+                color="primary"
+                :uppercase-title="false"
+            />
         </div>
 
     </div>
@@ -282,7 +161,7 @@
                                             <small class="text-muted">{{ $producto->categoria ?? 'Sin categoría' }}</small>
                                         </td>
                                         <td class="text-center">
-                                            <span class="badge bg-primary">{{ $producto->total_vendido ?? 0 }}</span>
+                                            <x-badge type="primary">{{ $producto->total_vendido ?? 0 }}</x-badge>
                                         </td>
                                         <td class="text-end">
                                             <strong class="text-success">S/ {{ number_format($producto->ingresos ?? 0, 2) }}</strong>
@@ -293,10 +172,7 @@
                             </table>
                         </div>
                     @else
-                        <div class="text-center py-5">
-                            <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
-                            <p class="text-muted mb-0">No hay datos de ventas disponibles</p>
-                        </div>
+                        <x-empty-state icon="fas fa-box-open" message="No hay datos de ventas disponibles" />
                     @endif
                 </div>
             </div>
@@ -334,17 +210,11 @@
                                         </td>
                                         <td>
                                             @if($pedido->estado == 'completado')
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-check me-1"></i>Completado
-                                                </span>
+                                                <x-badge type="success" icon="fas fa-check">Completado</x-badge>
                                             @elseif($pedido->estado == 'pendiente')
-                                                <span class="badge bg-warning">
-                                                    <i class="fas fa-clock me-1"></i>Pendiente
-                                                </span>
+                                                <x-badge type="warning" icon="fas fa-clock">Pendiente</x-badge>
                                             @else
-                                                <span class="badge bg-danger">
-                                                    <i class="fas fa-times me-1"></i>Cancelado
-                                                </span>
+                                                <x-badge type="danger" icon="fas fa-times">Cancelado</x-badge>
                                             @endif
                                         </td>
                                         <td class="text-end">
@@ -356,10 +226,7 @@
                             </table>
                         </div>
                     @else
-                        <div class="text-center py-5">
-                            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
-                            <p class="text-muted mb-0">No hay pedidos recientes</p>
-                        </div>
+                        <x-empty-state icon="fas fa-shopping-cart" message="No hay pedidos recientes" />
                     @endif
                 </div>
             </div>
