@@ -1,21 +1,26 @@
+@import 'bootstrap/dist/css/bootstrap.min.css';
+@import '@fortawesome/fontawesome-free/css/all.min.css';
+@import 'animate.css/animate.min.css';
+@import 'sweetalert2/dist/sweetalert2.min.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer components {
-  .btn-primary {
+  .app-btn-primary {
     @apply bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200;
   }
   
-  .btn-secondary {
+  .app-btn-secondary {
     @apply bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 font-medium py-2.5 px-5 rounded-lg shadow-md hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200;
   }
   
-  .btn-success {
+  .app-btn-success {
     @apply bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-medium py-2.5 px-5 rounded-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200;
   }
   
-  .card {
+  .app-card {
     @apply bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 border border-gray-100;
   }
   
@@ -23,15 +28,15 @@
     @apply w-full bg-white rounded-xl overflow-hidden shadow-lg border border-gray-100;
   }
 
-  .form-input {
+  .app-form-input {
     @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200 bg-white;
   }
 
-  .form-select {
+  .app-form-select {
     @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200 bg-white;
   }
 
-  .form-textarea {
+  .app-form-textarea {
     @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-colors duration-200 resize-none bg-white;
   }
 }
@@ -65,4 +70,67 @@
 
 .animate-fade-in {
   animation: fadeIn 0.5s ease-out;
+}
+
+/* Shared dashboard utilities extracted from repeated Blade page styles. */
+.border-left-primary {
+  border-left: 0.35rem solid #4e73df !important;
+}
+
+.border-left-success {
+  border-left: 0.35rem solid #1cc88a !important;
+}
+
+.border-left-info {
+  border-left: 0.35rem solid #36b9cc !important;
+}
+
+.border-left-warning {
+  border-left: 0.35rem solid #f6c23e !important;
+}
+
+.border-left-danger {
+  border-left: 0.35rem solid #e74a3b !important;
+}
+
+.border-left-secondary {
+  border-left: 0.35rem solid #858796 !important;
+}
+
+.text-gray-800 {
+  color: #5a5c69 !important;
+}
+
+.text-gray-300 {
+  color: #dddfeb !important;
+}
+
+.text-xs {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.hover-shadow {
+  transition: all 0.3s ease;
+}
+
+.hover-shadow:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.175) !important;
+}
+
+.btn-quick-access {
+  transition: all 0.3s ease;
+  border-width: 2px;
+  text-decoration: none !important;
+}
+
+.btn-quick-access:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+}
+
+.opacity-25 {
+  opacity: 0.25;
 }

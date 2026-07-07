@@ -355,9 +355,9 @@ Goal: standardize repeated UI.
 
 Goal: reduce duplicated CSS/JS and centralize assets.
 
-- Move shared CSS/JS into Vite.
-- Remove repeated CDNs.
-- Load page-specific scripts conditionally.
+- [x] Move shared CSS/JS into Vite.
+- [x] Remove repeated CDNs from shared admin/worker layouts.
+- [x] Load page-specific scripts conditionally through existing Blade stacks.
 
 ### Slice 5: Accessibility Baseline
 

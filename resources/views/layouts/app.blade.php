@@ -25,19 +25,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
-    {{-- Bootstrap 5.3 CSS --}}
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" 
-          integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
-    
-    {{-- Font Awesome 6.5 --}}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" 
-          integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
-    {{-- Animate.css --}}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
-
-    {{-- SweetAlert2 --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.3/dist/sweetalert2.min.css">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{-- Custom Styles --}}
     <style>
@@ -564,6 +552,13 @@
     @stack('styles')
 </head>
 <body>
+    <div id="flash-messages"
+         class="d-none"
+         data-success="{{ session('success') }}"
+         data-error="{{ session('error') }}"
+         data-warning="{{ session('warning') }}"
+         data-info="{{ session('info') }}"></div>
+
     <div id="wrapper">
 
         @include('layouts.partials.admin-sidebar')
@@ -583,132 +578,9 @@
         </div>
     </div>
 
-    {{-- ==========================================
-        SCRIPTS
-        ========================================== --}}
-    
-    {{-- jQuery --}}
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-    
-    {{-- Bootstrap Bundle JS --}}
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" 
-            integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-
-    {{-- SweetAlert2 --}}
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.10.3/dist/sweetalert2.all.min.js"></script>
-
-    {{-- Custom Scripts --}}
-    <script>
-        // ==========================================
-        // SIDEBAR TOGGLE
-        // ==========================================
-        document.getElementById('sidebarToggle').addEventListener('click', function() {
-            document.getElementById('wrapper').classList.toggle('toggled');
-            
-            // Guardar estado en localStorage
-            const isToggled = document.getElementById('wrapper').classList.contains('toggled');
-            localStorage.setItem('sidebarToggled', isToggled);
-        });
-
-        // Restaurar estado del sidebar
-        window.addEventListener('DOMContentLoaded', function() {
-            const sidebarToggled = localStorage.getItem('sidebarToggled') === 'true';
-            if (sidebarToggled) {
-                document.getElementById('wrapper').classList.add('toggled');
-            }
-        });
-
-        // Cerrar sidebar en mobile al hacer clic fuera
-        if (window.innerWidth < 768) {
-            document.getElementById('page-content-wrapper').addEventListener('click', function() {
-                if (document.getElementById('wrapper').classList.contains('toggled')) {
-                    document.getElementById('wrapper').classList.remove('toggled');
-                }
-            });
-        }
-
-        // ==========================================
-        // TOOLTIPS
-        // ==========================================
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-
-        // ==========================================
-        // CSRF TOKEN PARA AJAX
-        // ==========================================
-        $.ajaxSetup({
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            }
-        });
-
-        // ==========================================
-        // ALERTA DE SESIÓN
-        // ==========================================
-        @if(session('success'))
-            Swal.fire({
-                icon: 'success',
-                title: '¡Éxito!',
-                text: '{{ session('success') }}',
-                timer: 3000,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
-            });
-        @endif
-
-        @if(session('error'))
-            Swal.fire({
-                icon: 'error',
-                title: '¡Error!',
-                text: '{{ session('error') }}',
-                timer: 3000,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
-            });
-        @endif
-
-        @if(session('warning'))
-            Swal.fire({
-                icon: 'warning',
-                title: '¡Advertencia!',
-                text: '{{ session('warning') }}',
-                timer: 3000,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
-            });
-        @endif
-
-        @if(session('info'))
-            Swal.fire({
-                icon: 'info',
-                title: 'Información',
-                text: '{{ session('info') }}',
-                timer: 3000,
-                showConfirmButton: false,
-                toast: true,
-                position: 'top-end'
-            });
-        @endif
-
-        // ==========================================
-        // ANIMACIONES AL SCROLL
-        // ==========================================
-        window.addEventListener('scroll', function() {
-            const navbar = document.querySelector('.navbar-custom');
-            if (window.scrollY > 10) {
-                navbar.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
-            } else {
-                navbar.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
-            }
-        });
-    </script>
-
     {{-- Custom Page Scripts --}}
-    @stack('scripts')
+    <template data-run-after-vite="legacy-scripts">
+        @stack('scripts')
+    </template>
 </body>
 </html>
