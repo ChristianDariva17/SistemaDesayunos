@@ -1,14 +1,25 @@
 # Backend Improvement Plan
 
-This document defines the recommended backend and database improvements for SistemaDesayunos. The current foundation is strong: database constraints, product price history, business auditing, stock reservations, daily cash closures, and tests already protect key flows. The next work should focus on authorization, cleaner business boundaries, money correctness, concurrency, and operational visibility.
+This document tracks the backend and database improvement roadmap for SistemaDesayunos. Sections 1 through 8 have been implemented: authorization, order write-flow actions, monetary correctness, concurrency/rollback coverage, observability, reporting scalability, database integrity follow-up, and domain boundary cleanup.
 
 ## Quick Path
 
-1. Implement real Laravel Policies for critical resources.
-2. Move order write logic out of models/controllers into dedicated Actions.
-3. Convert monetary fields from floating-point types to `DECIMAL(10,2)` or integer cents.
-4. Add concurrency and rollback tests for stock, reservations, orders, and daily closures.
-5. Add structured observability for business-critical operations.
+1. Treat Sections 1 through 8 as completed baseline work.
+2. Continue new backend work from this completed baseline.
+3. Keep new business logic in clear module/action/service homes instead of adding orchestration to controllers or models.
+
+## Progress Snapshot
+
+| Section | Area | Status |
+|---|---|---|
+| 1 | Authorization Hardening | Completed |
+| 2 | Order Use Case Extraction | Completed |
+| 3 | Monetary Data Correctness | Completed |
+| 4 | Concurrency and Rollback Testing | Completed |
+| 5 | Observability and Business Events | Completed |
+| 6 | Reporting and Dashboard Scalability | Completed |
+| 7 | Database Integrity Follow-up | Completed |
+| 8 | Domain Boundary Cleanup | Completed |
 
 ## Priority Summary
 
@@ -42,10 +53,10 @@ Route middleware and role checks help, but they are not enough. Sensitive operat
 
 ### Acceptance Checklist
 
-- [ ] Critical Form Requests no longer authorize blindly.
-- [ ] Policies exist for core business models.
-- [ ] Controller/Action flows enforce policies.
-- [ ] Feature tests cover allowed and denied access.
+- [x] Critical Form Requests no longer authorize blindly.
+- [x] Policies exist for core business models.
+- [x] Controller/Action flows enforce policies.
+- [x] Feature tests cover allowed and denied access.
 
 ## 2. Order Use Case Extraction
 
@@ -73,10 +84,10 @@ Each Action should own one business use case and handle:
 
 ### Acceptance Checklist
 
-- [ ] Controllers only validate, authorize, call Actions, and return responses.
-- [ ] `Pedido` model keeps relationships, casts, scopes, and small domain helpers only.
-- [ ] Stock mutations happen inside explicit transactions.
-- [ ] Existing tests still pass after refactor.
+- [x] Controllers only validate, authorize, call Actions, and return responses.
+- [x] `Pedido` model keeps relationships, casts, scopes, and small domain helpers only.
+- [x] Stock mutations happen inside explicit transactions.
+- [x] Existing tests still pass after refactor.
 
 ## 3. Monetary Data Correctness
 
@@ -105,10 +116,10 @@ Fields to review:
 
 ### Acceptance Checklist
 
-- [ ] No business money columns use float/double.
-- [ ] Tests cover decimal totals and rounding boundaries.
-- [ ] Historical prices remain stable after product price changes.
-- [ ] Daily closure totals match completed orders exactly.
+- [x] No business money columns use float/double.
+- [x] Tests cover decimal totals and rounding boundaries.
+- [x] Historical prices remain stable after product price changes.
+- [x] Daily closure totals match completed orders exactly.
 
 ## 4. Concurrency and Rollback Testing
 
@@ -126,10 +137,10 @@ The system already uses transactions and locks in important areas. The next step
 
 ### Acceptance Checklist
 
-- [ ] Tests cover concurrent stock pressure.
-- [ ] Tests cover transaction rollback behavior.
-- [ ] Tests cover duplicate closure race behavior.
-- [ ] Tests prove audit failures do not corrupt business operations.
+- [x] Tests cover concurrent stock pressure.
+- [x] Tests cover transaction rollback behavior.
+- [x] Tests cover duplicate closure race behavior.
+- [x] Tests prove audit failures do not corrupt business operations.
 
 ## 5. Observability and Business Events
 
@@ -223,22 +234,23 @@ This does not require a full rewrite. Start by placing new Actions and Services 
 
 ### Acceptance Checklist
 
-- [ ] New business logic has a clear module/home.
-- [ ] Cross-module writes happen through Actions, not random model calls.
-- [ ] Tests describe business behavior, not implementation details.
+- [x] New business logic has a clear module/home.
+- [x] Cross-module writes happen through Actions, not random model calls.
+- [x] Tests describe business behavior, not implementation details.
 
 ## Suggested Implementation Order
 
-1. Policies and authorization hardening.
-2. Money migration to `DECIMAL(10,2)`.
-3. Pedido write-flow Actions refactor.
-4. Concurrency and rollback tests.
-5. Observability with events and structured logs.
-6. Report query optimization.
-7. Domain boundary cleanup.
+1. [x] Policies and authorization hardening.
+2. [x] Money migration to `DECIMAL(10,2)`.
+3. [x] Pedido write-flow Actions refactor.
+4. [x] Concurrency and rollback tests.
+5. [x] Observability with events and structured logs.
+6. [x] Report query optimization.
+7. [x] Database integrity follow-up.
+8. [x] Domain boundary cleanup.
 
 ## Recommended Next Slice
 
-Start with **Policies and authorization hardening**.
+Backend improvement plan Sections 1 through 8 are complete.
 
-Reason: the database is now much stronger, but business security still needs resource-level authorization. This improves safety without changing the user interface and creates a better foundation for every later backend refactor.
+Reason: orders now coordinate inventory stock mutations through explicit Inventory Actions, preserving behavior while giving new cross-module business logic a clear module home.

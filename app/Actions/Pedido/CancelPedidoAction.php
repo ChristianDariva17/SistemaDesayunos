@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Pedido;
 
+use App\Actions\Inventory\ReleaseProductoStockAction;
 use App\Actions\Pedido\Concerns\HandlesPedidoProductStock;
-use App\Actions\Stock\RegisterStockMovementAction;
 use App\Events\OrderCancelled;
 use App\Models\Pedido;
 use App\Models\User;
@@ -16,7 +16,7 @@ final class CancelPedidoAction
     use HandlesPedidoProductStock;
 
     public function __construct(
-        private readonly RegisterStockMovementAction $registerStockMovement,
+        private readonly ReleaseProductoStockAction $releaseProductoStock,
     ) {}
 
     public function handle(Pedido $pedido, ?string $observaciones = null, ?User $user = null): Pedido
@@ -30,9 +30,10 @@ final class CancelPedidoAction
             if ($pedido->estado !== 'cancelado') {
                 $this->restorePedidoStock(
                     $pedido,
-                    $this->registerStockMovement,
+                    $this->releaseProductoStock,
                     $user,
                     'Pedido cancellation stock restoration',
+                    'pedido.cancel',
                 );
             }
 

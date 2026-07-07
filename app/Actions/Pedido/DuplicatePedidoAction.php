@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Pedido;
 
+use App\Actions\Inventory\ReserveProductoStockAction;
 use App\Actions\Pedido\Concerns\HandlesPedidoProductStock;
-use App\Actions\Stock\RegisterStockMovementAction;
 use App\Models\Pedido;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +15,7 @@ final class DuplicatePedidoAction
     use HandlesPedidoProductStock;
 
     public function __construct(
-        private readonly RegisterStockMovementAction $registerStockMovement,
+        private readonly ReserveProductoStockAction $reserveProductoStock,
     ) {}
 
     public function handle(Pedido $pedido, ?User $user = null): Pedido
@@ -39,7 +39,7 @@ final class DuplicatePedidoAction
                 'total' => $this->attachProductsAndReserveStock(
                     $duplicatedPedido,
                     $pedido->productos,
-                    $this->registerStockMovement,
+                    $this->reserveProductoStock,
                     $user,
                 ),
             ]);

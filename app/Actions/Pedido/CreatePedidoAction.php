@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions\Pedido;
 
+use App\Actions\Inventory\ReserveProductoStockAction;
 use App\Actions\Pedido\Concerns\HandlesPedidoProductStock;
-use App\Actions\Stock\RegisterStockMovementAction;
 use App\Events\OrderCreated;
 use App\Models\Pedido;
 use App\Models\User;
@@ -19,7 +19,7 @@ final class CreatePedidoAction
     use HandlesPedidoProductStock;
 
     public function __construct(
-        private readonly RegisterStockMovementAction $registerStockMovement,
+        private readonly ReserveProductoStockAction $reserveProductoStock,
     ) {}
 
     /**
@@ -50,7 +50,7 @@ final class CreatePedidoAction
                     'total' => $this->attachProductsAndReserveStock(
                         $pedido,
                         $data['productos'],
-                        $this->registerStockMovement,
+                        $this->reserveProductoStock,
                         $user,
                     ),
                 ]);
