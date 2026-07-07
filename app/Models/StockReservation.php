@@ -5,12 +5,17 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Actions\Stock\RegisterStockMovementAction;
+use App\Events\StockConsumed;
+use App\Events\StockReleased;
+use App\Events\StockReserved;
+use App\Support\BusinessOperationLogger;
 use DomainException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 class StockReservation extends Model
 {
@@ -65,29 +70,49 @@ class StockReservation extends Model
 
     public static function reserve(Producto $producto, Pedido $pedido, int $cantidad): self
     {
-        return DB::transaction(function () use ($producto, $pedido, $cantidad): self {
-            if ($cantidad <= 0) {
-                throw new DomainException('Stock reservation cantidad must be greater than 0.');
-            }
+        try {
+            $reservation = DB::transaction(function () use ($producto, $pedido, $cantidad): self {
+                if ($cantidad <= 0) {
+                    throw new DomainException('Stock reservation cantidad must be greater than 0.');
+                }
 
-            $lockedProducto = Producto::query()
-                ->lockForUpdate()
-                ->findOrFail($producto->getKey());
+                $lockedProducto = Producto::query()
+                    ->lockForUpdate()
+                    ->findOrFail($producto->getKey());
 
-            $availableStock = $lockedProducto->availableStock();
+                $availableStock = $lockedProducto->availableStock();
 
-            if ($availableStock < $cantidad) {
-                throw new DomainException("Stock insuficiente para {$lockedProducto->nombre}. Disponible: {$availableStock}");
-            }
+                if ($availableStock < $cantidad) {
+                    throw new DomainException("Stock insuficiente para {$lockedProducto->nombre}. Disponible: {$availableStock}");
+                }
 
-            return self::create([
-                'producto_id' => $lockedProducto->getKey(),
-                'pedido_id' => $pedido->getKey(),
-                'cantidad' => $cantidad,
-                'status' => self::STATUS_ACTIVE,
-                'status_changed_at' => now(),
+                return self::create([
+                    'producto_id' => $lockedProducto->getKey(),
+                    'pedido_id' => $pedido->getKey(),
+                    'cantidad' => $cantidad,
+                    'status' => self::STATUS_ACTIVE,
+                    'status_changed_at' => now(),
+                ]);
+            });
+        } catch (Throwable $exception) {
+            BusinessOperationLogger::failure('stock.reserve', $exception, [
+                'model_id' => $producto->getKey(),
+                'user_id' => null,
+                'business_date' => $pedido->fecha,
             ]);
-        });
+
+            throw $exception;
+        }
+
+        DB::afterCommit(static fn (): mixed => StockReserved::dispatch(
+            (int) $reservation->producto_id,
+            (int) $reservation->pedido_id,
+            (int) $reservation->cantidad,
+            null,
+            'stock.reserve',
+        ));
+
+        return $reservation;
     }
 
     public function release(): self
@@ -104,48 +129,74 @@ class StockReservation extends Model
         ?RegisterStockMovementAction $registerStockMovement = null,
         ?User $user = null,
     ): self {
-        return DB::transaction(function () use ($registerStockMovement, $user): self {
-            $reservation = self::query()
-                ->lockForUpdate()
-                ->findOrFail($this->getKey());
+        $wasConsumed = false;
 
-            if ($reservation->status !== self::STATUS_ACTIVE) {
+        try {
+            $consumedReservation = DB::transaction(function () use ($registerStockMovement, $user, &$wasConsumed): self {
+                $reservation = self::query()
+                    ->lockForUpdate()
+                    ->findOrFail($this->getKey());
+
+                if ($reservation->status !== self::STATUS_ACTIVE) {
+                    return $reservation->refresh();
+                }
+
+                $producto = Producto::query()
+                    ->lockForUpdate()
+                    ->findOrFail($reservation->producto_id);
+
+                $stockAnterior = (int) $producto->stock;
+                $stockNuevo = $stockAnterior - (int) $reservation->cantidad;
+
+                if ($stockNuevo < 0) {
+                    throw new DomainException("Stock insuficiente para {$producto->nombre}. Disponible: {$stockAnterior}");
+                }
+
+                $producto->update([
+                    'stock' => $stockNuevo,
+                ]);
+
+                $reservation->update([
+                    'status' => self::STATUS_CONSUMED,
+                    'status_changed_at' => now(),
+                ]);
+
+                $wasConsumed = true;
+
+                $registerStockMovement?->handle(
+                    producto: $producto,
+                    tipo: StockMovimiento::TIPO_SALIDA,
+                    cantidad: (int) $reservation->cantidad,
+                    stockAnterior: $stockAnterior,
+                    stockNuevo: $stockNuevo,
+                    pedido: $reservation->pedido,
+                    user: $user,
+                    motivo: 'Stock reservation consumed',
+                );
+
                 return $reservation->refresh();
-            }
-
-            $producto = Producto::query()
-                ->lockForUpdate()
-                ->findOrFail($reservation->producto_id);
-
-            $stockAnterior = (int) $producto->stock;
-            $stockNuevo = $stockAnterior - (int) $reservation->cantidad;
-
-            if ($stockNuevo < 0) {
-                throw new DomainException("Stock insuficiente para {$producto->nombre}. Disponible: {$stockAnterior}");
-            }
-
-            $producto->update([
-                'stock' => $stockNuevo,
+            });
+        } catch (Throwable $exception) {
+            BusinessOperationLogger::failure('stock.consume', $exception, [
+                'model_id' => $this->getKey(),
+                'user_id' => $user?->id,
+                'business_date' => $this->pedido?->fecha,
             ]);
 
-            $reservation->update([
-                'status' => self::STATUS_CONSUMED,
-                'status_changed_at' => now(),
-            ]);
+            throw $exception;
+        }
 
-            $registerStockMovement?->handle(
-                producto: $producto,
-                tipo: StockMovimiento::TIPO_SALIDA,
-                cantidad: (int) $reservation->cantidad,
-                stockAnterior: $stockAnterior,
-                stockNuevo: $stockNuevo,
-                pedido: $reservation->pedido,
-                user: $user,
-                motivo: 'Stock reservation consumed',
-            );
+        if ($wasConsumed) {
+            DB::afterCommit(static fn (): mixed => StockConsumed::dispatch(
+                (int) $consumedReservation->producto_id,
+                (int) $consumedReservation->pedido_id,
+                (int) $consumedReservation->cantidad,
+                $user?->id,
+                'stock.consume',
+            ));
+        }
 
-            return $reservation->refresh();
-        });
+        return $consumedReservation;
     }
 
     private function transitionFromActive(string $status): self
@@ -164,7 +215,17 @@ class StockReservation extends Model
                 'status_changed_at' => now(),
             ]);
 
-            return $reservation->refresh();
+            $transitionedReservation = $reservation->refresh();
+
+            DB::afterCommit(static fn (): mixed => StockReleased::dispatch(
+                (int) $transitionedReservation->producto_id,
+                (int) $transitionedReservation->pedido_id,
+                (int) $transitionedReservation->cantidad,
+                null,
+                $status === self::STATUS_RELEASED ? 'stock.release' : 'stock.cancel',
+            ));
+
+            return $transitionedReservation;
         });
     }
 }

@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Events\ProductPriceChanged;
 use App\Models\Concerns\Auditable;
 use App\Support\InventoryLimits;
+use App\Support\MoneyDecimal;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -68,6 +70,7 @@ class Producto extends Model
     public function pedidos(): BelongsToMany
     {
         return $this->belongsToMany(Pedido::class, 'pedido_producto')
+            ->using(PedidoProducto::class)
             ->withPivot(Pedido::PRODUCTOS_PIVOT_COLUMNS)
             ->withTimestamps();
     }
@@ -120,11 +123,13 @@ class Producto extends Model
      * Obtener el total vendido de este producto
      * Uso: $producto->total_vendido
      */
-    public function getTotalVendidoAttribute(): float
+    public function getTotalVendidoAttribute(): string
     {
-        return $this->pedidos()
+        $total = $this->pedidos()
             ->where('estado', 'completado')
             ->sum(\DB::raw('pedido_producto.cantidad * pedido_producto.precio_unitario'));
+
+        return MoneyDecimal::fromCents(MoneyDecimal::toCents($total));
     }
 
     /**
@@ -310,6 +315,7 @@ class Producto extends Model
             }
 
             $producto->recordPriceChangeHistory($newPrice);
+            DB::afterCommit(static fn (): mixed => ProductPriceChanged::dispatch((int) $producto->getKey(), $oldPrice, $newPrice));
         });
     }
 
@@ -346,6 +352,6 @@ class Producto extends Model
 
     private static function normalizePrice(mixed $price): string
     {
-        return number_format((float) $price, 2, '.', '');
+        return MoneyDecimal::fromCents(MoneyDecimal::toCents($price));
     }
 }

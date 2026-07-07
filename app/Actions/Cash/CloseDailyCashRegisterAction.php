@@ -4,8 +4,11 @@ declare(strict_types=1);
 
 namespace App\Actions\Cash;
 
+use App\Events\DailyCashClosureCreated;
 use App\Models\DailyCashClosure;
 use App\Models\Pedido;
+use App\Support\BusinessOperationLogger;
+use App\Support\MoneyDecimal;
 use Carbon\CarbonImmutable;
 use Carbon\CarbonInterface;
 use DomainException;
@@ -13,6 +16,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Throwable;
 
 final class CloseDailyCashRegisterAction
 {
@@ -22,7 +26,7 @@ final class CloseDailyCashRegisterAction
         $actorId = $userId ?? Auth::id();
 
         try {
-            return DB::transaction(function () use ($normalizedDate, $actorId): DailyCashClosure {
+            $closure = DB::transaction(function () use ($normalizedDate, $actorId): DailyCashClosure {
                 if (DailyCashClosure::query()->forBusinessDate($normalizedDate)->exists()) {
                     throw $this->duplicateClosureException($normalizedDate);
                 }
@@ -45,10 +49,35 @@ final class CloseDailyCashRegisterAction
                     'closed_at' => now(),
                 ]);
             });
+
+            DB::afterCommit(static fn (): mixed => DailyCashClosureCreated::dispatch($closure->id, $actorId, $normalizedDate));
+
+            return $closure;
         } catch (QueryException $exception) {
             if ($this->isUniqueConstraintViolation($exception)) {
-                throw $this->duplicateClosureException($normalizedDate);
+                $domainException = $this->duplicateClosureException($normalizedDate);
+                BusinessOperationLogger::failure('daily_cash_closure.create', $domainException, [
+                    'model_id' => null,
+                    'user_id' => $actorId,
+                    'business_date' => $normalizedDate,
+                ]);
+
+                throw $domainException;
             }
+
+            BusinessOperationLogger::failure('daily_cash_closure.create', $exception, [
+                'model_id' => null,
+                'user_id' => $actorId,
+                'business_date' => $normalizedDate,
+            ]);
+
+            throw $exception;
+        } catch (Throwable $exception) {
+            BusinessOperationLogger::failure('daily_cash_closure.create', $exception, [
+                'model_id' => null,
+                'user_id' => $actorId,
+                'business_date' => $normalizedDate,
+            ]);
 
             throw $exception;
         }
@@ -80,14 +109,14 @@ final class CloseDailyCashRegisterAction
     /**
      * @param  Collection<int, Pedido>  $pedidos
      */
-    private function sumTotals(Collection $pedidos): float
+    private function sumTotals(Collection $pedidos): string
     {
-        return round((float) $pedidos->sum(static fn (Pedido $pedido): float => (float) $pedido->total), 2);
+        return MoneyDecimal::sum($pedidos->map(static fn (Pedido $pedido): string => (string) $pedido->total));
     }
 
     /**
      * @param  Collection<int, Pedido>  $pedidos
-     * @return array<string, array{count:int,total:float}>
+     * @return array<string, array{count:int,total:string}>
      */
     private function paymentMethodTotals(Collection $pedidos): array
     {
