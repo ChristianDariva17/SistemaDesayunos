@@ -389,9 +389,9 @@ Goal: reduce DOM weight and improve list scalability.
 
 Goal: add libraries where they solve real product problems.
 
-- Add searchable selects for products/clients if datasets are large.
-- Improve reports with lazy-loaded Chart.js.
-- Add image handling through Medialibrary if product images are important.
+- [x] Added Tom Select-powered searchable selects for order-flow client and product selectors in admin create/edit orders and worker create/edit order views, using explicit `data-enhance="searchable-select"` hooks and idempotent initialization for dynamically added product rows. Worker edit route coverage is intentionally absent because `trabajador.pedidos.edit` is not registered; rendered worker coverage currently exercises the create route instead of scanning Blade source.
+- [ ] Improve reports with lazy-loaded Chart.js.
+- [ ] Add image handling through Medialibrary if product images are important.
 
 ## Review Guardrails
 

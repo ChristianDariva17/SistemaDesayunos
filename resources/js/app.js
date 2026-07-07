@@ -1,6 +1,8 @@
 import './bootstrap';
 import * as bootstrap from 'bootstrap';
 import $ from 'jquery';
+import TomSelect from 'tom-select/base';
+import 'tom-select/dist/css/tom-select.bootstrap5.css';
 
 import Alpine from 'alpinejs';
 import Swal from 'sweetalert2';
@@ -9,6 +11,46 @@ window.Alpine = Alpine;
 window.bootstrap = bootstrap;
 window.$ = window.jQuery = $;
 window.Swal = Swal;
+
+export function enhanceSearchableSelect(selectElement, TomSelectClass = TomSelect) {
+    if (!selectElement || selectElement.tomselect) {
+        return selectElement?.tomselect ?? null;
+    }
+
+    return new TomSelectClass(selectElement, {
+        allowEmptyOption: true,
+        create: false,
+        maxOptions: null,
+        placeholder: selectElement.dataset.searchableSelectPlaceholder
+            ?? selectElement.querySelector('option[value=""]')?.textContent?.trim()
+            ?? 'Search...',
+    });
+}
+
+export function enhanceSearchableSelects(root = document, TomSelectClass = TomSelect) {
+    return Array.from(root.querySelectorAll('select[data-enhance="searchable-select"]'))
+        .map((selectElement) => enhanceSearchableSelect(selectElement, TomSelectClass));
+}
+
+export function clearSearchableSelect(target) {
+    const selectElement = typeof target === 'string' ? document.querySelector(target) : target;
+
+    if (!selectElement) {
+        return;
+    }
+
+    if (selectElement.tomselect) {
+        selectElement.tomselect.clear(true);
+        selectElement.tomselect.blur();
+        return;
+    }
+
+    selectElement.value = '';
+}
+
+window.enhanceSearchableSelect = enhanceSearchableSelect;
+window.enhanceSearchableSelects = enhanceSearchableSelects;
+window.clearSearchableSelect = clearSearchableSelect;
 
 function installBootstrapJqueryBridge() {
     if (!$.fn.modal) {
@@ -151,6 +193,8 @@ export function registerProductStockModalHandlers(productStockModal, documentRef
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    enhanceSearchableSelects(document);
+
     const sidebarToggle = document.getElementById('sidebarToggle');
     const wrapper = document.getElementById('wrapper');
     const pageContentWrapper = document.getElementById('page-content-wrapper');

@@ -24,6 +24,7 @@
         "animate.css": "^4.1.1",
         "bootstrap": "^5.3.8",
         "chart.js": "^4.5.0",
-        "jquery": "^3.7.1"
+        "jquery": "^3.7.1",
+        "tom-select": "^2.6.2"
     }
 }

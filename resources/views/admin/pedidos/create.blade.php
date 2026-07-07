@@ -82,6 +82,8 @@
                             <select class="form-select form-select-lg @error('cliente_id') is-invalid @enderror" 
                                     id="cliente_id" 
                                     name="cliente_id" 
+                                    data-enhance="searchable-select"
+                                    data-searchable-select-placeholder="Selecciona un cliente"
                                     required>
                                 <option value="">Selecciona un cliente</option>
                                 @foreach($clientes as $cliente)
@@ -366,7 +368,10 @@
                         <label for="producto_id" class="form-label fw-semibold">
                             <i class="fas fa-box text-muted"></i> Selecciona un Producto
                         </label>
-                        <select class="form-select form-select-lg" id="producto_id">
+                        <select class="form-select form-select-lg"
+                                id="producto_id"
+                                data-enhance="searchable-select"
+                                data-searchable-select-placeholder="Selecciona un producto">
                             <option value="">-- Selecciona un producto --</option>
                             @foreach($productos as $producto)
                                 <option value="{{ $producto->id }}" 
@@ -604,6 +609,7 @@
         $('#btnAgregarProducto').on('click', function() {
             $('#modalAgregarProducto').modal('show');
             $('#producto_id').val('');
+            window.clearSearchableSelect?.('#producto_id');
             $('#cantidad').val(1);
             $('#productoInfo').hide();
         });

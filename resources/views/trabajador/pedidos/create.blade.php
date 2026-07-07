@@ -337,7 +337,7 @@
                                 <label for="cliente_id" class="form-label">
                                     <i class="fas fa-user me-1"></i>Cliente <span class="text-danger">*</span>
                                 </label>
-                                <select name="cliente_id" id="cliente_id" class="form-select @error('cliente_id') is-invalid @enderror" required>
+                                <select name="cliente_id" id="cliente_id" class="form-select @error('cliente_id') is-invalid @enderror" data-enhance="searchable-select" data-searchable-select-placeholder="Seleccione un cliente" required>
                                     <option value="">Seleccione un cliente</option>
                                     @foreach($clientes as $cliente)
                                         <option value="{{ $cliente->id }}" {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
@@ -570,6 +570,8 @@
                 <select name="productos[${contadorProductos}][producto_id]" 
                         class="form-select form-select-sm producto-select" 
                         data-index="${contadorProductos}" 
+                        data-enhance="searchable-select"
+                        data-searchable-select-placeholder="Seleccione un producto"
                         aria-label="Producto de la fila ${contadorProductos + 1}"
                         required>
                     <option value="">Seleccione un producto</option>
@@ -615,6 +617,7 @@
 
         // Event listeners
         agregarEventListeners(contadorProductos);
+        window.enhanceSearchableSelect?.(fila.querySelector('select[data-enhance="searchable-select"]'));
 
         contadorProductos++;
     });
