@@ -8,6 +8,10 @@ This document tracks the backend and database improvement roadmap for SistemaDes
 2. Continue new backend work from this completed baseline.
 3. Keep new business logic in clear module/action/service homes instead of adding orchestration to controllers or models.
 
+## Current Status
+
+Backend Sections 1 through 8 are complete and pushed. The final backend cleanup slice was committed as `70fc3f0 feat: clean up backend domain boundaries`.
+
 ## Progress Snapshot
 
 | Section | Area | Status |
@@ -249,8 +253,8 @@ This does not require a full rewrite. Start by placing new Actions and Services 
 7. [x] Database integrity follow-up.
 8. [x] Domain boundary cleanup.
 
-## Recommended Next Slice
+## Next Recommended Work
 
 Backend improvement plan Sections 1 through 8 are complete.
 
-Reason: orders now coordinate inventory stock mutations through explicit Inventory Actions, preserving behavior while giving new cross-module business logic a clear module home.
+Recommended next step: start a new, narrowly scoped backend plan only when there is a concrete product need. Use the completed domain-boundary baseline by routing new order, inventory, reporting, or cash-closure behavior through the existing Actions/Services instead of expanding controllers or models.

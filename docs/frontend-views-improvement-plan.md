@@ -4,13 +4,20 @@ This document captures the current state of the Laravel Blade views and the reco
 
 ## Quick Path
 
-1. Remove database queries from Blade layouts.
-2. Unify admin and worker layouts.
-3. Extract repeated UI into Blade components.
-4. Move inline CSS/JS into Vite-managed assets.
-5. Fix accessibility basics: labels, landmarks, focus, and live alerts.
-6. Optimize heavy tables, per-row modals, images, and dashboard scripts.
-7. Add frontend libraries only after the Blade foundation is cleaner.
+1. Treat frontend Slices 1 through 7 as the completed Blade foundation and first functional enhancement baseline.
+2. Keep future UI work slice-based and backed by focused rendering or feature tests.
+3. Continue with report/chart loading or product image handling only when those workflows are the next product priority.
+
+## Current Status
+
+Frontend Slices 1 through 7 are complete through searchable order-flow selects. The follow-up admin order summary overlap fix and Profile/Settings dropdown links/settings page were committed and pushed as `7312dac fix: cover admin summary card and settings links`.
+
+Completed baseline:
+
+- Layout data cleanup, shared layouts, Blade components, and Vite-managed shared assets.
+- Accessibility baseline: skip links/main landmarks, accessible names for icon-only controls, alert/live-region semantics, labeled dynamic order quantity controls, and focused rendering tests.
+- Table/modal performance: reusable admin product modals, eager-loaded order listings, responsive card-table behavior, and focused regression coverage.
+- Functional enhancement: Tom Select searchable product/user selects in admin and worker order flows, with idempotent dynamic-row initialization and focused rendering tests.
 
 ## Executive Summary
 
@@ -175,7 +182,6 @@ Some controls use `href="#"` for actions that are not implemented yet.
 
 Examples:
 
-- Profile/settings dropdown actions.
 - Export buttons such as Excel/PDF/CSV in some screens.
 
 Why this matters:
@@ -232,10 +238,10 @@ Centralize reusable styles and scripts.
 
 Acceptance checklist:
 
-- [ ] Shared CSS lives in `resources/css/app.css` or imported modules.
-- [ ] Shared JS lives in `resources/js/app.js` or page modules.
-- [ ] CDNs are removed or limited to intentional exceptions.
-- [ ] Chart/report scripts are loaded only where needed.
+- [x] Shared CSS lives in `resources/css/app.css` or imported modules.
+- [x] Shared JS lives in `resources/js/app.js` or page modules.
+- [x] CDNs are removed or limited to intentional exceptions.
+- [x] Chart/report scripts are loaded only where needed or deferred until the report workflow is improved.
 
 ### 4. Optimize Tables and Lists
 
@@ -339,9 +345,9 @@ Goal: remove queries and business data loading from Blade layouts.
 
 Goal: reduce duplicated page shells.
 
-- Create admin and worker layouts.
-- Extract navbar/sidebar partials.
-- Convert dashboards to extend the shared layouts.
+- [x] Create admin and worker layouts.
+- [x] Extract navbar/sidebar partials.
+- [x] Convert dashboards to extend the shared layouts.
 
 ### Slice 3: Blade Components
 
@@ -363,10 +369,10 @@ Goal: reduce duplicated CSS/JS and centralize assets.
 
 Goal: make the interface more usable with keyboard and assistive technology.
 
-- Add accessible names to icon controls.
-- Add landmarks and skip link.
-- Standardize alerts and dynamic status messages.
-- Fix labels on dynamic form controls.
+- [x] Add accessible names to icon controls.
+- [x] Add landmarks and skip link.
+- [x] Standardize alerts and dynamic status messages.
+- [x] Fix labels on dynamic form controls.
 
 Completed in Slice 5:
 
@@ -403,4 +409,4 @@ Goal: add libraries where they solve real product problems.
 
 ## Next Step
 
-Start with **Slice 1: Layout Data Cleanup**. It is the safest first move because it improves performance and architecture without changing the visual design.
+Frontend Slices 1 through 7 are complete. The next recommended work is **report/chart loading cleanup**: lazy-load Chart.js only on report/dashboard pages that render charts, then add focused rendering/build verification. If product images become a higher product priority, handle that as a separate image-management slice instead of mixing it with reports.
