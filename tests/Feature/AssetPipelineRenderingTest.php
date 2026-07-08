@@ -49,3 +49,35 @@ it('does not define Tailwind components that override Bootstrap class names glob
         ->and($css)->toContain('.app-btn-primary')
         ->and($css)->toContain('.app-card');
 });
+
+it('keeps Chart.js and report chart assets out of pages without rendered chart hooks', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-report-chart-assets@example.test',
+        'rol' => 'administrador',
+    ]);
+
+    $appScript = file_get_contents(resource_path('js/app.js'));
+    $appLayout = file_get_contents(resource_path('views/layouts/app.blade.php'));
+    $workerLayout = file_get_contents(resource_path('views/layouts/trabajador.blade.php'));
+
+    expect($appScript)->not->toContain('chart.js')
+        ->and($appLayout)->not->toContain('cdn.jsdelivr.net/npm/chart.js')
+        ->and($workerLayout)->not->toContain('cdn.jsdelivr.net/npm/chart.js');
+
+    $this->actingAs($admin)
+        ->get(route('admin.dashboard'))
+        ->assertOk()
+        ->assertDontSee('/build/assets/report-charts-', false)
+        ->assertDontSee('cdn.jsdelivr.net/npm/chart.js', false);
+
+    $this->actingAs($admin)
+        ->get(route('admin.reportes.index'))
+        ->assertOk()
+        ->assertDontSee('/build/assets/report-charts-', false)
+        ->assertDontSee('data-chartjs', false)
+        ->assertDontSee('data-chartjs-config', false)
+        ->assertSee('Centro de Reportes')
+        ->assertSee('Análisis de Ventas')
+        ->assertSee('id="formVentas"', false)
+        ->assertDontSee('cdn.jsdelivr.net/npm/chart.js', false);
+});

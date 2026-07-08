@@ -4,13 +4,13 @@ This document captures the current state of the Laravel Blade views and the reco
 
 ## Quick Path
 
-1. Treat frontend Slices 1 through 7 as the completed Blade foundation and first functional enhancement baseline.
+1. Treat frontend Slices 1 through 7 plus the report/chart loading cleanup as the completed Blade foundation and first functional enhancement baseline.
 2. Keep future UI work slice-based and backed by focused rendering or feature tests.
-3. Continue with report/chart loading or product image handling only when those workflows are the next product priority.
+3. Continue with product image handling only when that workflow is the next product priority.
 
 ## Current Status
 
-Frontend Slices 1 through 7 are complete through searchable order-flow selects. The follow-up admin order summary overlap fix and Profile/Settings dropdown links/settings page were committed and pushed as `7312dac fix: cover admin summary card and settings links`.
+Frontend Slices 1 through 7 are complete through searchable order-flow selects, and report/chart loading cleanup is complete. The follow-up admin order summary overlap fix and Profile/Settings dropdown links/settings page were committed and pushed as `7312dac fix: cover admin summary card and settings links`.
 
 Completed baseline:
 
@@ -18,6 +18,7 @@ Completed baseline:
 - Accessibility baseline: skip links/main landmarks, accessible names for icon-only controls, alert/live-region semantics, labeled dynamic order quantity controls, and focused rendering tests.
 - Table/modal performance: reusable admin product modals, eager-loaded order listings, responsive card-table behavior, and focused regression coverage.
 - Functional enhancement: Tom Select searchable product/user selects in admin and worker order flows, with idempotent dynamic-row initialization and focused rendering tests.
+- Report/chart loading cleanup: Chart.js stays out of shared app assets; report pages currently rely on static/PDF-safe chart markup and do not render Chart.js hooks.
 
 ## Executive Summary
 
@@ -396,7 +397,7 @@ Goal: reduce DOM weight and improve list scalability.
 Goal: add libraries where they solve real product problems.
 
 - [x] Added Tom Select-powered searchable selects for order-flow client and product selectors in admin create/edit orders and worker create/edit order views, using explicit `data-enhance="searchable-select"` hooks and idempotent initialization for dynamically added product rows. Worker edit route coverage is intentionally absent because `trabajador.pedidos.edit` is not registered; rendered worker coverage currently exercises the create route instead of scanning Blade source.
-- [ ] Improve reports with lazy-loaded Chart.js.
+- [x] Keep Chart.js out of shared report assets until a rendered page exposes real chart hooks/config.
 - [ ] Add image handling through Medialibrary if product images are important.
 
 ## Review Guardrails
@@ -409,4 +410,4 @@ Goal: add libraries where they solve real product problems.
 
 ## Next Step
 
-Frontend Slices 1 through 7 are complete. The next recommended work is **report/chart loading cleanup**: lazy-load Chart.js only on report/dashboard pages that render charts, then add focused rendering/build verification. If product images become a higher product priority, handle that as a separate image-management slice instead of mixing it with reports.
+Frontend Slices 1 through 7 and report/chart loading cleanup are complete. The next recommended work is **product image handling** if product images become a higher product priority; keep it as a separate image-management slice instead of mixing it with reports.
