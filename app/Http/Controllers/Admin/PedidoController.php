@@ -16,6 +16,7 @@ use App\Models\Producto;
 use App\Models\User;
 use DomainException;
 use Exception;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -107,9 +108,7 @@ class PedidoController extends Controller
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'rol_operativo']);
 
-        $clientes = Cliente::where('estado', 'activo')
-            ->orderBy('nombre')
-            ->get(['id', 'nombre', 'apellido', 'email']);
+        $clientes = $this->activePedidoClientes();
 
         $cliente_seleccionado = null;
         if ($request->filled('cliente_id')) {
@@ -166,7 +165,7 @@ class PedidoController extends Controller
         $pedido->loadDetails();
 
         // Obtener listas completas
-        $clientes = Cliente::orderBy('nombre')->get();
+        $clientes = $this->pedidoEditClientes($pedido);
         $empleados = Empleado::where('estado', 'activo')->orderBy('nombre')->get();
         $productos = Producto::where('stock', '>', 0)->orderBy('nombre')->get();
 
@@ -348,5 +347,25 @@ class PedidoController extends Controller
         } catch (Exception $e) {
             return redirect()->back()->with('error', '❌ '.$e->getMessage());
         }
+    }
+
+    private function activePedidoClientes(): Collection
+    {
+        return Cliente::where('estado', 'activo')
+            ->orderBy('nombre')
+            ->get(['id', 'nombre', 'apellido']);
+    }
+
+    private function pedidoEditClientes(Pedido $pedido): Collection
+    {
+        $clientes = $this->activePedidoClientes();
+
+        if ($pedido->cliente && ! $clientes->contains('id', $pedido->cliente->id)) {
+            $clientes->push($pedido->cliente);
+        }
+
+        return $clientes
+            ->sortBy(fn (Cliente $cliente): string => trim($cliente->nombre.' '.($cliente->apellido ?? '')))
+            ->values();
     }
 }

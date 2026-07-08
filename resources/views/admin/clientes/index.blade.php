@@ -156,12 +156,14 @@
         </div>
     </div>
 
+    <div id="clientesResults" data-ajax-region>
+
     {{-- ==========================================
          PANEL DE FILTROS Y BÚSQUEDA
         ========================================== --}}
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <form method="GET" action="{{ route('admin.clientes.index') }}" id="filterForm">
+            <form method="GET" action="{{ route('admin.clientes.index') }}" id="filterForm" data-ajax-filter="true" data-ajax-auto-submit="true" data-ajax-target="#clientesResults">
                 <div class="row g-3 align-items-end">
                     {{-- Buscador --}}
                     <div class="col-12 col-md-4">
@@ -180,7 +182,7 @@
                                    value="{{ request('search') }}"
                                    placeholder="Nombre, email, teléfono...">
                             @if(request('search'))
-                                <a href="{{ route('admin.clientes.index') }}" class="btn btn-outline-secondary" title="Limpiar búsqueda">
+                                <a href="{{ route('admin.clientes.index') }}" class="btn btn-outline-secondary" title="Limpiar búsqueda" data-ajax-link="true" data-ajax-target="#clientesResults">
                                     <i class="fas fa-times"></i>
                                 </a>
                             @endif
@@ -193,7 +195,7 @@
                             <i class="fas fa-filter me-1"></i>
                             Estado
                         </label>
-                        <select class="form-select" id="estado" name="estado" onchange="document.getElementById('filterForm').submit();">
+                        <select class="form-select" id="estado" name="estado">
                             <option value="">Todos los estados</option>
                             <option value="activo" {{ request('estado') == 'activo' ? 'selected' : '' }}>
                                 Activos
@@ -210,7 +212,7 @@
                             <i class="fas fa-sort me-1"></i>
                             Ordenar por
                         </label>
-                        <select class="form-select" id="sort" name="sort" onchange="document.getElementById('filterForm').submit();">
+                        <select class="form-select" id="sort" name="sort">
                             <option value="nombre_asc" {{ request('sort', 'nombre_asc') == 'nombre_asc' ? 'selected' : '' }}>
                                 Nombre (A-Z)
                             </option>
@@ -235,7 +237,7 @@
                             <i class="fas fa-list me-1"></i>
                             Mostrar
                         </label>
-                        <select class="form-select" id="per_page" name="per_page" onchange="document.getElementById('filterForm').submit();">
+                        <select class="form-select" id="per_page" name="per_page">
                             <option value="10" {{ request('per_page', 10) == 10 ? 'selected' : '' }}>10</option>
                             <option value="25" {{ request('per_page') == 25 ? 'selected' : '' }}>25</option>
                             <option value="50" {{ request('per_page') == 50 ? 'selected' : '' }}>50</option>
@@ -248,7 +250,7 @@
                 <div class="mt-3 d-flex justify-content-between align-items-center">
                     <div>
                         @if(request('search') || request('estado'))
-                            <a href="{{ route('admin.clientes.index') }}" class="btn btn-outline-secondary btn-sm">
+                            <a href="{{ route('admin.clientes.index') }}" class="btn btn-outline-secondary btn-sm" data-ajax-link="true" data-ajax-target="#clientesResults">
                                 <i class="fas fa-redo me-1"></i>
                                 Limpiar Filtros
                             </a>
@@ -396,10 +398,11 @@
                                             <input class="form-check-input toggle-estado" 
                                                    type="checkbox" 
                                                    role="switch" 
-                                                   id="estado_{{ $cliente->id }}"
-                                                   data-cliente-id="{{ $cliente->id }}"
-                                                   {{ $cliente->estado == 'activo' ? 'checked' : '' }}
-                                                   style="cursor: pointer;">
+                                                    id="estado_{{ $cliente->id }}"
+                                                    data-cliente-id="{{ $cliente->id }}"
+                                                    data-toggle-url="{{ route('admin.clientes.toggle-estado', $cliente) }}"
+                                                    {{ $cliente->estado == 'activo' ? 'checked' : '' }}
+                                                    style="cursor: pointer;">
                                             <label class="form-check-label ms-2 small" for="estado_{{ $cliente->id }}">
                                                 <span class="estado-text-{{ $cliente->id }}">
                                                     {{ ucfirst($cliente->estado) }}
@@ -471,7 +474,7 @@
                         <p class="text-muted mb-4">
                             Intenta ajustar los filtros de búsqueda o crear un nuevo cliente.
                         </p>
-                        <a href="{{ route('admin.clientes.index') }}" class="btn btn-outline-secondary me-2">
+                        <a href="{{ route('admin.clientes.index') }}" class="btn btn-outline-secondary me-2" data-ajax-link="true" data-ajax-target="#clientesResults">
                             <i class="fas fa-redo me-2"></i>
                             Limpiar Filtros
                         </a>
@@ -493,6 +496,8 @@
                 </div>
             @endif
         </div>
+    </div>
+
     </div>
 
 </div>
@@ -596,24 +601,37 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         // Toggle de estado AJAX
-        document.querySelectorAll('.toggle-estado').forEach(function(toggle) {
-            toggle.addEventListener('change', function() {
-                const clienteId = this.dataset.clienteId;
-                const isChecked = this.checked;
+        document.addEventListener('change', function(event) {
+            if (!event.target.matches('.toggle-estado[data-cliente-id]')) {
+                return;
+            }
+
+            const toggle = event.target;
+            const clienteId = toggle.dataset.clienteId;
+            const toggleUrl = toggle.dataset.toggleUrl;
+            const isChecked = toggle.checked;
 
                 // Deshabilitar el toggle mientras se procesa
-                this.disabled = true;
+                toggle.disabled = true;
 
-                fetch(`/clientes/${clienteId}/toggle-estado`, {
+                fetch(toggleUrl, {
                     method: 'PATCH',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                     }
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Unable to update client status');
+                    }
+
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.success) {
+                    if (data.success && data.nuevo_estado) {
+                        toggle.checked = data.nuevo_estado === 'activo';
+
                         // Actualizar texto del estado
                         const estadoText = document.querySelector(`.estado-text-${clienteId}`);
                         if (estadoText) {
@@ -624,21 +642,20 @@
                         mostrarNotificacion(data.message, 'success');
                     } else {
                         // Revertir el switch si hay error
-                        this.checked = !isChecked;
+                        toggle.checked = !isChecked;
                         mostrarNotificacion('Error al cambiar el estado', 'error');
                     }
                 })
                 .catch(error => {
                     console.error('Error:', error);
                     // Revertir el switch si hay error
-                    this.checked = !isChecked;
+                    toggle.checked = !isChecked;
                     mostrarNotificacion('Error de conexión', 'error');
                 })
                 .finally(() => {
                     // Rehabilitar el toggle
-                    this.disabled = false;
+                    toggle.disabled = false;
                 });
-            });
         });
 
         // Función para mostrar notificaciones

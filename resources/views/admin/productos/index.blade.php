@@ -155,12 +155,12 @@
     {{-- ========================================== --}}
     {{-- TARJETA PRINCIPAL CON FILTROS Y TABLA --}}
     {{-- ========================================== --}}
-    <div class="card border-0 shadow-sm">
+    <div class="card border-0 shadow-sm" id="productosResults" data-ajax-region>
         <div class="card-header bg-white border-bottom">
             <div class="row align-items-center g-3">
                 {{-- BARRA DE BÚSQUEDA --}}
                 <div class="col-lg-4">
-                    <form action="{{ route('admin.productos.index') }}" method="GET" id="searchForm">
+                    <form action="{{ route('admin.productos.index') }}" method="GET" id="searchForm" data-ajax-filter="true" data-ajax-auto-submit="true" data-ajax-target="#productosResults">
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0">
                                 <i class="fas fa-search text-muted"></i>
@@ -173,13 +173,11 @@
                                 value="{{ request('search') }}"
                             >
                             @if(request()->hasAny(['search', 'categoria', 'estado']))
-                                <a href="{{ route('admin.productos.index') }}" class="btn btn-outline-secondary" title="Limpiar filtros">
+                                <a href="{{ route('admin.productos.index') }}" class="btn btn-outline-secondary" title="Limpiar filtros" data-ajax-link="true" data-ajax-target="#productosResults">
                                     <i class="fas fa-times"></i>
                                 </a>
                             @endif
                         </div>
-                        <input type="hidden" name="categoria" value="{{ request('categoria') }}">
-                        <input type="hidden" name="estado" value="{{ request('estado') }}">
                     </form>
                 </div>
 
@@ -188,7 +186,7 @@
                     <div class="row g-2">
                         {{-- Filtro por Categoría --}}
                         <div class="col-md-6">
-                            <select name="categoria" class="form-select" id="filterCategoria">
+                            <select name="categoria" class="form-select" id="filterCategoria" form="searchForm">
                                 <option value="">Todas las categorías</option>
                                 <option value="comidas" {{ request('categoria') == 'comidas' ? 'selected' : '' }}>Comidas</option>
                                 <option value="bebidas" {{ request('categoria') == 'bebidas' ? 'selected' : '' }}>Bebidas</option>
@@ -199,7 +197,7 @@
 
                         {{-- Filtro por Estado --}}
                         <div class="col-md-6">
-                            <select name="estado" class="form-select" id="filterEstado">
+                            <select name="estado" class="form-select" id="filterEstado" form="searchForm">
                                 <option value="">Todos los estados</option>
                                 <option value="activo" {{ request('estado') == 'activo' ? 'selected' : '' }}>Activo</option>
                                 <option value="inactivo" {{ request('estado') == 'inactivo' ? 'selected' : '' }}>Inactivo</option>
@@ -332,6 +330,7 @@
                                             type="checkbox" 
                                             role="switch" 
                                             data-producto-id="{{ $producto->id }}"
+                                            data-toggle-url="{{ route('admin.productos.toggle-estado', $producto) }}"
                                             aria-label="Cambiar estado de {{ $producto->nombre }}"
                                             {{ $producto->estado == 'activo' ? 'checked' : '' }}
                                             title="Cambiar estado"
@@ -412,7 +411,7 @@
                                         @if(request()->hasAny(['search', 'categoria', 'estado']))
                                             <h5 class="fw-bold">No hay productos que coincidan</h5>
                                             <p class="mb-3">Intenta con otros criterios de búsqueda</p>
-                                            <a href="{{ route('admin.productos.index') }}" class="btn btn-outline-primary">
+                                            <a href="{{ route('admin.productos.index') }}" class="btn btn-outline-primary" data-ajax-link="true" data-ajax-target="#productosResults">
                                                 <i class="fas fa-undo me-2"></i>Limpiar filtros
                                             </a>
                                         @else
@@ -583,12 +582,19 @@
 document.addEventListener('DOMContentLoaded', function() {
     
     // ✅ TOGGLE ESTADO AJAX
-    document.querySelectorAll('.toggle-estado').forEach(toggle => {
-        toggle.addEventListener('change', function() {
-            const productoId = this.dataset.productoId;
+    document.addEventListener('change', function(event) {
+        if (!event.target.matches('.toggle-estado[data-producto-id]')) {
+            return;
+        }
+
+        const toggle = event.target;
+        (function() {
+            const previousChecked = !toggle.checked;
+            const toggleUrl = toggle.dataset.toggleUrl;
             const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            toggle.disabled = true;
             
-            fetch(`/productos/${productoId}/toggle-estado`, {
+            fetch(toggleUrl, {
                 method: 'PATCH',
                 headers: {
                     'Content-Type': 'application/json',
@@ -599,6 +605,8 @@ document.addEventListener('DOMContentLoaded', function() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
+                    toggle.checked = data.nuevo_estado === 'activo';
+
                     // Mostrar notificación de éxito
                     const alert = document.createElement('div');
                     alert.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3';
@@ -616,60 +624,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     setTimeout(() => alert.remove(), 3000);
                 } else {
                     // Revertir el toggle si hay error
-                    this.checked = !this.checked;
-                    alert('Error al cambiar el estado');
+                    toggle.checked = previousChecked;
+                    alert(data.message || 'Error al cambiar el estado');
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                this.checked = !this.checked;
+                toggle.checked = previousChecked;
                 alert('Error de conexión');
+            })
+            .finally(() => {
+                toggle.disabled = false;
             });
-        });
+        })();
     });
-
-    // ✅ FILTROS AUTOMÁTICOS
-    document.getElementById('filterCategoria').addEventListener('change', function() {
-        aplicarFiltros();
-    });
-
-    document.getElementById('filterEstado').addEventListener('change', function() {
-        aplicarFiltros();
-    });
-
-    function aplicarFiltros() {
-        const form = document.getElementById('searchForm');
-        const searchValue = form.querySelector('input[name="search"]').value;
-        const categoriaValue = document.getElementById('filterCategoria').value;
-        const estadoValue = document.getElementById('filterEstado').value;
-
-        // Construir URL con parámetros
-        const params = new URLSearchParams();
-        if (searchValue) params.append('search', searchValue);
-        if (categoriaValue) params.append('categoria', categoriaValue);
-        if (estadoValue) params.append('estado', estadoValue);
-
-        // Redirigir con filtros
-        window.location.href = `{{ route('admin.productos.index') }}?${params.toString()}`;
-    }
-
-    // ✅ AUTO-SUBMIT EN BÚSQUEDA
-    document.querySelector('input[name="search"]').addEventListener('keyup', debounce(function() {
-        document.getElementById('searchForm').submit();
-    }, 500));
-
-    // Función debounce para evitar múltiples requests
-    function debounce(func, wait) {
-        let timeout;
-        return function executedFunction(...args) {
-            const later = () => {
-                clearTimeout(timeout);
-                func(...args);
-            };
-            clearTimeout(timeout);
-            timeout = setTimeout(later, wait);
-        };
-    }
 });
 </script>
 @endpush

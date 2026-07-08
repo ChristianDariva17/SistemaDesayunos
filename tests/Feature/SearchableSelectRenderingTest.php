@@ -7,6 +7,7 @@ use App\Models\Empleado;
 use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 use Symfony\Component\Process\Process;
 
@@ -78,6 +79,374 @@ it('renders searchable select hooks only on order create workflows', function ()
         ->assertSee('Seleccione un producto', false);
 
     expect(Route::has('trabajador.pedidos.edit'))->toBeFalse();
+});
+
+it('renders admin pedido client names with automatic date time values', function (): void {
+    Carbon::setTestNow('2026-07-08 14:35:00');
+
+    $admin = User::factory()->create([
+        'email' => 'admin-pedido-client-select@example.test',
+        'rol' => 'administrador',
+    ]);
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.pedidos@example.test',
+        'estado' => 'activo',
+    ]);
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+    $pedido = Pedido::create([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'fecha' => '2026-07-07',
+        'hora' => '09:10:00',
+        'total' => 0,
+        'estado' => 'pendiente',
+    ]);
+
+    try {
+        $this->actingAs($admin)
+            ->get(route('admin.pedidos.create'))
+            ->assertOk()
+            ->assertSee('Ana Paredes', false)
+            ->assertSee('value="2026-07-08"', false)
+            ->assertSee('value="14:35"', false)
+            ->assertDontSee('ana.pedidos@example.test', false);
+
+        $this->actingAs($admin)
+            ->get(route('admin.pedidos.edit', $pedido))
+            ->assertOk()
+            ->assertSee('Ana Paredes', false)
+            ->assertSee('value="2026-07-07"', false)
+            ->assertSee('value="09:10"', false)
+            ->assertDontSee('ana.pedidos@example.test', false);
+    } finally {
+        Carbon::setTestNow();
+    }
+});
+
+it('renders an inactive assigned cliente on admin pedido edit by name only', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-inactive-pedido-client@example.test',
+        'rol' => 'administrador',
+    ]);
+    $cliente = Cliente::create([
+        'nombre' => 'Marta',
+        'apellido' => 'Soto',
+        'email' => 'marta.inactive@example.test',
+        'estado' => 'inactivo',
+    ]);
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+    $pedido = Pedido::create([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'fecha' => '2026-07-07',
+        'hora' => '09:10:00',
+        'total' => 0,
+        'estado' => 'pendiente',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.edit', $pedido))
+        ->assertOk()
+        ->assertSee('Marta Soto', false)
+        ->assertSee('value="'.$cliente->id.'"', false)
+        ->assertDontSee('marta.inactive@example.test', false);
+});
+
+it('renders the deterministic generic cliente on admin pedido create and edit', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-generic-pedido-client@example.test',
+        'rol' => 'administrador',
+    ]);
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.generic-test@example.test',
+        'estado' => 'activo',
+    ]);
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+    $pedido = Pedido::create([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'fecha' => '2026-07-07',
+        'hora' => '09:10:00',
+        'total' => 0,
+        'estado' => 'pendiente',
+    ]);
+
+    $this->assertDatabaseHas('clientes', [
+        'nombre' => 'Clientes varios',
+        'apellido' => null,
+        'email' => null,
+        'estado' => 'activo',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.create'))
+        ->assertOk()
+        ->assertSee('Clientes varios', false);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.edit', $pedido))
+        ->assertOk()
+        ->assertSee('Clientes varios', false);
+});
+
+it('renders progressive ajax hooks for high ROI admin list filters', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-ajax-list-hooks@example.test',
+        'rol' => 'administrador',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.productos.index'))
+        ->assertOk()
+        ->assertSee('id="searchForm"', false)
+        ->assertSee('data-ajax-filter="true"', false)
+        ->assertSee('data-ajax-target="#productosResults"', false)
+        ->assertSee('id="productosResults" data-ajax-region', false);
+
+    $this->actingAs($admin)
+        ->get(route('admin.clientes.index'))
+        ->assertOk()
+        ->assertSee('id="filterForm"', false)
+        ->assertSee('data-ajax-auto-submit="true"', false)
+        ->assertSee('data-ajax-target="#clientesResults"', false)
+        ->assertSee('id="clientesResults" data-ajax-region', false);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.index'))
+        ->assertOk()
+        ->assertSee('id="filtrosForm"', false)
+        ->assertSee('data-ajax-auto-submit="true"', false)
+        ->assertSee('data-ajax-target="#pedidosResults"', false)
+        ->assertSee('id="pedidosResults" data-ajax-region', false);
+});
+
+it('renders the admin pedido create side panel as a single sticky stack', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-pedido-side-panel@example.test',
+        'rol' => 'administrador',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.create'))
+        ->assertOk()
+        ->assertSee('class="pedido-side-panel"', false)
+        ->assertSee('.pedido-side-panel', false)
+        ->assertSee('max-height: calc(100vh - var(--header-height, 70px) - 40px);', false)
+        ->assertSee('z-index: 1;', false)
+        ->assertSee('@media (max-width: 991.98px)', false)
+        ->assertDontSee('class="card shadow-sm border-0 mb-4 sticky-top"', false)
+        ->assertDontSee('style="top: 20px;"', false);
+});
+
+it('renders admin empleado create preview in the scoped sticky stack', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-empleado-create-side-panel@example.test',
+        'rol' => 'administrador',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.empleados.create'))
+        ->assertOk()
+        ->assertSee('class="empleado-side-panel"', false)
+        ->assertSee('class="card shadow-sm border-0 mb-4 empleado-preview-card"', false)
+        ->assertSee('Vista Previa')
+        ->assertSee('max-height: calc(100vh - var(--header-height, 70px) - 40px);', false)
+        ->assertSee('@media (max-width: 991.98px)', false)
+        ->assertDontSee('class="card shadow-sm border-0 mb-4 sticky-top"', false)
+        ->assertDontSee('style="top: 20px;"', false);
+});
+
+it('renders admin pedido edit side cards in the scoped sticky stack', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-pedido-edit-side-panel@example.test',
+        'rol' => 'administrador',
+    ]);
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'estado' => 'activo',
+    ]);
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+    $pedido = Pedido::create([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'fecha' => now()->toDateString(),
+        'hora' => '08:30',
+        'total' => 0,
+        'estado' => 'pendiente',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.edit', $pedido))
+        ->assertOk()
+        ->assertSee('class="pedido-side-panel"', false)
+        ->assertSee('class="card shadow-sm border-0 mb-4 pedido-summary-card"', false)
+        ->assertSee('Guía de Edición')
+        ->assertSee('max-height: calc(100vh - var(--header-height, 70px) - 40px);', false)
+        ->assertSee('@media (max-width: 991.98px)', false)
+        ->assertDontSee('class="card shadow-sm border-0 mb-4 sticky-top"', false)
+        ->assertDontSee('style="top: 20px;"', false);
+});
+
+it('renders admin empleado edit preview in the scoped sticky stack', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-empleado-edit-side-panel@example.test',
+        'rol' => 'administrador',
+    ]);
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.empleados.edit', $empleado))
+        ->assertOk()
+        ->assertSee('class="empleado-side-panel"', false)
+        ->assertSee('class="card shadow-sm border-0 mb-4 empleado-preview-card"', false)
+        ->assertSee('Vista Previa')
+        ->assertSee('max-height: calc(100vh - var(--header-height, 70px) - 40px);', false)
+        ->assertDontSee('class="card shadow-sm border-0 mb-4 sticky-top"', false)
+        ->assertDontSee('style="top: 20px;"', false);
+});
+
+it('renders admin pedido show side cards in the scoped sticky stack', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-pedido-show-side-panel@example.test',
+        'rol' => 'administrador',
+    ]);
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'estado' => 'activo',
+    ]);
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+    $pedido = Pedido::create([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'fecha' => now()->toDateString(),
+        'hora' => '08:30',
+        'total' => 0,
+        'estado' => 'pendiente',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.show', $pedido))
+        ->assertOk()
+        ->assertSee('class="pedido-side-panel"', false)
+        ->assertSee('class="card shadow-sm border-0 mb-4 pedido-summary-card"', false)
+        ->assertSee('Resumen del Pedido')
+        ->assertSee('max-height: calc(100vh - var(--header-height, 70px) - 40px);', false)
+        ->assertSee('@media (max-width: 991.98px)', false)
+        ->assertDontSee('class="card shadow-sm border-0 mb-4 sticky-top"', false)
+        ->assertDontSee('style="top: 20px;"', false);
+});
+
+it('renders admin pedidos filters directly without a collapse dropdown', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-pedidos-visible-filters@example.test',
+        'rol' => 'administrador',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.index'))
+        ->assertOk()
+        ->assertSee('pedidos-filters-card', false)
+        ->assertSee('class="pedidos-filters-content"', false)
+        ->assertSee('id="filtrosForm"', false)
+        ->assertSee('id="search"', false)
+        ->assertSee('id="estado" name="estado"', false)
+        ->assertSee('id="fecha_desde"', false)
+        ->assertSee('.pedidos-filters-card .pedidos-filters-content', false)
+        ->assertSee('overflow: visible;', false)
+        ->assertDontSee('Mostrar/Ocultar')
+        ->assertDontSee('data-bs-toggle="collapse"', false)
+        ->assertDontSee('id="filtrosCollapse"', false);
+});
+
+it('reuses a pre-existing generic cliente with nullable differences in the deterministic setup', function (): void {
+    Cliente::where('nombre', 'Clientes varios')->delete();
+
+    $existingGenericCliente = Cliente::create([
+        'nombre' => 'Clientes varios',
+        'apellido' => 'Temporal',
+        'email' => 'clientes.varios.existing@example.test',
+        'estado' => 'inactivo',
+    ]);
+
+    $migration = require database_path('migrations/2026_07_08_000001_ensure_generic_cliente_exists.php');
+    $migration->up();
+
+    expect(Cliente::where('nombre', 'Clientes varios')->count())->toBe(1);
+
+    $this->assertDatabaseHas('clientes', [
+        'id' => $existingGenericCliente->id,
+        'nombre' => 'Clientes varios',
+        'apellido' => null,
+        'email' => null,
+        'estado' => 'activo',
+    ]);
+});
+
+it('does not create duplicate generic clientes when rendering admin pedido forms', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-generic-no-duplicates@example.test',
+        'rol' => 'administrador',
+    ]);
+    $cliente = Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.no-duplicates@example.test',
+        'estado' => 'activo',
+    ]);
+    $empleado = Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+    $pedido = Pedido::create([
+        'cliente_id' => $cliente->id,
+        'empleado_id' => $empleado->id,
+        'fecha' => '2026-07-07',
+        'hora' => '09:10:00',
+        'total' => 0,
+        'estado' => 'pendiente',
+    ]);
+    $genericClientesBefore = Cliente::where('nombre', 'Clientes varios')->count();
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.create'))
+        ->assertOk();
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.edit', $pedido))
+        ->assertOk();
+
+    expect(Cliente::where('nombre', 'Clientes varios')->count())->toBe($genericClientesBefore);
 });
 
 it('keeps searchable select initialization idempotent for dynamic rows', function (): void {

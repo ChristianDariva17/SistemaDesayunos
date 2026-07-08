@@ -88,7 +88,7 @@
                                 <option value="">Selecciona un cliente</option>
                                 @foreach($clientes as $cliente)
                                     <option value="{{ $cliente->id }}" {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
-                                        {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}@if($cliente->email) - {{ $cliente->email }}@endif
+                                        {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}
                                     </option>
                                 @endforeach
                             </select>
@@ -137,7 +137,7 @@
                                    class="form-control @error('fecha') is-invalid @enderror" 
                                    id="fecha" 
                                    name="fecha" 
-                                   value="{{ old('fecha', date('Y-m-d')) }}"
+                                   value="{{ old('fecha', now()->toDateString()) }}"
                                    required>
                             @error('fecha')
                                 <div class="invalid-feedback">
@@ -155,7 +155,7 @@
                                    class="form-control @error('hora') is-invalid @enderror" 
                                    id="hora" 
                                    name="hora" 
-                                   value="{{ old('hora', date('H:i')) }}"
+                                   value="{{ old('hora', now()->format('H:i')) }}"
                                    required>
                             @error('hora')
                                 <div class="invalid-feedback">
@@ -251,6 +251,7 @@
             COLUMNA DERECHA - RESUMEN
             ========================================== --}}
         <div class="col-lg-4">
+            <div class="pedido-side-panel">
             
             {{-- Resumen del Pedido --}}
             <div class="card shadow-sm border-0 mb-4 pedido-summary-card">
@@ -342,6 +343,8 @@
                         </li>
                     </ul>
                 </div>
+            </div>
+
             </div>
 
         </div>
@@ -530,11 +533,19 @@
         box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
     }
 
-    /* Sticky Sidebar */
-    .pedido-summary-card {
+    /* Sticky right-side panel */
+    .pedido-side-panel {
         position: sticky;
         top: calc(var(--header-height, 70px) + 20px);
-        z-index: 10;
+        z-index: 1;
+        align-self: start;
+        max-height: calc(100vh - var(--header-height, 70px) - 40px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .pedido-summary-card {
+        z-index: auto;
     }
 
     /* Badges */
@@ -569,9 +580,11 @@
             font-size: 22px;
         }
 
-        .pedido-summary-card {
+        .pedido-side-panel {
             position: static;
             top: auto;
+            max-height: none;
+            overflow: visible;
         }
 
         .table {

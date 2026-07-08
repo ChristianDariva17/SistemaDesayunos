@@ -338,9 +338,10 @@
             COLUMNA DERECHA - PREVIEW Y ACCIONES
             ========================================== --}}
         <div class="col-lg-4">
+            <div class="empleado-side-panel">
             
             {{-- Preview del Empleado --}}
-            <div class="card shadow-sm border-0 mb-4 sticky-top" style="top: 20px;">
+            <div class="card shadow-sm border-0 mb-4 empleado-preview-card">
                 <div class="card-header bg-gradient-warning text-dark border-0">
                     <h5 class="mb-0">
                         <i class="fas fa-eye me-2"></i> Vista Previa
@@ -448,6 +449,8 @@
                         <i class="fas fa-trash me-2"></i> Eliminar Empleado
                     </button>
                 </div>
+            </div>
+
             </div>
 
         </div>
@@ -592,10 +595,15 @@
         box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
     }
 
-    /* Sticky Sidebar */
-    .sticky-top {
+    /* Sticky side panel */
+    .empleado-side-panel {
         position: sticky;
-        z-index: 1020;
+        top: calc(var(--header-height, 70px) + 20px);
+        z-index: 1;
+        align-self: start;
+        max-height: calc(100vh - var(--header-height, 70px) - 40px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
     }
 
     /* Badges */
@@ -628,13 +636,16 @@
     }
 
     /* Responsive */
-    @media (max-width: 768px) {
+    @media (max-width: 991.98px) {
         .page-title {
             font-size: 22px;
         }
 
-        .sticky-top {
-            position: relative !important;
+        .empleado-side-panel {
+            position: static;
+            top: auto;
+            max-height: none;
+            overflow: visible;
         }
 
         .avatar-circle-large {

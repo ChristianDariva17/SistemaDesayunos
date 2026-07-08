@@ -362,9 +362,10 @@
         COLUMNA DERECHA - SIDEBAR
         ========================================== --}}
     <div class="col-lg-4">
+        <div class="pedido-side-panel">
         
         {{-- RESUMEN DEL PEDIDO --}}
-        <div class="card shadow-sm border-0 mb-4 sticky-top" style="top: 20px;">
+        <div class="card shadow-sm border-0 mb-4 pedido-summary-card">
             <div class="card-header bg-gradient-primary text-white border-0">
                 <h5 class="mb-0">
                     <i class="fas fa-info-circle me-2"></i> Resumen del Pedido
@@ -518,6 +519,8 @@
                     </button>
                 </div>
             </div>
+        </div>
+
         </div>
 
     </div>
@@ -705,10 +708,19 @@
         box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
     }
 
-    /* Sticky Sidebar */
-    .sticky-top {
+    /* Sticky right-side panel */
+    .pedido-side-panel {
         position: sticky;
-        z-index: 1020;
+        top: calc(var(--header-height, 70px) + 20px);
+        z-index: 1;
+        align-self: start;
+        max-height: calc(100vh - var(--header-height, 70px) - 40px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .pedido-summary-card {
+        z-index: auto;
     }
 
     /* Badges */
@@ -726,13 +738,16 @@
     }
 
     /* Responsive */
-    @media (max-width: 768px) {
+    @media (max-width: 991.98px) {
         .page-title {
             font-size: 22px;
         }
 
-        .sticky-top {
-            position: relative !important;
+        .pedido-side-panel {
+            position: static;
+            top: auto;
+            max-height: none;
+            overflow: visible;
         }
 
         .table {

@@ -157,7 +157,7 @@
                                 @foreach($clientes as $cliente)
                                     <option value="{{ $cliente->id }}" 
                                             {{ old('cliente_id', $pedido->cliente_id) == $cliente->id ? 'selected' : '' }}>
-                                        {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}@if($cliente->email) - {{ $cliente->email }}@endif
+                                        {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}
                                     </option>
                                 @endforeach
                             </select>
@@ -213,7 +213,7 @@
                                    class="form-control @error('fecha') is-invalid @enderror" 
                                    id="fecha" 
                                    name="fecha" 
-                                   value="{{ old('fecha', $pedido->fecha) }}"
+                                   value="{{ old('fecha', $pedido->fecha?->format('Y-m-d')) }}"
                                    required>
                             @error('fecha')
                                 <div class="invalid-feedback">
@@ -231,7 +231,7 @@
                                    class="form-control @error('hora') is-invalid @enderror" 
                                    id="hora" 
                                    name="hora" 
-                                   value="{{ old('hora', $pedido->hora) }}"
+                                   value="{{ old('hora', substr((string) $pedido->hora, 0, 5)) }}"
                                    required>
                             @error('hora')
                                 <div class="invalid-feedback">
@@ -416,9 +416,10 @@
             COLUMNA DERECHA - RESUMEN
             ========================================== --}}
         <div class="col-lg-4">
+            <div class="pedido-side-panel">
             
             {{-- Resumen del Pedido --}}
-            <div class="card shadow-sm border-0 mb-4 sticky-top" style="top: 20px;">
+            <div class="card shadow-sm border-0 mb-4 pedido-summary-card">
                 <div class="card-header bg-gradient-primary text-white border-0">
                     <h5 class="mb-0">
                         <i class="fas fa-calculator me-2"></i> Resumen del Pedido
@@ -530,6 +531,8 @@
                         </li>
                     </ul>
                 </div>
+            </div>
+
             </div>
 
         </div>
@@ -709,10 +712,19 @@
         box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
     }
 
-    /* Sticky Sidebar */
-    .sticky-top {
+    /* Sticky right-side panel */
+    .pedido-side-panel {
         position: sticky;
-        z-index: 1020;
+        top: calc(var(--header-height, 70px) + 20px);
+        z-index: 1;
+        align-self: start;
+        max-height: calc(100vh - var(--header-height, 70px) - 40px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+    }
+
+    .pedido-summary-card {
+        z-index: auto;
     }
 
     /* Badges */
@@ -742,13 +754,16 @@
     }
 
     /* Responsive */
-    @media (max-width: 768px) {
+    @media (max-width: 991.98px) {
         .page-title {
             font-size: 22px;
         }
 
-        .sticky-top {
-            position: relative !important;
+        .pedido-side-panel {
+            position: static;
+            top: auto;
+            max-height: none;
+            overflow: visible;
         }
 
         .table {

@@ -153,10 +153,12 @@
     </div>
 </div>
 
+<div id="pedidosResults" data-ajax-region>
+
 {{-- ==========================================
     FILTROS
     ========================================== --}}
-<div class="card shadow-sm border-0 mb-4">
+<div class="card shadow-sm border-0 mb-4 pedidos-filters-card">
     <div class="card-header bg-white border-bottom">
         <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
@@ -165,14 +167,11 @@
                     <span class="badge bg-primary ms-2">Activos</span>
                 @endif
             </h5>
-            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#filtrosCollapse">
-                <i class="fas fa-chevron-down me-1"></i> <span class="d-none d-md-inline">Mostrar/Ocultar</span>
-            </button>
         </div>
     </div>
-    <div class="collapse show" id="filtrosCollapse">
+    <div class="pedidos-filters-content">
         <div class="card-body">
-            <form action="{{ route('admin.pedidos.index') }}" method="GET" id="filtrosForm">
+            <form action="{{ route('admin.pedidos.index') }}" method="GET" id="filtrosForm" data-ajax-filter="true" data-ajax-auto-submit="true" data-ajax-target="#pedidosResults">
                 <div class="row g-3">
                     {{-- Búsqueda General --}}
                     <div class="col-md-4">
@@ -256,7 +255,7 @@
                                 <i class="fas fa-search me-2"></i> Buscar
                             </button>
                             @if(request()->hasAny(['search', 'estado', 'fecha_desde', 'fecha_hasta', 'empleado_id']))
-                                <a href="{{ route('admin.pedidos.index') }}" class="btn btn-outline-secondary">
+                                <a href="{{ route('admin.pedidos.index') }}" class="btn btn-outline-secondary" data-ajax-link="true" data-ajax-target="#pedidosResults">
                                     <i class="fas fa-times me-2"></i> Limpiar Filtros
                                 </a>
                             @endif
@@ -471,7 +470,7 @@
                     <h4 class="text-muted mb-2">No hay pedidos registrados</h4>
                     @if(request()->hasAny(['search', 'estado', 'fecha_desde', 'fecha_hasta', 'empleado_id']))
                         <p class="text-muted mb-4">No se encontraron pedidos con los filtros aplicados</p>
-                        <a href="{{ route('admin.pedidos.index') }}" class="btn btn-outline-secondary me-2">
+                        <a href="{{ route('admin.pedidos.index') }}" class="btn btn-outline-secondary me-2" data-ajax-link="true" data-ajax-target="#pedidosResults">
                             <i class="fas fa-times me-2"></i> Limpiar Filtros
                         </a>
                     @else
@@ -493,6 +492,8 @@
         @method('DELETE')
     </form>
 @endforeach
+
+</div>
 
 {{-- ==========================================
     ESTILOS PERSONALIZADOS
@@ -650,6 +651,18 @@
         box-shadow: 0 8px 16px rgba(0,0,0,0.1) !important;
     }
 
+    /* Filter panel */
+    .pedidos-filters-card .pedidos-filters-content {
+        display: block;
+        overflow: visible;
+    }
+
+    .pedidos-filters-card .card-body,
+    .pedidos-filters-card form,
+    .pedidos-filters-card .row {
+        overflow: visible;
+    }
+
     /* Animations */
     .animate__animated {
         animation-duration: 0.5s;
@@ -721,7 +734,7 @@
         // ==========================================
         // ELIMINAR PEDIDO
         // ==========================================
-        $('.btn-delete').on('click', function() {
+        $(document).on('click', '.btn-delete', function() {
             const pedidoId = $(this).data('id');
             const numeroPedido = $(this).data('numero');
 
