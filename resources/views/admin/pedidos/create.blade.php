@@ -253,7 +253,7 @@
         <div class="col-lg-4">
             
             {{-- Resumen del Pedido --}}
-            <div class="card shadow-sm border-0 mb-4 sticky-top" style="top: 20px;">
+            <div class="card shadow-sm border-0 mb-4 pedido-summary-card">
                 <div class="card-header bg-gradient-primary text-white border-0">
                     <h5 class="mb-0">
                         <i class="fas fa-calculator me-2"></i> Resumen del Pedido
@@ -531,9 +531,10 @@
     }
 
     /* Sticky Sidebar */
-    .sticky-top {
+    .pedido-summary-card {
         position: sticky;
-        z-index: 1020;
+        top: calc(var(--header-height, 70px) + 20px);
+        z-index: 10;
     }
 
     /* Badges */
@@ -563,13 +564,14 @@
     }
 
     /* Responsive */
-    @media (max-width: 768px) {
+    @media (max-width: 991.98px) {
         .page-title {
             font-size: 22px;
         }
 
-        .sticky-top {
-            position: relative !important;
+        .pedido-summary-card {
+            position: static;
+            top: auto;
         }
 
         .table {

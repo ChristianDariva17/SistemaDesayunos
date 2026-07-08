@@ -90,6 +90,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'valid.role', 'rol:a
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
          ->name('dashboard');
 
+    Route::view('/configuracion', 'admin.settings.index')
+         ->name('settings.index');
+
     // ══════════════════════════════════════════════════════════════════
     // PRODUCTOS - CRUD COMPLETO
     // ══════════════════════════════════════════════════════════════════
