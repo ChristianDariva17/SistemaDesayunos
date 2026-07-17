@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\StockMovimientoTipo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -12,11 +13,15 @@ class StockMovimiento extends Model
 {
     use HasFactory;
 
-    public const TIPO_ENTRADA = 'entrada';
-    public const TIPO_SALIDA = 'salida';
-    public const TIPO_AJUSTE = 'ajuste';
-    public const TIPO_DEVOLUCION = 'devolucion';
-    public const TIPO_CANCELACION = 'cancelacion';
+    public const TIPO_ENTRADA = StockMovimientoTipo::Entry->value;
+
+    public const TIPO_SALIDA = StockMovimientoTipo::Exit->value;
+
+    public const TIPO_AJUSTE = StockMovimientoTipo::Adjustment->value;
+
+    public const TIPO_DEVOLUCION = StockMovimientoTipo::Returned->value;
+
+    public const TIPO_CANCELACION = StockMovimientoTipo::Cancellation->value;
 
     public const TIPOS = [
         self::TIPO_ENTRADA,
@@ -51,6 +56,11 @@ class StockMovimiento extends Model
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
+
+    public function tipoEnum(): ?StockMovimientoTipo
+    {
+        return StockMovimientoTipo::tryFrom((string) $this->tipo);
+    }
 
     public function producto(): BelongsTo
     {

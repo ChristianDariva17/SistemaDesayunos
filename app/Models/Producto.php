@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\ProductoEstado;
 use App\Events\ProductPriceChanged;
 use App\Models\Concerns\Auditable;
 use App\Support\InventoryLimits;
@@ -158,9 +159,14 @@ class Producto extends Model
      */
     public function getEstadoBadgeAttribute(): string
     {
-        return $this->estado === 'activo'
+        return $this->isActive()
             ? '<span class="badge bg-success">Activo</span>'
             : '<span class="badge bg-danger">Inactivo</span>';
+    }
+
+    public function isActive(): bool
+    {
+        return $this->estado === ProductoEstado::Active->value;
     }
 
     /**
@@ -175,7 +181,7 @@ class Producto extends Model
      */
     public function scopeActivos($query)
     {
-        return $query->where('estado', 'activo');
+        return $query->where('estado', ProductoEstado::Active->value);
     }
 
     /**

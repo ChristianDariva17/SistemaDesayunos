@@ -7,6 +7,7 @@ use App\Actions\Pedido\DeletePedidoAction;
 use App\Actions\Pedido\DuplicatePedidoAction;
 use App\Actions\Pedido\UpdatePedidoAction;
 use App\Enums\PedidoStatus;
+use App\Enums\ProductoEstado;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Pedido\StorePedidoRequest;
 use App\Http\Requests\Pedido\UpdatePedidoRequest;
@@ -50,7 +51,7 @@ class PedidoController extends Controller
     {
         Gate::authorize('create', Pedido::class);
 
-        $productos = Producto::where('estado', 'activo')
+        $productos = Producto::where('estado', ProductoEstado::Active->value)
             ->where('stock', '>', 0)
             ->orderBy('nombre')
             ->get(['id', 'nombre', 'precio', 'stock', 'imagen']);

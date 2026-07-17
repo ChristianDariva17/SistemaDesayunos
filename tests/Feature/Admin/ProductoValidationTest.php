@@ -1,12 +1,36 @@
 <?php
 
+use App\Http\Controllers\Admin\ProductoController;
+use App\Http\Requests\Admin\UpdateProductoRequest;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
-use App\Http\Controllers\Admin\ProductoController;
-use App\Http\Requests\Admin\UpdateProductoRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+
+it('rejects an invalid producto estado through enum validation', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $this->actingAs($admin)
+        ->from(route('admin.productos.create'))
+        ->post(route('admin.productos.store'), [
+            'nombre' => 'Producto invalid state',
+            'categoria' => 'bebida',
+            'precio' => 12.50,
+            'stock' => 5,
+            'estado' => 'suspendido',
+        ])
+        ->assertRedirect(route('admin.productos.create'))
+        ->assertSessionHasErrors([
+            'estado' => 'El estado debe ser activo o inactivo.',
+        ]);
+
+    $this->assertDatabaseMissing('productos', [
+        'nombre' => 'Producto invalid state',
+    ]);
+});
 
 it('treats stock 10 as low stock and standardizes the inventory scope', function (): void {
     $lowStock = Producto::create([
@@ -1053,7 +1077,8 @@ it('records admin product edit stock movement from the locked database stock whe
     $request->setLaravelSession($this->app['session.store']);
     $request->setUserResolver(fn (): User => $admin);
 
-    $request->setRouteResolver(fn (): object => new class ($staleProducto) {
+    $request->setRouteResolver(fn (): object => new class($staleProducto)
+    {
         public function __construct(private readonly Producto $producto) {}
 
         public function parameter(string $name, mixed $default = null): mixed
@@ -1293,7 +1318,7 @@ it('validates manual stock motivo max length after trimming unicode whitespace',
         ->patch(route('admin.productos.actualizar-stock', $producto), [
             'tipo' => 'incrementar',
             'cantidad' => 1,
-            'motivo' => "\u{00A0}" . $motivo . "\u{2003}",
+            'motivo' => "\u{00A0}".$motivo."\u{2003}",
         ]);
 
     $response->assertRedirect(route('admin.productos.show', $producto));

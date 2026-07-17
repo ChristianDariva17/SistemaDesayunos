@@ -1,7 +1,26 @@
 <?php
 
+use App\Enums\ProductoEstado;
 use App\Models\Producto;
 use App\Models\User;
+
+it('defines canonical product states and keeps the model attribute as a string', function (): void {
+    $producto = Producto::create([
+        'nombre' => 'Producto enum state',
+        'categoria' => 'bebida',
+        'precio' => 12.50,
+        'stock' => 5,
+        'estado' => ProductoEstado::Active->value,
+    ])->refresh();
+
+    expect(ProductoEstado::values())->toBe(['activo', 'inactivo'])
+        ->and(ProductoEstado::Active->label())->toBe('Activo')
+        ->and(ProductoEstado::Inactive->label())->toBe('Inactivo')
+        ->and(ProductoEstado::Active->toggled())->toBe(ProductoEstado::Inactive)
+        ->and(ProductoEstado::Inactive->toggled())->toBe(ProductoEstado::Active)
+        ->and($producto->estado)->toBeString()->toBe('activo')
+        ->and($producto->isActive())->toBeTrue();
+});
 
 it('renders the exact admin product status toggle route on the index switch', function (): void {
     $admin = User::factory()->create([

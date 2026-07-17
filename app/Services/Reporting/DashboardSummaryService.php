@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Reporting;
 
+use App\Enums\ProductoEstado;
 use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\Pedido;
@@ -50,7 +51,10 @@ final class DashboardSummaryService
     {
         return Producto::query()
             ->selectRaw('COUNT(*) as total_productos')
-            ->selectRaw("SUM(CASE WHEN estado = 'activo' THEN 1 ELSE 0 END) as productos_activos")
+            ->selectRaw(
+                'SUM(CASE WHEN estado = ? THEN 1 ELSE 0 END) as productos_activos',
+                [ProductoEstado::Active->value],
+            )
             ->first() ?? (object) [];
     }
 

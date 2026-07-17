@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Inventory;
 
 use App\Actions\Stock\RegisterStockMovementAction;
+use App\Enums\StockMovimientoTipo;
 use App\Events\StockReserved;
 use App\Models\Pedido;
 use App\Models\Producto;
@@ -37,7 +38,7 @@ final class ReserveProductoStockAction
             ->lockForUpdate()
             ->findOrFail($productoId);
 
-        if ($producto->estado !== 'activo') {
+        if (! $producto->isActive()) {
             throw ValidationException::withMessages([
                 'productos' => "The producto {$producto->nombre} is not active.",
             ]);
@@ -76,7 +77,7 @@ final class ReserveProductoStockAction
 
         $movimiento = $this->registerStockMovement->handle(
             producto: $producto,
-            tipo: StockMovimiento::TIPO_SALIDA,
+            tipo: StockMovimientoTipo::Exit->value,
             cantidad: $cantidad,
             stockAnterior: $stockAnterior,
             stockNuevo: $stockNuevo,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Trabajador;
 
+use App\Enums\ProductoEstado;
 use App\Http\Controllers\Controller;
 use App\Models\Producto;
 use Exception;
@@ -49,7 +50,7 @@ class ProductoController extends Controller
         // ESTADÍSTICAS DEL DASHBOARD
         // ==========================================
         $totalProductos = Producto::count();
-        $productosActivos = Producto::where('estado', 'activo')->count();
+        $productosActivos = Producto::activos()->count();
         $productosNuevos = Producto::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->count();
@@ -104,7 +105,7 @@ class ProductoController extends Controller
             $termino = $request->get('q', '');
 
             $productos = Producto::where('nombre', 'like', '%'.$termino.'%')
-                ->where('estado', 'activo')
+                ->activos()
                 ->limit(10)
                 ->get(['id', 'nombre', 'precio', 'stock', 'imagen']);
 
@@ -143,13 +144,13 @@ class ProductoController extends Controller
         try {
             $estadisticas = [
                 'total' => Producto::count(),
-                'activos' => Producto::where('estado', 'activo')->count(),
-                'inactivos' => Producto::where('estado', 'inactivo')->count(),
+                'activos' => Producto::activos()->count(),
+                'inactivos' => Producto::where('estado', ProductoEstado::Inactive->value)->count(),
                 'stock_bajo' => Producto::stockBajo()->count(),
                 'sin_stock' => Producto::where('stock', 0)->count(),
-                'valor_inventario' => Producto::where('estado', 'activo')->sum(DB::raw('precio * stock')),
-                'precio_promedio' => Producto::where('estado', 'activo')->avg('precio'),
-                'stock_promedio' => Producto::where('estado', 'activo')->avg('stock'),
+                'valor_inventario' => Producto::activos()->sum(DB::raw('precio * stock')),
+                'precio_promedio' => Producto::activos()->avg('precio'),
+                'stock_promedio' => Producto::activos()->avg('stock'),
                 'por_categoria' => Producto::selectRaw('categoria, COUNT(*) as total')
                     ->whereNotNull('categoria')
                     ->groupBy('categoria')

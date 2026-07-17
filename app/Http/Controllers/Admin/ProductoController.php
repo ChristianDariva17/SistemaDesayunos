@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Stock\RegisterStockMovementAction;
+use App\Enums\ProductoEstado;
+use App\Enums\StockMovimientoTipo;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreProductoRequest;
 use App\Http\Requests\Admin\UpdateProductoRequest;
 use App\Models\Producto;
-use App\Models\StockMovimiento;
 use App\Models\User;
 use Exception;
 use Illuminate\Http\Request;
@@ -55,7 +56,7 @@ class ProductoController extends Controller
         // ESTADÍSTICAS DEL DASHBOARD
         // ==========================================
         $totalProductos = Producto::count();
-        $productosActivos = Producto::where('estado', 'activo')->count();
+        $productosActivos = Producto::activos()->count();
         $productosNuevos = Producto::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->count();
@@ -309,7 +310,7 @@ class ProductoController extends Controller
             $termino = $request->get('q', '');
 
             $productos = Producto::where('nombre', 'like', '%'.$termino.'%')
-                ->where('estado', 'activo')
+                ->activos()
                 ->limit(10)
                 ->get(['id', 'nombre', 'precio', 'stock', 'imagen']);
 
@@ -347,7 +348,8 @@ class ProductoController extends Controller
 
         try {
             $estadoAnterior = $producto->estado;
-            $nuevoEstado = $producto->estado === 'activo' ? 'inactivo' : 'activo';
+            $estado = ProductoEstado::tryFrom((string) $producto->estado) ?? ProductoEstado::Inactive;
+            $nuevoEstado = $estado->toggled()->value;
 
             $producto->update(['estado' => $nuevoEstado]);
 
@@ -492,7 +494,7 @@ class ProductoController extends Controller
 
         app(RegisterStockMovementAction::class)->handle(
             producto: $producto,
-            tipo: StockMovimiento::TIPO_AJUSTE,
+            tipo: StockMovimientoTipo::Adjustment->value,
             cantidad: abs($stockNuevo - $stockAnterior),
             stockAnterior: $stockAnterior,
             stockNuevo: $stockNuevo,
@@ -661,13 +663,13 @@ class ProductoController extends Controller
         try {
             $estadisticas = [
                 'total' => Producto::count(),
-                'activos' => Producto::where('estado', 'activo')->count(),
-                'inactivos' => Producto::where('estado', 'inactivo')->count(),
+                'activos' => Producto::activos()->count(),
+                'inactivos' => Producto::where('estado', ProductoEstado::Inactive->value)->count(),
                 'stock_bajo' => Producto::stockBajo()->count(),
                 'sin_stock' => Producto::where('stock', 0)->count(),
-                'valor_inventario' => Producto::where('estado', 'activo')->sum(DB::raw('precio * stock')),
-                'precio_promedio' => Producto::where('estado', 'activo')->avg('precio'),
-                'stock_promedio' => Producto::where('estado', 'activo')->avg('stock'),
+                'valor_inventario' => Producto::activos()->sum(DB::raw('precio * stock')),
+                'precio_promedio' => Producto::activos()->avg('precio'),
+                'stock_promedio' => Producto::activos()->avg('stock'),
                 'por_categoria' => Producto::selectRaw('categoria, COUNT(*) as total')
                     ->whereNotNull('categoria')
                     ->groupBy('categoria')

@@ -57,8 +57,8 @@
                         <label for="estado" class="form-label fw-bold">Estado</label>
                         <select id="estado" name="estado" class="form-select">
                             <option value="">Todos los estados</option>
-                            <option value="activo" @selected(request('estado') === 'activo')>Activo</option>
-                            <option value="inactivo" @selected(request('estado') === 'inactivo')>Inactivo</option>
+                            <option value="{{ \App\Enums\ProductoEstado::Active->value }}" @selected(request('estado') === \App\Enums\ProductoEstado::Active->value)>Activo</option>
+                            <option value="{{ \App\Enums\ProductoEstado::Inactive->value }}" @selected(request('estado') === \App\Enums\ProductoEstado::Inactive->value)>Inactivo</option>
                         </select>
                     </div>
 
@@ -120,7 +120,7 @@
                                     <small class="text-muted d-block">{{ ucfirst($producto->categoria) }}</small>
                                 </td>
                                 <td class="text-center">
-                                    <span class="badge bg-{{ $producto->estado === 'activo' ? 'success' : 'danger' }} bg-opacity-10 text-{{ $producto->estado === 'activo' ? 'success' : 'danger' }} border">
+                                    <span class="badge bg-{{ $producto->isActive() ? 'success' : 'danger' }} bg-opacity-10 text-{{ $producto->isActive() ? 'success' : 'danger' }} border">
                                         {{ ucfirst($producto->estado) }}
                                     </span>
                                 </td>

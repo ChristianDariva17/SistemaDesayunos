@@ -2,15 +2,28 @@
 
 declare(strict_types=1);
 
+use App\Actions\Inventory\ReserveProductoStockAction;
 use App\Actions\Stock\RegisterStockMovementAction;
+use App\Enums\StockMovimientoTipo;
 use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
+use App\Models\StockReservation;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+
+it('defines canonical stock movement types and compatibility constants', function (): void {
+    expect(StockMovimientoTipo::values())->toBe([
+        'entrada', 'salida', 'ajuste', 'devolucion', 'cancelacion',
+    ])->and(array_map(
+        static fn (StockMovimientoTipo $tipo): string => $tipo->label(),
+        StockMovimientoTipo::cases(),
+    ))->toBe(['Entrada', 'Salida', 'Ajuste', 'Devolución', 'Cancelación'])
+        ->and(StockMovimiento::TIPOS)->toBe(StockMovimientoTipo::values());
+});
 
 function stockMovimientoTestProducto(array $attributes = []): Producto
 {
@@ -28,7 +41,7 @@ function stockMovimientoTestPedido(array $attributes = []): Pedido
     $cliente = Cliente::create([
         'nombre' => 'Ledger',
         'apellido' => 'Cliente',
-        'email' => 'ledger.cliente.' . uniqid() . '@example.com',
+        'email' => 'ledger.cliente.'.uniqid().'@example.com',
         'estado' => 'activo',
     ]);
 
@@ -39,7 +52,7 @@ function stockMovimientoTestPedido(array $attributes = []): Pedido
     ]);
 
     return Pedido::create(array_merge([
-        'numero_pedido' => 'PED-' . uniqid(),
+        'numero_pedido' => 'PED-'.uniqid(),
         'cliente_id' => $cliente->id,
         'empleado_id' => $empleado->id,
         'metodo_pago' => 'efectivo',
@@ -111,7 +124,8 @@ it('allows nullable pedido and user for manual or system adjustments', function 
 
     expect($movimiento->pedido)->toBeNull()
         ->and($movimiento->user)->toBeNull()
-        ->and($movimiento->tipo)->toBe('ajuste')
+        ->and($movimiento->tipo)->toBeString()->toBe('ajuste')
+        ->and($movimiento->tipoEnum())->toBe(StockMovimientoTipo::Adjustment)
         ->and($movimiento->cantidad)->toBe(2)
         ->and($movimiento->stock_anterior)->toBe(5)
         ->and($movimiento->stock_nuevo)->toBe(7)
@@ -171,6 +185,57 @@ it('registers a valid stock movement through the stock action', function (): voi
         'stock_nuevo' => 7,
         'motivo' => 'Pedido registrado',
     ]);
+});
+
+it('accounts for an active legacy reservation without overbooking new pedido stock', function (): void {
+    $producto = stockMovimientoTestProducto(['stock' => 10]);
+    $legacyPedido = stockMovimientoTestPedido();
+    $newPedido = stockMovimientoTestPedido();
+
+    $legacyReservation = StockReservation::create([
+        'producto_id' => $producto->id,
+        'pedido_id' => $legacyPedido->id,
+        'cantidad' => 3,
+        'status' => StockReservation::STATUS_ACTIVE,
+        'status_changed_at' => now(),
+    ]);
+
+    expect($producto->availableStock())->toBe(7);
+
+    $reservation = DB::transaction(fn (): array => app(ReserveProductoStockAction::class)->handle(
+        productoId: (int) $producto->id,
+        cantidad: 7,
+        pedido: $newPedido,
+        user: null,
+        motivo: 'Pedido stock reservation',
+        source: 'pedido.create',
+    ));
+
+    $producto->refresh();
+    $legacyReservation->refresh();
+
+    expect($reservation['stock_anterior'])->toBe(10)
+        ->and($reservation['stock_nuevo'])->toBe(3)
+        ->and($producto->stock)->toBe(3)
+        ->and($producto->availableStock())->toBe(0)
+        ->and($legacyReservation->status)->toBe(StockReservation::STATUS_ACTIVE)
+        ->and($reservation['movimiento']->pedido_id)->toBe($newPedido->id)
+        ->and($reservation['movimiento']->tipo)->toBe(StockMovimientoTipo::Exit->value)
+        ->and($reservation['movimiento']->cantidad)->toBe(7);
+
+    expect(fn (): array => DB::transaction(fn (): array => app(ReserveProductoStockAction::class)->handle(
+        productoId: (int) $producto->id,
+        cantidad: 1,
+        pedido: $newPedido,
+        user: null,
+        motivo: 'Additional pedido stock reservation',
+        source: 'pedido.create',
+    )))->toThrow(Exception::class, 'Disponible: 0');
+
+    expect($producto->refresh()->stock)->toBe(3)
+        ->and($producto->availableStock())->toBe(0)
+        ->and($legacyReservation->refresh()->status)->toBe(StockReservation::STATUS_ACTIVE)
+        ->and($producto->stockMovimientos()->count())->toBe(1);
 });
 
 it('keeps the historical pedido number when a related pedido is deleted', function (): void {

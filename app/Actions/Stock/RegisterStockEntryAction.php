@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Stock;
 
+use App\Enums\StockMovimientoTipo;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
@@ -39,7 +40,7 @@ final class RegisterStockEntryAction
 
             return $this->registerStockMovement->handle(
                 producto: $producto,
-                tipo: StockMovimiento::TIPO_ENTRADA,
+                tipo: StockMovimientoTipo::Entry->value,
                 cantidad: $cantidad,
                 stockAnterior: $stockAnterior,
                 stockNuevo: $stockNuevo,

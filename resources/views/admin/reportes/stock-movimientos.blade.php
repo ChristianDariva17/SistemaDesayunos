@@ -61,8 +61,8 @@
                         <select id="tipo" name="tipo" class="form-select">
                             <option value="">Todos los tipos</option>
                             @foreach($tipos as $tipo)
-                                <option value="{{ $tipo }}" @selected(request('tipo') === $tipo)>
-                                    {{ ucfirst($tipo) }}
+                                <option value="{{ $tipo->value }}" @selected(request('tipo') === $tipo->value)>
+                                    {{ ucfirst($tipo->value) }}
                                 </option>
                             @endforeach
                         </select>
@@ -149,7 +149,7 @@
                                     @endif
                                 </td>
                                 <td class="text-center">
-                                    <span class="badge bg-{{ $movimiento->tipo === 'salida' ? 'danger' : ($movimiento->tipo === 'entrada' ? 'success' : 'secondary') }} bg-opacity-10 text-{{ $movimiento->tipo === 'salida' ? 'danger' : ($movimiento->tipo === 'entrada' ? 'success' : 'secondary') }} border">
+                                    <span class="badge bg-{{ $movimiento->tipo === \App\Enums\StockMovimientoTipo::Exit->value ? 'danger' : ($movimiento->tipo === \App\Enums\StockMovimientoTipo::Entry->value ? 'success' : 'secondary') }} bg-opacity-10 text-{{ $movimiento->tipo === \App\Enums\StockMovimientoTipo::Exit->value ? 'danger' : ($movimiento->tipo === \App\Enums\StockMovimientoTipo::Entry->value ? 'success' : 'secondary') }} border">
                                         {{ ucfirst($movimiento->tipo) }}
                                     </span>
                                 </td>

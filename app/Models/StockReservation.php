@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Actions\Stock\RegisterStockMovementAction;
+use App\Enums\StockMovimientoTipo;
 use App\Events\StockConsumed;
 use App\Events\StockReleased;
 use App\Events\StockReserved;
@@ -165,7 +166,7 @@ class StockReservation extends Model
 
                 $registerStockMovement?->handle(
                     producto: $producto,
-                    tipo: StockMovimiento::TIPO_SALIDA,
+                    tipo: StockMovimientoTipo::Exit->value,
                     cantidad: (int) $reservation->cantidad,
                     stockAnterior: $stockAnterior,
                     stockNuevo: $stockNuevo,

@@ -482,8 +482,8 @@
                                 <div class="col-md-6">
                                     <select name="estado" class="form-select" id="filterEstado">
                                         <option value="">Todos los estados</option>
-                                        <option value="activo" {{ request('estado') == 'activo' ? 'selected' : '' }}>Activo</option>
-                                        <option value="inactivo" {{ request('estado') == 'inactivo' ? 'selected' : '' }}>Inactivo</option>
+                                        <option value="{{ \App\Enums\ProductoEstado::Active->value }}" {{ request('estado') == \App\Enums\ProductoEstado::Active->value ? 'selected' : '' }}>Activo</option>
+                                        <option value="{{ \App\Enums\ProductoEstado::Inactive->value }}" {{ request('estado') == \App\Enums\ProductoEstado::Inactive->value ? 'selected' : '' }}>Inactivo</option>
                                     </select>
                                 </div>
                             </div>

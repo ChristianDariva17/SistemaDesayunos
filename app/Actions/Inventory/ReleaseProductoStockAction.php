@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Actions\Inventory;
 
 use App\Actions\Stock\RegisterStockMovementAction;
+use App\Enums\StockMovimientoTipo;
 use App\Events\StockReleased;
 use App\Models\Pedido;
 use App\Models\Producto;
@@ -46,7 +47,7 @@ final class ReleaseProductoStockAction
 
         $movimiento = $this->registerStockMovement->handle(
             producto: $producto,
-            tipo: StockMovimiento::TIPO_CANCELACION,
+            tipo: StockMovimientoTipo::Cancellation->value,
             cantidad: $cantidad,
             stockAnterior: $stockAnterior,
             stockNuevo: $stockNuevo,

@@ -188,3 +188,15 @@ it('validates malformed stock movement report date filters', function (): void {
         ->assertRedirect(route('admin.reportes.stock-movimientos'))
         ->assertSessionHasErrors(['fecha_inicio', 'fecha_fin']);
 });
+
+it('rejects an invalid stock movement type filter', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+
+    $this->actingAs($admin)
+        ->from(route('admin.reportes.stock-movimientos'))
+        ->get(route('admin.reportes.stock-movimientos', [
+            'tipo' => 'invalid',
+        ]))
+        ->assertRedirect(route('admin.reportes.stock-movimientos'))
+        ->assertSessionHasErrors(['tipo']);
+});

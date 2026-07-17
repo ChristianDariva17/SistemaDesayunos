@@ -2,15 +2,17 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Enums\ProductoEstado;
+use App\Enums\StockMovimientoTipo;
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Barryvdh\DomPDF\Facade\Pdf;
-use App\Models\Producto;
 use App\Models\Pedido;
+use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
 use App\Services\Reporting\DashboardSummaryService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -61,7 +63,7 @@ class ReporteController extends Controller
 
             return view('admin.reportes.index', compact('estadisticas'));
         } catch (\Exception $e) {
-            Log::error('Error al cargar estadísticas: ' . $e->getMessage());
+            Log::error('Error al cargar estadísticas: '.$e->getMessage());
 
             $estadisticas = [
                 'totalProductos' => 0,
@@ -111,7 +113,7 @@ class ReporteController extends Controller
                 'productos',
                 'totalProductos',
                 'stockTotal',
-                'valorInventario'
+                'valorInventario',
             ));
 
             // 6. CONFIGURAR PDF
@@ -120,7 +122,7 @@ class ReporteController extends Controller
             $pdf->setOption('isRemoteEnabled', true);
 
             // 7. NOMBRE DEL ARCHIVO
-            $nombreArchivo = 'reporte-inventario-' . now()->format('Y-m-d-His') . '.pdf';
+            $nombreArchivo = 'reporte-inventario-'.now()->format('Y-m-d-His').'.pdf';
 
             // 8. RETORNAR SEGÚN ACCIÓN
             if ($accion === 'ver') {
@@ -130,10 +132,10 @@ class ReporteController extends Controller
             }
         } catch (\Exception $e) {
             // Log del error
-            Log::error('Error en reporte de inventario: ' . $e->getMessage());
-            Log::error('Línea: ' . $e->getLine());
+            Log::error('Error en reporte de inventario: '.$e->getMessage());
+            Log::error('Línea: '.$e->getLine());
 
-            return back()->with('error', 'Error al generar el reporte: ' . $e->getMessage());
+            return back()->with('error', 'Error al generar el reporte: '.$e->getMessage());
         }
     }
 
@@ -163,7 +165,7 @@ class ReporteController extends Controller
                 'productos',
                 'totalProductosBajo',
                 'stockCritico',
-                'valorEnRiesgo'
+                'valorEnRiesgo',
             ));
 
             // 5. CONFIGURAR PDF
@@ -172,7 +174,7 @@ class ReporteController extends Controller
             $pdf->setOption('isRemoteEnabled', true);
 
             // 6. NOMBRE DEL ARCHIVO
-            $nombreArchivo = 'reporte-stock-bajo-' . now()->format('Y-m-d-His') . '.pdf';
+            $nombreArchivo = 'reporte-stock-bajo-'.now()->format('Y-m-d-His').'.pdf';
 
             // 7. RETORNAR SEGÚN ACCIÓN
             if ($accion === 'ver') {
@@ -182,10 +184,10 @@ class ReporteController extends Controller
             }
         } catch (\Exception $e) {
             // Log del error
-            Log::error('Error en reporte de stock bajo: ' . $e->getMessage());
-            Log::error('Línea: ' . $e->getLine());
+            Log::error('Error en reporte de stock bajo: '.$e->getMessage());
+            Log::error('Línea: '.$e->getLine());
 
-            return back()->with('error', 'Error al generar el reporte: ' . $e->getMessage());
+            return back()->with('error', 'Error al generar el reporte: '.$e->getMessage());
         }
     }
 
@@ -196,7 +198,7 @@ class ReporteController extends Controller
     {
         $rules = [
             'producto_id' => ['nullable', 'integer', 'exists:productos,id'],
-            'tipo' => ['nullable', Rule::in(StockMovimiento::TIPOS)],
+            'tipo' => ['nullable', Rule::enum(StockMovimientoTipo::class)],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
             'fecha_inicio' => ['nullable', 'date_format:Y-m-d'],
             'fecha_fin' => ['nullable', 'date_format:Y-m-d'],
@@ -211,23 +213,23 @@ class ReporteController extends Controller
         $query = StockMovimiento::query()
             ->with(['producto', 'pedido', 'user']);
 
-        if (!empty($validated['producto_id'])) {
+        if (! empty($validated['producto_id'])) {
             $query->where('producto_id', (int) $validated['producto_id']);
         }
 
-        if (!empty($validated['tipo'])) {
+        if (! empty($validated['tipo'])) {
             $query->where('tipo', $validated['tipo']);
         }
 
-        if (!empty($validated['user_id'])) {
+        if (! empty($validated['user_id'])) {
             $query->where('user_id', (int) $validated['user_id']);
         }
 
-        if (!empty($validated['fecha_inicio'])) {
+        if (! empty($validated['fecha_inicio'])) {
             $query->where('created_at', '>=', CarbonImmutable::parse($validated['fecha_inicio'])->startOfDay());
         }
 
-        if (!empty($validated['fecha_fin'])) {
+        if (! empty($validated['fecha_fin'])) {
             $query->where('created_at', '<=', CarbonImmutable::parse($validated['fecha_fin'])->endOfDay());
         }
 
@@ -243,18 +245,18 @@ class ReporteController extends Controller
         $usuarios = User::query()
             ->whereIn('id', StockMovimiento::query()
                 ->select('user_id')
-                ->whereNotNull('user_id')
+                ->whereNotNull('user_id'),
             )
             ->orderBy('name')
             ->get(['id', 'name', 'email']);
 
-        $tipos = StockMovimiento::TIPOS;
+        $tipos = StockMovimientoTipo::cases();
 
         return view('admin.reportes.stock-movimientos', compact(
             'movimientos',
             'productos',
             'usuarios',
-            'tipos'
+            'tipos',
         ));
     }
 
@@ -266,7 +268,7 @@ class ReporteController extends Controller
         $validated = $request->validate([
             'buscar' => ['nullable', 'string', 'max:255'],
             'categoria' => ['nullable', 'string', 'max:255'],
-            'estado' => ['nullable', Rule::in(['activo', 'inactivo'])],
+            'estado' => ['nullable', Rule::enum(ProductoEstado::class)],
         ]);
 
         $latestMovementDate = StockMovimiento::query()
@@ -288,24 +290,24 @@ class ReporteController extends Controller
             ->selectSub($latestMovementDate, 'ultimo_movimiento_fecha')
             ->selectSub($latestMovementType, 'ultimo_movimiento_tipo')
             ->withSum([
-                'stockMovimientos as total_entradas' => fn ($query) => $query->where('tipo', StockMovimiento::TIPO_ENTRADA),
+                'stockMovimientos as total_entradas' => fn ($query) => $query->where('tipo', StockMovimientoTipo::Entry->value),
             ], 'cantidad')
             ->withSum([
-                'stockMovimientos as total_salidas' => fn ($query) => $query->where('tipo', StockMovimiento::TIPO_SALIDA),
+                'stockMovimientos as total_salidas' => fn ($query) => $query->where('tipo', StockMovimientoTipo::Exit->value),
             ], 'cantidad')
             ->withSum([
-                'stockMovimientos as total_ajustes' => fn ($query) => $query->where('tipo', StockMovimiento::TIPO_AJUSTE),
+                'stockMovimientos as total_ajustes' => fn ($query) => $query->where('tipo', StockMovimientoTipo::Adjustment->value),
             ], 'cantidad');
 
-        if (!empty($validated['buscar'])) {
-            $query->where('nombre', 'like', '%' . $validated['buscar'] . '%');
+        if (! empty($validated['buscar'])) {
+            $query->where('nombre', 'like', '%'.$validated['buscar'].'%');
         }
 
-        if (!empty($validated['categoria'])) {
+        if (! empty($validated['categoria'])) {
             $query->where('categoria', $validated['categoria']);
         }
 
-        if (!empty($validated['estado'])) {
+        if (! empty($validated['estado'])) {
             $query->where('estado', $validated['estado']);
         }
 
@@ -341,11 +343,11 @@ class ReporteController extends Controller
             $fechaFin = $request->input('fecha_fin');
 
             // Si no se proporcionan fechas, usar el mes actual
-            if (!$fechaInicio) {
+            if (! $fechaInicio) {
                 $fechaInicio = now()->startOfMonth()->format('Y-m-d');
             }
 
-            if (!$fechaFin) {
+            if (! $fechaFin) {
                 $fechaFin = now()->format('Y-m-d');
             }
 
@@ -436,7 +438,7 @@ class ReporteController extends Controller
             $pdf->setOption('dpi', 150);
 
             // 8. NOMBRE DEL ARCHIVO
-            $nombreArchivo = 'reporte-ventas-' . now()->format('Y-m-d-His') . '.pdf';
+            $nombreArchivo = 'reporte-ventas-'.now()->format('Y-m-d-His').'.pdf';
 
             // ==========================================
             // 9. RETORNAR PDF SEGÚN ACCIÓN
@@ -453,13 +455,13 @@ class ReporteController extends Controller
             Log::error('==========================================');
             Log::error('ERROR EN REPORTE DE VENTAS');
             Log::error('==========================================');
-            Log::error('Mensaje: ' . $e->getMessage());
-            Log::error('Línea: ' . $e->getLine());
-            Log::error('Archivo: ' . $e->getFile());
-            Log::error('Traza: ' . $e->getTraceAsString());
+            Log::error('Mensaje: '.$e->getMessage());
+            Log::error('Línea: '.$e->getLine());
+            Log::error('Archivo: '.$e->getFile());
+            Log::error('Traza: '.$e->getTraceAsString());
             Log::error('==========================================');
 
-            return back()->with('error', 'Error al generar el reporte de ventas: ' . $e->getMessage() . ' (Línea: ' . $e->getLine() . ')');
+            return back()->with('error', 'Error al generar el reporte de ventas: '.$e->getMessage().' (Línea: '.$e->getLine().')');
         }
     }
 
@@ -483,7 +485,7 @@ class ReporteController extends Controller
                     'clientes.email',
                     'clientes.telefono',
                     DB::raw('COUNT(pedidos.id) as total_pedidos'),
-                    DB::raw('SUM(pedidos.total) as total_ventas')
+                    DB::raw('SUM(pedidos.total) as total_ventas'),
                 )
                 ->whereBetween('pedidos.fecha', [$fechaInicio, $fechaFin])
                 ->groupBy('clientes.id', 'clientes.nombre', 'clientes.email', 'clientes.telefono')
@@ -495,14 +497,14 @@ class ReporteController extends Controller
                 'fechaInicio' => $fechaInicio,
                 'fechaFin' => $fechaFin,
                 'totalClientes' => $ventasPorCliente->count(),
-                'ventasGenerales' => $ventasPorCliente->sum('total_ventas')
+                'ventasGenerales' => $ventasPorCliente->sum('total_ventas'),
             ];
 
             $pdf = PDF::loadView('admin.reportes.ventas-por-cliente', $datos);
             $pdf->setPaper('A4', 'portrait');
             $pdf->setOption('enable_html5_parser', true);
 
-            $nombreArchivo = 'reporte-ventas-por-cliente-' . now()->format('Y-m-d-His') . '.pdf';
+            $nombreArchivo = 'reporte-ventas-por-cliente-'.now()->format('Y-m-d-His').'.pdf';
 
             if ($accion === 'ver') {
                 return $pdf->stream($nombreArchivo);
@@ -510,8 +512,9 @@ class ReporteController extends Controller
                 return $pdf->download($nombreArchivo);
             }
         } catch (\Exception $e) {
-            Log::error('Error en reporte de ventas por cliente: ' . $e->getMessage());
-            return back()->with('error', 'Error al generar el reporte: ' . $e->getMessage());
+            Log::error('Error en reporte de ventas por cliente: '.$e->getMessage());
+
+            return back()->with('error', 'Error al generar el reporte: '.$e->getMessage());
         }
     }
 }

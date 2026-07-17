@@ -552,7 +552,7 @@
                                     type="radio" 
                                     name="estado" 
                                     id="estado_activo" 
-                                    value="activo" 
+                                    value="{{ \App\Enums\ProductoEstado::Active->value }}" 
                                     {{ old('estado', $producto->estado) == 'activo' ? 'checked' : '' }}
                                     required
                                 >
@@ -582,7 +582,7 @@
                                     type="radio" 
                                     name="estado" 
                                     id="estado_inactivo" 
-                                    value="inactivo" 
+                                    value="{{ \App\Enums\ProductoEstado::Inactive->value }}" 
                                     {{ old('estado', $producto->estado) == 'inactivo' ? 'checked' : '' }}
                                 >
                                 <label class="form-check-label w-100" for="estado_inactivo">

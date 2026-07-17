@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Actions\Stock;
 
+use App\Enums\StockMovimientoTipo;
 use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
@@ -48,7 +49,7 @@ final class RegisterStockMovementAction
             throw new InvalidArgumentException('A persisted producto is required to register a stock movement.');
         }
 
-        if (! in_array($tipo, StockMovimiento::TIPOS, true)) {
+        if (StockMovimientoTipo::tryFrom($tipo) === null) {
             throw new InvalidArgumentException('Invalid stock movement tipo.');
         }
 

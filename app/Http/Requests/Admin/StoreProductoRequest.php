@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Enums\ProductoEstado;
 use App\Models\Producto;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Unique;
+use Illuminate\Validation\Rules\Enum as EnumRule;
 
 final class StoreProductoRequest extends FormRequest
 {
@@ -111,7 +112,7 @@ final class StoreProductoRequest extends FormRequest
     }
 
     /**
-     * @return array<string, array<int, string|Unique>>
+     * @return array<string, array<int, mixed>>
      */
     public function rules(): array
     {
@@ -124,7 +125,7 @@ final class StoreProductoRequest extends FormRequest
             'sku' => ['nullable', 'string', 'max:50', Rule::unique('productos', 'sku')],
             'stock' => ['required', 'integer', 'min:0', 'max:999999'],
             'stock_minimo' => ['nullable', 'integer', 'min:0', 'max:999999'],
-            'estado' => ['required', 'in:activo,inactivo'],
+            'estado' => ['required', Rule::enum(ProductoEstado::class)],
             'imagen' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
         ];
     }
@@ -156,7 +157,7 @@ final class StoreProductoRequest extends FormRequest
             'stock_minimo.min' => 'El stock mínimo no puede ser negativo.',
             'stock_minimo.max' => 'El stock mínimo no puede superar las 999,999 unidades.',
             'estado.required' => 'Debes seleccionar el estado del producto.',
-            'estado.in' => 'El estado debe ser activo o inactivo.',
+            'estado.'.EnumRule::class => 'El estado debe ser activo o inactivo.',
             'imagen.image' => 'El archivo debe ser una imagen.',
             'imagen.mimes' => 'La imagen debe ser formato: jpeg, png, jpg, gif o webp.',
             'imagen.max' => 'La imagen no puede pesar más de 2MB.',
