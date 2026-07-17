@@ -6,6 +6,7 @@ use App\Actions\Pedido\CreatePedidoAction;
 use App\Actions\Pedido\DeletePedidoAction;
 use App\Actions\Pedido\DuplicatePedidoAction;
 use App\Actions\Pedido\UpdatePedidoAction;
+use App\Enums\PedidoStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Pedido\StorePedidoRequest;
 use App\Http\Requests\Pedido\UpdatePedidoRequest;
@@ -14,12 +15,15 @@ use App\Models\Empleado;
 use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\User;
+use App\Queries\PedidoQuery;
+use App\Services\PedidoStatsService;
 use DomainException;
 use Exception;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class PedidoController extends Controller
@@ -27,62 +31,12 @@ class PedidoController extends Controller
     /**
      * Mostrar listado de pedidos con filtros y estadísticas
      */
-    public function index(Request $request)
+    public function index(Request $request, PedidoQuery $pedidoQuery, PedidoStatsService $pedidoStats)
     {
         Gate::authorize('viewAny', Pedido::class);
 
-        $estadisticas = [
-            'total_pedidos' => Pedido::count(),
-            'pendientes' => Pedido::where('estado', 'pendiente')->count(),
-            'completados' => Pedido::where('estado', 'completado')->count(),
-            'ventas_hoy' => Pedido::whereDate('fecha', today())
-                ->where('estado', 'completado')
-                ->sum('total'),
-            'ventas_mes' => Pedido::whereMonth('fecha', now()->month)
-                ->whereYear('fecha', now()->year)
-                ->where('estado', 'completado')
-                ->sum('total'),
-        ];
-
-        // Load only relationships and counts rendered by the index table.
-        $query = Pedido::query()
-            ->with(['empleado:id,nombre,rol_operativo', 'cliente:id,nombre,apellido,email'])
-            ->withCount('productos');
-
-        if ($request->filled('search')) {
-            $search = $request->get('search');
-            $query->where(function ($q) use ($search) {
-                $q->where('numero_pedido', 'like', "%{$search}%")
-                    ->orWhereHas('cliente', function ($q2) use ($search) {
-                        $q2->where('nombre', 'like', "%{$search}%")
-                            ->orWhere('apellido', 'like', "%{$search}%");
-                    });
-            });
-        }
-
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->get('estado'));
-        }
-
-        if ($request->filled('fecha_desde')) {
-            $query->whereDate('fecha', '>=', $request->get('fecha_desde'));
-        }
-        if ($request->filled('fecha_hasta')) {
-            $query->whereDate('fecha', '<=', $request->get('fecha_hasta'));
-        }
-
-        if ($request->filled('fecha')) {
-            $query->whereDate('fecha', $request->get('fecha'));
-        }
-
-        if ($request->filled('empleado_id')) {
-            $query->where('empleado_id', $request->get('empleado_id'));
-        }
-
-        $pedidos = $query->orderBy('fecha', 'desc')
-            ->orderBy('hora', 'desc')
-            ->paginate(15)
-            ->withQueryString();
+        $estadisticas = $pedidoStats->get();
+        $pedidos = $pedidoQuery->paginate($request);
 
         $empleados = Empleado::where('estado', 'activo')
             ->orderBy('nombre')
@@ -240,7 +194,7 @@ class PedidoController extends Controller
         Gate::authorize('changeStatus', $pedido);
 
         $request->validate([
-            'estado' => 'required|in:pendiente,procesando,completado,cancelado',
+            'estado' => ['required', Rule::enum(PedidoStatus::class)],
         ]);
         try {
             $updatePedidoAction->handle([

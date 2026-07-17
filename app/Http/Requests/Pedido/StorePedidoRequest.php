@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Pedido;
 
+use App\Enums\PaymentMethod;
 use App\Models\Pedido;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -54,7 +55,7 @@ final class StorePedidoRequest extends FormRequest
             'productos' => ['required', 'array', 'min:1'],
             'productos.*.id' => ['required', 'distinct', Rule::exists('productos', 'id')->where('estado', 'activo')],
             'productos.*.cantidad' => ['required', 'integer', 'min:1'],
-            'metodo_pago' => ['nullable', 'in:efectivo,tarjeta,transferencia,otro'],
+            'metodo_pago' => ['nullable', Rule::enum(PaymentMethod::class)],
             'observaciones' => ['nullable', 'string', 'max:500'],
         ];
     }

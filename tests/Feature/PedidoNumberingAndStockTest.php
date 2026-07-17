@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\PaymentMethod;
+use App\Enums\PedidoStatus;
 use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\Pedido;
@@ -18,7 +20,7 @@ function pedidoTestCliente(array $attributes = []): Cliente
     return Cliente::create(array_merge([
         'nombre' => 'Cliente',
         'apellido' => 'Pedido',
-        'email' => 'cliente.pedido.' . uniqid() . '@example.com',
+        'email' => 'cliente.pedido.'.uniqid().'@example.com',
         'estado' => 'activo',
     ], $attributes));
 }
@@ -46,7 +48,7 @@ function pedidoTestProducto(array $attributes = []): Producto
 function pedidoTestPedido(Cliente $cliente, Empleado $empleado, array $attributes = []): Pedido
 {
     return Pedido::create(array_merge([
-        'numero_pedido' => 'PED-' . uniqid(),
+        'numero_pedido' => 'PED-'.uniqid(),
         'cliente_id' => $cliente->id,
         'empleado_id' => $empleado->id,
         'metodo_pago' => 'efectivo',
@@ -57,6 +59,14 @@ function pedidoTestPedido(Cliente $cliente, Empleado $empleado, array $attribute
         'observaciones' => null,
     ], $attributes));
 }
+
+it('defines the canonical pedido status and payment method values', function (): void {
+    expect(array_column(PedidoStatus::cases(), 'value'))->toBe([
+        'pendiente', 'procesando', 'completado', 'cancelado',
+    ])->and(array_column(PaymentMethod::cases(), 'value'))->toBe([
+        'efectivo', 'tarjeta', 'transferencia', 'otro',
+    ]);
+});
 
 it('creates a pedido through the trabajador HTTP flow and persists stock changes', function (): void {
     $user = User::factory()->create([
@@ -553,11 +563,11 @@ it('filters worker pedidos by canonical fecha input', function (): void {
     $response->assertDontSee($other->numero_pedido);
 });
 
-it('filters and orders admin pedidos by canonical fecha and hora fields', function (): void {
+it('filters and orders pedidos by canonical fields for :role', function (string $role, string $routeName): void {
     Carbon::setTestNow('2026-06-02 10:00:00');
 
     $user = User::factory()->create([
-        'rol' => 'administrador',
+        'rol' => $role,
     ]);
 
     $cliente = pedidoTestCliente([
@@ -599,7 +609,7 @@ it('filters and orders admin pedidos by canonical fecha and hora fields', functi
         'updated_at' => '2026-06-02 10:00:00',
     ]);
 
-    $response = $this->actingAs($user)->get(route('admin.pedidos.index', [
+    $response = $this->actingAs($user)->get(route($routeName, [
         'search' => 'Canonical',
         'estado' => 'completado',
         'fecha_desde' => '2026-06-02',
@@ -615,13 +625,16 @@ it('filters and orders admin pedidos by canonical fecha and hora fields', functi
     $response->assertDontSee($createdAtOnlyMatch->numero_pedido);
 
     Carbon::setTestNow();
-});
+})->with([
+    'admin' => ['administrador', 'admin.pedidos.index'],
+    'worker' => ['trabajador', 'trabajador.pedidos.index'],
+]);
 
-it('calculates admin pedido stats from canonical fecha instead of created_at', function (): void {
+it('calculates equivalent pedido stats from canonical fecha for :role', function (string $role, string $routeName): void {
     Carbon::setTestNow('2026-06-02 10:00:00');
 
     $user = User::factory()->create([
-        'rol' => 'administrador',
+        'rol' => $role,
     ]);
 
     $cliente = pedidoTestCliente();
@@ -647,16 +660,26 @@ it('calculates admin pedido stats from canonical fecha instead of created_at', f
         'updated_at' => '2026-06-02 10:00:00',
     ]);
 
-    $response = $this->actingAs($user)->get(route('admin.pedidos.index', [
+    $response = $this->actingAs($user)->get(route($routeName, [
         'fecha' => '2026-06-02',
     ]));
 
     $response->assertOk();
     $response->assertSee('S/ 25.00');
     $response->assertDontSee('S/ 99.00');
+    expect($response->viewData('estadisticas'))->toMatchArray([
+        'total_pedidos' => 2,
+        'pendientes' => 0,
+        'completados' => 2,
+        'ventas_hoy' => 25,
+        'ventas_mes' => 124,
+    ]);
 
     Carbon::setTestNow();
-});
+})->with([
+    'admin' => ['administrador', 'admin.pedidos.index'],
+    'worker' => ['trabajador', 'trabajador.pedidos.index'],
+]);
 
 it('exports admin pedidos with canonical fecha hora and employee role fields', function (): void {
     $user = User::factory()->create([

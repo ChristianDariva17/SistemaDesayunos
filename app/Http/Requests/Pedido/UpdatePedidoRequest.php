@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Pedido;
 
+use App\Enums\PedidoStatus;
 use App\Models\Pedido;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 final class UpdatePedidoRequest extends FormRequest
 {
@@ -36,7 +38,7 @@ final class UpdatePedidoRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'estado' => ['required', 'in:pendiente,procesando,completado,cancelado'],
+            'estado' => ['required', Rule::enum(PedidoStatus::class)],
             'observaciones' => ['nullable', 'string', 'max:500'],
         ];
     }
