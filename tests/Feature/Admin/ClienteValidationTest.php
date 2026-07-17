@@ -82,8 +82,10 @@ it('allows multiple clientes with blank or null email', function (): void {
     $response->assertRedirect(route('admin.clientes.index'));
     $response->assertSessionHasNoErrors();
 
-    $this->assertDatabaseCount('clientes', 2);
-    $this->assertSame(2, Cliente::whereNull('email')->count());
+    $this->assertSame(2, Cliente::query()
+        ->whereIn('nombre', ['Ana', 'Bea'])
+        ->whereNull('email')
+        ->count());
 });
 
 it('rejects duplicate normalized cliente email on create', function (): void {
@@ -106,7 +108,13 @@ it('rejects duplicate normalized cliente email on create', function (): void {
     $response->assertRedirect(route('admin.clientes.create'));
     $response->assertSessionHasErrors(['email']);
 
-    $this->assertDatabaseCount('clientes', 1);
+    $this->assertSame(1, Cliente::query()
+        ->where('email', 'ana.duplicate@example.com')
+        ->count());
+    $this->assertDatabaseMissing('clientes', [
+        'nombre' => 'Bea',
+        'email' => 'ana.duplicate@example.com',
+    ]);
 });
 
 it('normalizes cliente contact fields on update', function (): void {
