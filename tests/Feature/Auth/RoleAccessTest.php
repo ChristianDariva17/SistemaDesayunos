@@ -1,15 +1,16 @@
 <?php
 
-use App\Models\User;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\ReporteController as AdminReporteController;
 use App\Http\Controllers\Trabajador\DashboardController as TrabajadorDashboardController;
+use App\Models\User;
+use App\Services\Reporting\DashboardSummaryService;
 use Illuminate\Support\Facades\DB;
 
 test('administrators can access the real admin dashboard route', function (): void {
     $this->app->instance(AdminDashboardController::class, new class extends AdminDashboardController
     {
-        public function index()
+        public function index(DashboardSummaryService $dashboardSummary)
         {
             return response('admin ok');
         }
@@ -27,7 +28,7 @@ test('administrators can access the real admin dashboard route', function (): vo
 test('workers can access the real worker dashboard route', function (): void {
     $this->app->instance(TrabajadorDashboardController::class, new class extends TrabajadorDashboardController
     {
-        public function index()
+        public function index(DashboardSummaryService $dashboardSummary)
         {
             return response('worker ok');
         }
@@ -129,7 +130,7 @@ test('unsupported authenticated roles are logged out when hitting admin and work
 test('administrators can access the report index route', function (): void {
     $this->app->instance(AdminReporteController::class, new class extends AdminReporteController
     {
-        public function index()
+        public function index(DashboardSummaryService $dashboardSummary)
         {
             return response('report ok');
         }
