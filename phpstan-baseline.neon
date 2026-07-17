@@ -1,0 +1,163 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Access to an undefined property App\\Models\\Producto\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Pedido/CancelPedidoAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Pedido/CancelPedidoAction.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Producto\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Pedido/CreatePedidoAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Pedido/CreatePedidoAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Pedido/DeletePedidoAction.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Producto\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Pedido/DuplicatePedidoAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Pedido/DuplicatePedidoAction.php
+
+		-
+			message: '#^Access to an undefined property App\\Models\\Producto\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Actions/Pedido/ReactivatePedidoAction.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$pivot\.$#'
+			identifier: property.notFound
+			count: 2
+			path: app/Actions/Pedido/ReactivatePedidoAction.php
+
+		-
+			message: '#^Relation ''pedidos'' is not found in App\\Models\\Cliente model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Admin/ClienteController.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$id\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Http/Controllers/Admin/PedidoController.php
+
+		-
+			message: '#^Parameter \#1 \$callback of method Illuminate\\Support\\Collection\<\(int\|string\),Illuminate\\Database\\Eloquent\\Model\>\:\:sortBy\(\) expects array\<array\{string, string\}\|\(callable\(Illuminate\\Database\\Eloquent\\Model, Illuminate\\Database\\Eloquent\\Model\)\: mixed\)\|\(callable\(Illuminate\\Database\\Eloquent\\Model, int\|string\)\: mixed\)\|string\>\|\(callable\(Illuminate\\Database\\Eloquent\\Model, int\|string\)\: mixed\)\|string, Closure\(App\\Models\\Cliente\)\: string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/PedidoController.php
+
+		-
+			message: '#^Parameter \#1 \$num of function number_format expects float, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/PedidoController.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Admin/PedidoController.php
+
+		-
+			message: '#^Parameter \#1 \$num of function number_format expects float, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Admin/ProductoController.php
+
+		-
+			message: '#^Parameter \#1 \$user of class Illuminate\\Auth\\Events\\Verified constructor expects Illuminate\\Contracts\\Auth\\MustVerifyEmail, App\\Models\\User\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Auth/VerifyEmailController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Trabajador\\ClienteController\:\:getValidationMessages\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Http/Controllers/Trabajador/ClienteController.php
+
+		-
+			message: '#^Method App\\Http\\Controllers\\Trabajador\\ClienteController\:\:getValidationRules\(\) is unused\.$#'
+			identifier: method.unused
+			count: 1
+			path: app/Http/Controllers/Trabajador/ClienteController.php
+
+		-
+			message: '#^Relation ''pedidos'' is not found in App\\Models\\Cliente model\.$#'
+			identifier: larastan.relationExistence
+			count: 2
+			path: app/Http/Controllers/Trabajador/ClienteController.php
+
+		-
+			message: '#^Parameter \#1 \$num of function number_format expects float, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Trabajador/PedidoController.php
+
+		-
+			message: '#^Parameter \#1 \$view of function view expects view\-string\|null, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Trabajador/PedidoController.php
+
+		-
+			message: '#^Using nullsafe method call on non\-nullable type Carbon\\Carbon\. Use \-\> instead\.$#'
+			identifier: nullsafe.neverNull
+			count: 1
+			path: app/Http/Controllers/Trabajador/PedidoController.php
+
+		-
+			message: '#^Parameter \#1 \$num of function number_format expects float, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Http/Controllers/Trabajador/ProductoController.php
+
+		-
+			message: '#^Method App\\Http\\Requests\\Pedido\\UpdatePedidoRequest\:\:rules\(\) should return array\<string, array\<int, string\>\> but returns array\<string, list\<Illuminate\\Validation\\Rules\\Enum\|string\>\>\.$#'
+			identifier: return.type
+			count: 1
+			path: app/Http/Requests/Pedido/UpdatePedidoRequest.php
+
+		-
+			message: '#^Parameter \#1 \$num of function number_format expects float, string given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Models/Producto.php
+
+		-
+			message: '#^Access to an undefined property Illuminate\\Database\\Eloquent\\Model\:\:\$fecha\.$#'
+			identifier: property.notFound
+			count: 1
+			path: app/Models/StockReservation.php
+
+		-
+			message: '#^Parameter \$pedido of method App\\Actions\\Stock\\RegisterStockMovementAction\:\:handle\(\) expects App\\Models\\Pedido\|null, Illuminate\\Database\\Eloquent\\Model\|null given\.$#'
+			identifier: argument.type
+			count: 1
+			path: app/Models/StockReservation.php

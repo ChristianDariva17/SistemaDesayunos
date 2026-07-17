@@ -21,6 +21,16 @@ Laravel is a web application framework with expressive, elegant syntax. We belie
 
 Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
+## Quality Checks
+
+Run static analysis locally with:
+
+```bash
+composer analyse
+```
+
+PHPStan analyzes `app/` at level 5. The committed baseline records the existing legacy findings; new findings must be fixed instead of added to the baseline. Reduce the baseline as existing findings are remediated.
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
