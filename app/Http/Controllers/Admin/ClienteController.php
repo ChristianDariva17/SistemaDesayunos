@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreClienteRequest;
 use App\Http\Requests\Admin\UpdateClienteRequest;
 use App\Models\Cliente;
+use App\Queries\ClienteQuery;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,11 +21,9 @@ class ClienteController extends Controller
      * ==========================================
      * Muestra todos los clientes con filtros, búsqueda y estadísticas
      */
-    public function index(Request $request)
+    public function index(Request $request, ClienteQuery $clienteQuery)
     {
         Gate::authorize('viewAny', Cliente::class);
-
-        $query = Cliente::query();
 
         // ==========================================
         // ESTADÍSTICAS DEL DASHBOARD
@@ -37,51 +36,9 @@ class ClienteController extends Controller
             ->count();
 
         // ==========================================
-        // FILTRO: BÚSQUEDA GENERAL
-        // ==========================================
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('nombre', 'like', "%{$search}%")
-                    ->orWhere('apellido', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%")
-                    ->orWhere('telefono', 'like', "%{$search}%");
-            });
-        }
-
-        // ==========================================
-        // FILTRO: POR ESTADO
-        // ==========================================
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
-        }
-
-        // ==========================================
-        // ORDENAMIENTO DINÁMICO
-        // ==========================================
-        switch ($request->get('sort', 'nombre_asc')) {
-            case 'nombre_asc':
-                $query->orderBy('nombre', 'asc');
-                break;
-            case 'nombre_desc':
-                $query->orderBy('nombre', 'desc');
-                break;
-            case 'reciente':
-                $query->orderBy('created_at', 'desc');
-                break;
-            case 'antiguo':
-                $query->orderBy('created_at', 'asc');
-                break;
-            case 'pedidos_desc':
-                $query->withCount('pedidos')->orderBy('pedidos_count', 'desc');
-                break;
-        }
-
-        // ==========================================
         // PAGINACIÓN CONFIGURABLE
         // ==========================================
-        $perPage = $request->get('per_page', 10);
-        $clientes = $query->withCount('pedidos')->paginate($perPage)->withQueryString();
+        $clientes = $clienteQuery->paginate($request);
 
         return view('admin.clientes.index', compact(
             'clientes',

@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\StoreProductoRequest;
 use App\Http\Requests\Admin\UpdateProductoRequest;
 use App\Models\Producto;
 use App\Models\User;
+use App\Queries\ProductoQuery;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,32 +26,9 @@ class ProductoController extends Controller
      * ==========================================
      * Muestra todos los productos con filtros, búsqueda y estadísticas
      */
-    public function index(Request $request)
+    public function index(Request $request, ProductoQuery $productoQuery)
     {
         Gate::authorize('viewAny', Producto::class);
-
-        $query = Producto::query();
-
-        // ==========================================
-        // FILTRO: BÚSQUEDA POR NOMBRE
-        // ==========================================
-        if ($request->filled('search')) {
-            $query->where('nombre', 'like', '%'.$request->search.'%');
-        }
-
-        // ==========================================
-        // FILTRO: POR CATEGORÍA
-        // ==========================================
-        if ($request->filled('categoria')) {
-            $query->where('categoria', $request->categoria);
-        }
-
-        // ==========================================
-        // FILTRO: POR ESTADO (activo/inactivo)
-        // ==========================================
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
-        }
 
         // ==========================================
         // ESTADÍSTICAS DEL DASHBOARD
@@ -65,7 +43,7 @@ class ProductoController extends Controller
         // ==========================================
         // PRODUCTOS PAGINADOS
         // ==========================================
-        $productos = $query->latest()->paginate(10)->withQueryString();
+        $productos = $productoQuery->paginate($request);
 
         return view('admin.productos.index', compact(
             'productos',
