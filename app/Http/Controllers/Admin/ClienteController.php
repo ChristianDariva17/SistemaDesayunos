@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Cliente\ToggleClienteStatusAction;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreClienteRequest;
 use App\Http\Requests\Admin\UpdateClienteRequest;
@@ -305,24 +306,13 @@ class ClienteController extends Controller
      * ==========================================
      * Ruta: PATCH /clientes/{cliente}/toggle-estado
      */
-    public function toggleEstado(Cliente $cliente)
+    public function toggleEstado(Cliente $cliente, ToggleClienteStatusAction $toggleClienteStatusAction)
     {
         Gate::authorize('toggleStatus', $cliente);
 
         try {
-            $estadoAnterior = $cliente->estado;
-            $nuevoEstado = $cliente->estado === 'activo' ? 'inactivo' : 'activo';
-
-            $cliente->update(['estado' => $nuevoEstado]);
-
-            // ✅ MEJORADO: Logging de cambio de estado
-            Log::info('Estado de cliente cambiado', [
-                'cliente_id' => $cliente->id,
-                'nombre_completo' => $this->formatClienteNombre($cliente),
-                'estado_anterior' => $estadoAnterior,
-                'estado_nuevo' => $nuevoEstado,
-                'usuario' => auth()->id() ?? 'Sistema',
-            ]);
+            $cliente = $toggleClienteStatusAction->handle($cliente);
+            $nuevoEstado = (string) $cliente->estado;
 
             return response()->json([
                 'success' => true,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\Producto\ToggleProductoStatusAction;
 use App\Actions\Stock\RegisterStockMovementAction;
 use App\Enums\ProductoEstado;
 use App\Enums\StockMovimientoTipo;
@@ -320,22 +321,13 @@ class ProductoController extends Controller
      * ==========================================
      * Ruta: PATCH /productos/{producto}/toggle-estado
      */
-    public function toggleEstado(Producto $producto)
+    public function toggleEstado(Producto $producto, ToggleProductoStatusAction $toggleProductoStatusAction)
     {
         Gate::authorize('toggleStatus', $producto);
 
         try {
-            $estadoAnterior = $producto->estado;
-            $estado = ProductoEstado::tryFrom((string) $producto->estado) ?? ProductoEstado::Inactive;
-            $nuevoEstado = $estado->toggled()->value;
-
-            $producto->update(['estado' => $nuevoEstado]);
-
-            Log::info('Estado de producto cambiado', [
-                'producto_id' => $producto->id,
-                'estado_anterior' => $estadoAnterior,
-                'estado_nuevo' => $nuevoEstado,
-            ]);
+            $producto = $toggleProductoStatusAction->handle($producto);
+            $nuevoEstado = (string) $producto->estado;
 
             return response()->json([
                 'success' => true,
