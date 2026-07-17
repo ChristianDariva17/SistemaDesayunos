@@ -56,7 +56,7 @@ final class CreatePedidoAction
                 ]);
 
                 return $pedido->load('productos');
-            });
+            }, attempts: 3);
         } catch (Throwable $exception) {
             BusinessOperationLogger::failure('pedido.create', $exception, [
                 'model_id' => null,

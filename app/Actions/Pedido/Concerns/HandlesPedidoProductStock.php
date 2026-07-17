@@ -42,6 +42,12 @@ trait HandlesPedidoProductStock
     ): string {
         $subtotals = [];
 
+        $productos = collect($productos)->sortBy(
+            static fn (mixed $productoData): int => (int) ($productoData instanceof Producto
+                ? $productoData->getKey()
+                : $productoData['id']),
+        );
+
         foreach ($productos as $productoData) {
             $productoId = $productoData instanceof Producto ? $productoData->getKey() : $productoData['id'];
 
