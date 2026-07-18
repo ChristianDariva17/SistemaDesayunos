@@ -162,6 +162,136 @@ it('renders an inactive assigned cliente on admin pedido edit by name only', fun
         ->assertDontSee('marta.inactive@example.test', false);
 });
 
+it('preselects active entities from their contextual detail actions', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $cliente = Cliente::create([
+        'nombre' => 'Cliente Contextual',
+        'estado' => 'activo',
+    ]);
+    $empleado = Empleado::create([
+        'nombre' => 'Empleado Contextual',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    $clienteCreateUrl = route('admin.pedidos.create', ['cliente_id' => $cliente->id]);
+    $empleadoCreateUrl = route('admin.pedidos.create', ['empleado_id' => $empleado->id]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.clientes.show', $cliente))
+        ->assertOk()
+        ->assertSee('href="'.$clienteCreateUrl.'"', false);
+
+    $this->actingAs($admin)
+        ->get(route('admin.empleados.show', $empleado))
+        ->assertOk()
+        ->assertSee('href="'.$empleadoCreateUrl.'"', false);
+
+    $this->actingAs($admin)
+        ->get($clienteCreateUrl)
+        ->assertOk()
+        ->assertSee('value="'.$cliente->id.'" selected', false);
+
+    $this->actingAs($admin)
+        ->get($empleadoCreateUrl)
+        ->assertOk()
+        ->assertSee('value="'.$empleado->id.'" selected', false);
+});
+
+it('hides contextual order actions for inactive entities', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $cliente = Cliente::create([
+        'nombre' => 'Cliente Inactivo Contextual',
+        'estado' => 'inactivo',
+    ]);
+    $empleado = Empleado::create([
+        'nombre' => 'Empleado Inactivo Contextual',
+        'rol_operativo' => 'mesero',
+        'estado' => 'inactivo',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.clientes.show', $cliente))
+        ->assertOk()
+        ->assertDontSee(route('admin.pedidos.create', ['cliente_id' => $cliente->id]), false);
+
+    $this->actingAs($admin)
+        ->get(route('admin.empleados.show', $empleado))
+        ->assertOk()
+        ->assertDontSee(route('admin.pedidos.create', ['empleado_id' => $empleado->id]), false);
+});
+
+it('ignores invalid and inactive contextual order ids', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $inactiveCliente = Cliente::create([
+        'nombre' => 'Cliente No Elegible',
+        'estado' => 'inactivo',
+    ]);
+    $inactiveEmpleado = Empleado::create([
+        'nombre' => 'Empleado No Elegible',
+        'rol_operativo' => 'mesero',
+        'estado' => 'inactivo',
+    ]);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.create', [
+            'cliente_id' => $inactiveCliente->id,
+            'empleado_id' => $inactiveEmpleado->id,
+        ]))
+        ->assertOk()
+        ->assertViewHas('cliente_seleccionado', null)
+        ->assertViewHas('empleado_seleccionado', null)
+        ->assertDontSee('value="'.$inactiveCliente->id.'" selected', false)
+        ->assertDontSee('value="'.$inactiveEmpleado->id.'" selected', false);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.create', ['cliente_id' => 'invalid', 'empleado_id' => PHP_INT_MAX]))
+        ->assertOk()
+        ->assertViewHas('cliente_seleccionado', null)
+        ->assertViewHas('empleado_seleccionado', null);
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.create'))
+        ->assertOk()
+        ->assertViewHas('cliente_seleccionado', null)
+        ->assertViewHas('empleado_seleccionado', null);
+});
+
+it('prioritizes old order input over contextual preselection', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $contextCliente = Cliente::create([
+        'nombre' => 'Cliente del Contexto',
+        'estado' => 'activo',
+    ]);
+    $oldCliente = Cliente::create([
+        'nombre' => 'Cliente Anterior',
+        'estado' => 'activo',
+    ]);
+    $contextEmpleado = Empleado::create([
+        'nombre' => 'Empleado del Contexto',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+    $oldEmpleado = Empleado::create([
+        'nombre' => 'Empleado Anterior',
+        'rol_operativo' => 'cajero',
+        'estado' => 'activo',
+    ]);
+
+    $this->actingAs($admin)
+        ->withSession(['_old_input' => [
+            'cliente_id' => $oldCliente->id,
+            'empleado_id' => $oldEmpleado->id,
+        ]])
+        ->get(route('admin.pedidos.create', [
+            'cliente_id' => $contextCliente->id,
+            'empleado_id' => $contextEmpleado->id,
+        ]))
+        ->assertOk()
+        ->assertSee('value="'.$oldCliente->id.'" selected', false)
+        ->assertSee('value="'.$oldEmpleado->id.'" selected', false);
+});
+
 it('renders the deterministic generic cliente on admin pedido create and edit', function (): void {
     $admin = User::factory()->create([
         'email' => 'admin-generic-pedido-client@example.test',

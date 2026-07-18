@@ -65,12 +65,20 @@ class PedidoController extends Controller
 
         $clientes = $this->activePedidoClientes();
 
-        $cliente_seleccionado = null;
-        if ($request->filled('cliente_id')) {
-            $cliente_seleccionado = Cliente::find($request->get('cliente_id'));
-        }
+        $cliente_seleccionado = $request->filled('cliente_id')
+            ? $clientes->firstWhere('id', (int) $request->input('cliente_id'))
+            : null;
+        $empleado_seleccionado = $request->filled('empleado_id')
+            ? $empleados->firstWhere('id', (int) $request->input('empleado_id'))
+            : null;
 
-        return view('admin.pedidos.create', compact('productos', 'empleados', 'clientes', 'cliente_seleccionado'));
+        return view('admin.pedidos.create', compact(
+            'productos',
+            'empleados',
+            'clientes',
+            'cliente_seleccionado',
+            'empleado_seleccionado'
+        ));
     }
 
     /**

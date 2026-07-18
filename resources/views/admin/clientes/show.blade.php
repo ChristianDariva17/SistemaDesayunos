@@ -514,10 +514,12 @@
                             <p class="text-muted mb-4">
                                 Cuando se creen pedidos para este cliente, aparecerán aquí.
                             </p>
-                            <a href="{{ route('admin.pedidos.create') }}" class="btn btn-primary">
-                                <i class="fas fa-plus-circle me-2"></i>
-                                Crear Primer Pedido
-                            </a>
+                            @if($cliente->estado === 'activo')
+                                <a href="{{ route('admin.pedidos.create', ['cliente_id' => $cliente->id]) }}" class="btn btn-primary">
+                                    <i class="fas fa-plus-circle me-2"></i>
+                                    Crear Primer Pedido
+                                </a>
+                            @endif
                         </div>
                     @endif
                 </div>

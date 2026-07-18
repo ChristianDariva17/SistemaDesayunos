@@ -87,7 +87,7 @@
                                     required>
                                 <option value="">Selecciona un cliente</option>
                                 @foreach($clientes as $cliente)
-                                    <option value="{{ $cliente->id }}" {{ old('cliente_id') == $cliente->id ? 'selected' : '' }}>
+                                    <option value="{{ $cliente->id }}" {{ old('cliente_id', $cliente_seleccionado?->id) == $cliente->id ? 'selected' : '' }}>
                                         {{ trim($cliente->nombre . ' ' . ($cliente->apellido ?? '')) }}
                                     </option>
                                 @endforeach
@@ -113,7 +113,7 @@
                                     name="empleado_id">
                                 <option value="">Sin asignar</option>
                                 @foreach($empleados as $empleado)
-                                    <option value="{{ $empleado->id }}" {{ old('empleado_id') == $empleado->id ? 'selected' : '' }}>
+                                    <option value="{{ $empleado->id }}" {{ old('empleado_id', $empleado_seleccionado?->id) == $empleado->id ? 'selected' : '' }}>
                                         {{ $empleado->nombre }}
                                     </option>
                                 @endforeach

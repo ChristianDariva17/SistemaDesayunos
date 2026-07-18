@@ -431,9 +431,11 @@
                     <a href="{{ route('admin.empleados.edit', $empleado) }}" class="btn btn-warning">
                         <i class="fas fa-edit me-2"></i> Editar Empleado
                     </a>
-                    <a href="{{ route('admin.pedidos.create') }}?empleado_id={{ $empleado->id }}" class="btn btn-primary">
-                        <i class="fas fa-plus-circle me-2"></i> Nuevo Pedido
-                    </a>
+                    @if($empleado->estado === 'activo')
+                        <a href="{{ route('admin.pedidos.create', ['empleado_id' => $empleado->id]) }}" class="btn btn-primary">
+                            <i class="fas fa-plus-circle me-2"></i> Nuevo Pedido
+                        </a>
+                    @endif
                     <a href="{{ route('admin.empleados.index') }}" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left me-2"></i> Volver al Listado
                     </a>

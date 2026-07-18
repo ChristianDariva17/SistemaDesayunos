@@ -2,15 +2,26 @@
 
 use App\Models\User;
 
-test('profile page is displayed', function () {
-    $user = User::factory()->create();
+test('profile controls are rendered for each staff role', function (string $role, string $layoutText) {
+    $user = User::factory()->create(['rol' => $role]);
 
     $response = $this
         ->actingAs($user)
         ->get('/profile');
 
-    $response->assertOk();
-});
+    $response
+        ->assertOk()
+        ->assertSee($layoutText)
+        ->assertSee('Profile Information')
+        ->assertSee('action="'.route('profile.update').'"', false)
+        ->assertSee('Update Password')
+        ->assertSee('action="'.route('password.update').'"', false)
+        ->assertSee('Delete Account')
+        ->assertSee('action="'.route('profile.destroy').'"', false);
+})->with([
+    'administrator' => ['administrador', 'Menú Principal'],
+    'worker' => ['trabajador', 'Panel Trabajador'],
+]);
 
 test('profile information can be updated', function () {
     $user = User::factory()->create();
