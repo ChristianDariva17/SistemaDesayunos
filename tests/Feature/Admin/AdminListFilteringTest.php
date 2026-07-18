@@ -188,6 +188,57 @@ it('filters low-stock products for administrators and preserves the filter in pa
         ]);
 });
 
+it('exports only low-stock products for the supported stock filter', function (): void {
+    $lowStock = Producto::create([
+        'nombre' => 'Export low stock',
+        'categoria' => 'bebida',
+        'precio' => 5,
+        'stock' => 5,
+        'stock_minimo' => 5,
+        'estado' => 'activo',
+    ]);
+    $sufficientStock = Producto::create([
+        'nombre' => 'Export sufficient stock',
+        'categoria' => 'bebida',
+        'precio' => 5,
+        'stock' => 6,
+        'stock_minimo' => 5,
+        'estado' => 'activo',
+    ]);
+    $alertsDisabled = Producto::create([
+        'nombre' => 'Export alerts disabled',
+        'categoria' => 'bebida',
+        'precio' => 5,
+        'stock' => 0,
+        'stock_minimo' => 0,
+        'estado' => 'activo',
+    ]);
+
+    $filteredResponse = $this->actingAs($this->admin)->get(route('admin.productos.exportar', [
+        'stock' => 'bajo',
+    ]));
+    $unsupportedResponse = $this->actingAs($this->admin)->get(route('admin.productos.exportar', [
+        'stock' => 'low',
+    ]));
+
+    $filteredResponse->assertOk()
+        ->assertHeader('Content-Type', 'text/csv; charset=UTF-8')
+        ->assertHeader('Content-Disposition');
+    $unsupportedResponse->assertOk();
+
+    $filteredCsv = $filteredResponse->streamedContent();
+    $unsupportedCsv = $unsupportedResponse->streamedContent();
+
+    expect($filteredCsv)->toStartWith("\xEF\xBB\xBF")
+        ->and($filteredCsv)->toContain($lowStock->nombre)
+        ->and($filteredCsv)->not->toContain($sufficientStock->nombre, $alertsDisabled->nombre)
+        ->and($unsupportedCsv)->toContain(
+            $lowStock->nombre,
+            $sufficientStock->nombre,
+            $alertsDisabled->nombre,
+        );
+});
+
 it('filters low-stock products for workers and ignores unsupported stock values', function (): void {
     $worker = User::factory()->create([
         'rol' => 'trabajador',

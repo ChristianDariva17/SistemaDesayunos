@@ -592,6 +592,10 @@ class ProductoController extends Controller
                 $query->where('estado', $request->estado);
             }
 
+            if ($request->string('stock')->toString() === 'bajo') {
+                $query->stockMinimoBajo();
+            }
+
             $productos = $query->orderBy('nombre')->get();
 
             // Nombre del archivo
