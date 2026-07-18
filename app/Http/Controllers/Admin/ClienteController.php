@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\StoreClienteRequest;
 use App\Http\Requests\Admin\UpdateClienteRequest;
 use App\Models\Cliente;
 use App\Queries\ClienteQuery;
+use App\Services\ClienteStatsService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -22,19 +23,21 @@ class ClienteController extends Controller
      * ==========================================
      * Muestra todos los clientes con filtros, búsqueda y estadísticas
      */
-    public function index(Request $request, ClienteQuery $clienteQuery)
-    {
+    public function index(
+        Request $request,
+        ClienteQuery $clienteQuery,
+        ClienteStatsService $clienteStatsService,
+    ) {
         Gate::authorize('viewAny', Cliente::class);
 
         // ==========================================
         // ESTADÍSTICAS DEL DASHBOARD
         // ==========================================
-        $totalClientes = Cliente::count();
-        $clientesActivos = Cliente::where('estado', 'activo')->count();
-        $clientesInactivos = Cliente::where('estado', 'inactivo')->count();
-        $nuevosEsteMes = Cliente::whereMonth('created_at', now()->month)
-            ->whereYear('created_at', now()->year)
-            ->count();
+        $summary = $clienteStatsService->indexSummary();
+        $totalClientes = $summary['totalClientes'];
+        $clientesActivos = $summary['clientesActivos'];
+        $clientesInactivos = $summary['clientesInactivos'];
+        $nuevosEsteMes = $summary['nuevosEsteMes'];
 
         // ==========================================
         // PAGINACIÓN CONFIGURABLE
