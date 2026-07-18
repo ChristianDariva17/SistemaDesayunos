@@ -64,7 +64,24 @@ it('renders admin dashboard component values, alert semantics, and empty states'
 
     assertPendingOrderCardTarget($response->getContent(), route('admin.pedidos.index', ['estado' => 'pendiente']));
     assertAdminPendingOrderNotificationTarget($response->getContent(), route('admin.pedidos.index', ['estado' => 'pendiente']));
+    assertAdminLowStockNotificationTarget($response->getContent(), route('admin.productos.index', ['stock' => 'bajo']));
 });
+
+it('preserves the active low-stock filter in product listing controls', function (string $role, string $routeName): void {
+    $user = User::factory()->create([
+        'rol' => $role,
+    ]);
+
+    $response = $this->actingAs($user)->get(route($routeName, [
+        'stock' => 'bajo',
+    ]));
+
+    $response->assertOk()
+        ->assertSee('name="stock" value="bajo"', false);
+})->with([
+    'administrator' => ['administrador', 'admin.productos.index'],
+    'worker' => ['trabajador', 'trabajador.productos.index'],
+]);
 
 it('renders worker dashboard component values with worker routes and empty states', function (): void {
     $worker = User::factory()->create([
@@ -178,6 +195,20 @@ function assertAdminPendingOrderNotificationTarget(string $html, string $expecte
     $xpath = new DOMXPath($document);
     $links = $xpath->query(sprintf(
         '//nav[@aria-label = "Barra superior de administración"]//a[@href = "%s" and contains(normalize-space(), "pedidos pendientes")]',
+        $expectedHref,
+    ));
+
+    expect($links)->not->toBeFalse()
+        ->and($links->length)->toBe(1);
+}
+
+function assertAdminLowStockNotificationTarget(string $html, string $expectedHref): void
+{
+    $document = new DOMDocument;
+    @$document->loadHTML($html);
+    $xpath = new DOMXPath($document);
+    $links = $xpath->query(sprintf(
+        '//nav[@aria-label = "Barra superior de administración"]//a[@href = "%s" and contains(normalize-space(), "productos con stock bajo")]',
         $expectedHref,
     ));
 

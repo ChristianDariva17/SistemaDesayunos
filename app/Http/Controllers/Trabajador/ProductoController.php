@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Trabajador;
 use App\Enums\ProductoEstado;
 use App\Http\Controllers\Controller;
 use App\Models\Producto;
+use App\Queries\ProductoQuery;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -19,32 +20,9 @@ class ProductoController extends Controller
      * ==========================================
      * Muestra todos los productos con filtros, búsqueda y estadísticas
      */
-    public function index(Request $request)
+    public function index(Request $request, ProductoQuery $productoQuery)
     {
         Gate::authorize('viewAny', Producto::class);
-
-        $query = Producto::query();
-
-        // ==========================================
-        // FILTRO: BÚSQUEDA POR NOMBRE
-        // ==========================================
-        if ($request->filled('search')) {
-            $query->where('nombre', 'like', '%'.$request->search.'%');
-        }
-
-        // ==========================================
-        // FILTRO: POR CATEGORÍA
-        // ==========================================
-        if ($request->filled('categoria')) {
-            $query->where('categoria', $request->categoria);
-        }
-
-        // ==========================================
-        // FILTRO: POR ESTADO (activo/inactivo)
-        // ==========================================
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
-        }
 
         // ==========================================
         // ESTADÍSTICAS DEL DASHBOARD
@@ -54,12 +32,12 @@ class ProductoController extends Controller
         $productosNuevos = Producto::whereMonth('created_at', now()->month)
             ->whereYear('created_at', now()->year)
             ->count();
-        $stockBajo = Producto::stockBajo()->count();
+        $stockBajo = Producto::stockMinimoBajo()->count();
 
         // ==========================================
         // PRODUCTOS PAGINADOS
         // ==========================================
-        $productos = $query->latest()->paginate(10)->withQueryString();
+        $productos = $productoQuery->paginate($request);
 
         return view('trabajador.productos.index', compact(
             'productos',

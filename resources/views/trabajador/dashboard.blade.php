@@ -86,7 +86,7 @@
                 subtitle="Productos críticos"
                 icon="fas fa-exclamation-triangle"
                 color="danger"
-                :href="route('trabajador.productos.index') . '?stock=bajo'"
+                :href="route('trabajador.productos.index', ['stock' => 'bajo'])"
                 footer-text="Ver productos"
                 :uppercase-title="false"
             />

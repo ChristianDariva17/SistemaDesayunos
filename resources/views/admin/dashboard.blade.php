@@ -42,7 +42,7 @@
 
                         {{-- Stock Bajo --}}
                         <div class="col-xl-3 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
-                            <x-stat-card title="Stock Bajo" :value="$stockBajo ?? 0" subtitle="Productos críticos" icon="fas fa-exclamation-triangle" color="danger" :href="route('admin.productos.index') . '?stock=bajo'" footer-text="Ver productos" />
+                            <x-stat-card title="Stock Bajo" :value="$stockBajo ?? 0" subtitle="Productos críticos" icon="fas fa-exclamation-triangle" color="danger" :href="route('admin.productos.index', ['stock' => 'bajo'])" footer-text="Ver productos" />
                         </div>
 
                     </div>

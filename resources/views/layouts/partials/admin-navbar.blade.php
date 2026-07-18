@@ -31,7 +31,7 @@
                                     <i class="fas fa-shopping-cart text-danger" aria-hidden="true"></i>
                                     {{ $pedidosPendientes ?? 0 }} pedidos pendientes
                                 </a></li>
-                                <li><a class="dropdown-item" href="{{ route('admin.productos.index') }}">
+                                <li><a class="dropdown-item" href="{{ route('admin.productos.index', ['stock' => 'bajo']) }}">
                                     <i class="fas fa-exclamation-triangle text-warning" aria-hidden="true"></i>
                                     {{ $stockBajo ?? 0 }} productos con stock bajo
                                 </a></li>

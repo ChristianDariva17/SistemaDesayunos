@@ -406,7 +406,7 @@
                                 {{ $stockBajo ?? 0 }}
                             </div>
                             <small class="text-muted">
-                                Productos críticos
+                                Según mínimo configurado
                             </small>
                         </div>
                         <div class="col-auto">
@@ -440,6 +440,9 @@
                         {{-- BARRA DE BÚSQUEDA --}}
                         <div class="col-lg-5">
                             <form action="{{ route('trabajador.productos.index') }}" method="GET" id="searchForm">
+                                @if(request('stock') === 'bajo')
+                                    <input type="hidden" name="stock" value="bajo">
+                                @endif
                                 <div class="input-group">
                                     <span class="input-group-text bg-light border-end-0">
                                         <i class="fas fa-search text-muted"></i>
@@ -450,8 +453,8 @@
                                            placeholder="Buscar productos por nombre..." 
                                            value="{{ request('search') }}"
                                            autocomplete="off">
-                                    
-                                    @if(request()->hasAny(['search', 'categoria', 'estado']))
+
+                                    @if(request()->hasAny(['search', 'categoria', 'estado', 'stock']))
                                         <a href="{{ route('trabajador.productos.index') }}" 
                                            class="btn btn-outline-secondary" 
                                            title="Limpiar filtros">
@@ -567,7 +570,7 @@
                                             <span class="badge bg-danger">
                                                 <i class="fas fa-times-circle me-1"></i>Sin stock
                                             </span>
-                                        @elseif($producto->stock < 10)
+                                        @elseif($producto->stock_minimo > 0 && $producto->stock <= $producto->stock_minimo)
                                             <span class="badge bg-warning">
                                                 <i class="fas fa-exclamation-triangle me-1"></i>{{ $producto->stock }} und.
                                             </span>
@@ -612,7 +615,7 @@
                                     <td colspan="7" class="text-center py-5">
                                         <div class="text-muted">
                                             <i class="fas fa-inbox fa-4x mb-3 d-block opacity-25"></i>
-                                            @if(request()->hasAny(['search', 'categoria', 'estado']))
+                                            @if(request()->hasAny(['search', 'categoria', 'estado', 'stock']))
                                                 <h5 class="fw-bold mb-2">No hay productos que coincidan</h5>
                                                 <p class="mb-3">Intenta con otros criterios de búsqueda</p>
                                                 <a href="{{ route('trabajador.productos.index') }}" class="btn btn-outline-primary btn-sm">
@@ -671,12 +674,14 @@
             const searchValue = form.querySelector('input[name="search"]').value;
             const categoriaValue = filterCategoria.value;
             const estadoValue = filterEstado.value;
+            const stockValue = form.querySelector('input[name="stock"]')?.value;
 
             // Construir URL con parámetros
             const params = new URLSearchParams();
             if (searchValue) params.append('search', searchValue);
             if (categoriaValue) params.append('categoria', categoriaValue);
             if (estadoValue) params.append('estado', estadoValue);
+            if (stockValue === 'bajo') params.append('stock', stockValue);
 
             // Redirigir con filtros
             window.location.href = "{{ route('trabajador.productos.index') }}?" + params.toString();

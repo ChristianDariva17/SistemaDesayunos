@@ -125,6 +125,108 @@ it('keeps product filters in pagination links', function (): void {
         ]);
 });
 
+it('filters low-stock products for administrators and preserves the filter in pagination', function (): void {
+    $lowStock = Producto::create([
+        'nombre' => 'Admin low stock',
+        'categoria' => 'bebida',
+        'precio' => 5,
+        'stock' => 5,
+        'stock_minimo' => 5,
+        'estado' => 'activo',
+    ]);
+    $sufficientStock = Producto::create([
+        'nombre' => 'Admin sufficient stock',
+        'categoria' => 'bebida',
+        'precio' => 5,
+        'stock' => 6,
+        'stock_minimo' => 5,
+        'estado' => 'activo',
+    ]);
+    $alertsDisabled = Producto::create([
+        'nombre' => 'Admin alerts disabled',
+        'categoria' => 'bebida',
+        'precio' => 5,
+        'stock' => 0,
+        'stock_minimo' => 0,
+        'estado' => 'activo',
+    ]);
+
+    foreach (range(1, 10) as $index) {
+        Producto::create([
+            'nombre' => "Admin low stock {$index}",
+            'categoria' => 'bebida',
+            'precio' => 5,
+            'stock' => 1,
+            'stock_minimo' => 2,
+            'estado' => 'activo',
+        ]);
+    }
+
+    $productos = adminListResponse(
+        $this->actingAs($this->admin)->get(route('admin.productos.index', [
+            'stock' => 'bajo',
+        ])),
+        'productos',
+    );
+    $paginationQuery = [];
+    parse_str((string) parse_url($productos->nextPageUrl(), PHP_URL_QUERY), $paginationQuery);
+    $secondPage = adminListResponse(
+        $this->actingAs($this->admin)->get(route('admin.productos.index', [
+            'stock' => 'bajo',
+            'page' => 2,
+        ])),
+        'productos',
+    );
+    $filteredIds = $productos->pluck('id')->merge($secondPage->pluck('id'))->all();
+
+    expect($productos->total())->toBe(11)
+        ->and($filteredIds)->toContain($lowStock->id)
+        ->and($filteredIds)->not->toContain($sufficientStock->id, $alertsDisabled->id)
+        ->and($paginationQuery)->toBe([
+            'stock' => 'bajo',
+            'page' => '2',
+        ]);
+});
+
+it('filters low-stock products for workers and ignores unsupported stock values', function (): void {
+    $worker = User::factory()->create([
+        'rol' => 'trabajador',
+    ]);
+    $lowStock = Producto::create([
+        'nombre' => 'Worker low stock',
+        'categoria' => 'bebida',
+        'precio' => 5,
+        'stock' => 8,
+        'stock_minimo' => 8,
+        'estado' => 'activo',
+    ]);
+    $sufficientStock = Producto::create([
+        'nombre' => 'Worker sufficient stock',
+        'categoria' => 'bebida',
+        'precio' => 5,
+        'stock' => 9,
+        'stock_minimo' => 8,
+        'estado' => 'activo',
+    ]);
+
+    $filtered = adminListResponse(
+        $this->actingAs($worker)->get(route('trabajador.productos.index', [
+            'stock' => 'bajo',
+        ])),
+        'productos',
+    );
+    $unsupported = adminListResponse(
+        $this->actingAs($worker)->get(route('trabajador.productos.index', [
+            'stock' => 'low',
+        ])),
+        'productos',
+    );
+
+    expect($filtered->pluck('id')->all())->toBe([$lowStock->id])
+        ->and($filtered->pluck('id')->all())->not->toContain($sufficientStock->id)
+        ->and($unsupported->pluck('id')->all())->toContain($lowStock->id, $sufficientStock->id);
+});
+
 it('searches all client fields with status and includes pedidos count', function (): void {
     $employee = Empleado::create([
         'nombre' => 'List employee',

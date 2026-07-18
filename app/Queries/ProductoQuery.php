@@ -26,6 +26,10 @@ final class ProductoQuery
             $query->where('estado', $request->estado);
         }
 
-        return $query->latest()->paginate(10)->withQueryString();
+        if ($request->string('stock')->toString() === 'bajo') {
+            $query->stockMinimoBajo();
+        }
+
+        return $query->latest()->latest('id')->paginate(10)->withQueryString();
     }
 }

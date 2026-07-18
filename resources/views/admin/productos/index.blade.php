@@ -161,6 +161,9 @@
                 {{-- BARRA DE BÚSQUEDA --}}
                 <div class="col-lg-4">
                     <form action="{{ route('admin.productos.index') }}" method="GET" id="searchForm" data-ajax-filter="true" data-ajax-auto-submit="true" data-ajax-target="#productosResults">
+                        @if(request('stock') === 'bajo')
+                            <input type="hidden" name="stock" value="bajo">
+                        @endif
                         <div class="input-group">
                             <span class="input-group-text bg-light border-end-0">
                                 <i class="fas fa-search text-muted"></i>
@@ -172,7 +175,7 @@
                                 placeholder="Buscar productos..." 
                                 value="{{ request('search') }}"
                             >
-                            @if(request()->hasAny(['search', 'categoria', 'estado']))
+                            @if(request()->hasAny(['search', 'categoria', 'estado', 'stock']))
                                 <a href="{{ route('admin.productos.index') }}" class="btn btn-outline-secondary" title="Limpiar filtros" data-ajax-link="true" data-ajax-target="#productosResults">
                                     <i class="fas fa-times"></i>
                                 </a>
@@ -419,7 +422,7 @@
                                 <td colspan="7" class="text-center py-5">
                                     <div class="text-muted">
                                         <i class="fas fa-inbox fa-3x mb-3 d-block text-secondary opacity-50"></i>
-                                        @if(request()->hasAny(['search', 'categoria', 'estado']))
+                                        @if(request()->hasAny(['search', 'categoria', 'estado', 'stock']))
                                             <h5 class="fw-bold">No hay productos que coincidan</h5>
                                             <p class="mb-3">Intenta con otros criterios de búsqueda</p>
                                             <a href="{{ route('admin.productos.index') }}" class="btn btn-outline-primary" data-ajax-link="true" data-ajax-target="#productosResults">
