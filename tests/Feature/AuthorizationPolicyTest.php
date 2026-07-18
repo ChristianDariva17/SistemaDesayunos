@@ -155,6 +155,22 @@ it('allows staff to view and create pedidos but only administrators can update p
         ->and(Gate::forUser($worker)->denies('changeStatus', $pedido))->toBeTrue();
 });
 
+it('allows administrators and denies workers from exporting pedidos', function (): void {
+    $admin = authorizationUser('administrador');
+    $worker = authorizationUser('trabajador');
+
+    expect(Gate::forUser($admin)->allows('export', Pedido::class))->toBeTrue()
+        ->and(Gate::forUser($worker)->denies('export', Pedido::class))->toBeTrue();
+
+    $this->actingAs($admin)
+        ->get(route('admin.pedidos.exportar'))
+        ->assertOk();
+
+    $this->actingAs($worker)
+        ->get(route('admin.pedidos.exportar'))
+        ->assertForbidden();
+});
+
 it('honors legacy role aliases in policy checks through shared normalization', function (): void {
     $adminAlias = authorizationUserWithRole('admin');
     $workerAlias = authorizationUserWithRole('empleado');

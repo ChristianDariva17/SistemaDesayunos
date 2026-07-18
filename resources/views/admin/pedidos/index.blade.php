@@ -282,16 +282,10 @@
                 <button class="btn btn-sm btn-outline-secondary" onclick="window.print()">
                     <i class="fas fa-print me-1"></i> <span class="d-none d-md-inline">Imprimir</span>
                 </button>
-                <div class="dropdown">
-                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-download me-1"></i> <span class="d-none d-md-inline">Exportar</span>
-                    </button>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel me-2"></i> Excel</a></li>
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf me-2"></i> PDF</a></li>
-                        <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2"></i> CSV</a></li>
-                    </ul>
-                </div>
+                <a href="{{ route('admin.pedidos.exportar', request()->only(['search', 'estado', 'fecha_desde', 'fecha_hasta', 'fecha', 'empleado_id'])) }}"
+                   class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-file-csv me-1" aria-hidden="true"></i> Exportar CSV
+                </a>
             </div>
         </div>
     </div>

@@ -630,6 +630,32 @@ it('filters and orders pedidos by canonical fields for :role', function (string 
     'worker' => ['trabajador', 'trabajador.pedidos.index'],
 ]);
 
+it('renders a filtered admin pedido CSV export link without unsupported controls', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    $empleado = pedidoTestEmpleado();
+    $filters = [
+        'search' => 'Export',
+        'estado' => 'completado',
+        'fecha_desde' => '2026-06-01',
+        'fecha_hasta' => '2026-06-30',
+        'fecha' => '2026-06-03',
+        'empleado_id' => $empleado->id,
+    ];
+
+    $response = $this->actingAs($admin)->get(route('admin.pedidos.index', $filters));
+
+    $response->assertOk()
+        ->assertSee('href="'.e(route('admin.pedidos.exportar', $filters)).'"', false)
+        ->assertSee('Exportar CSV')
+        ->assertSee('<i class="fas fa-file-csv me-1" aria-hidden="true"></i>', false)
+        ->assertDontSee('fa-file-excel')
+        ->assertDontSee('fa-file-pdf')
+        ->assertDontSee('> Excel<', false)
+        ->assertDontSee('> PDF<', false);
+});
+
 it('calculates equivalent pedido stats from canonical fecha for :role', function (string $role, string $routeName): void {
     Carbon::setTestNow('2026-06-02 10:00:00');
 
@@ -681,7 +707,7 @@ it('calculates equivalent pedido stats from canonical fecha for :role', function
     'worker' => ['trabajador', 'trabajador.pedidos.index'],
 ]);
 
-it('exports admin pedidos with canonical fecha hora and employee role fields', function (): void {
+it('exports filtered admin pedidos with canonical fields and CSV metadata', function (): void {
     $user = User::factory()->create([
         'rol' => 'administrador',
     ]);
@@ -707,8 +733,8 @@ it('exports admin pedidos with canonical fecha hora and employee role fields', f
 
     $earlier = pedidoTestPedido($cliente, $empleado, [
         'numero_pedido' => 'PED-202606-EXPORT-EARLIER',
-        'fecha' => '2026-06-02',
-        'hora' => '15:45:00',
+        'fecha' => '2026-06-03',
+        'hora' => '09:45:00',
         'estado' => 'completado',
         'total' => 12.00,
         'created_at' => '2026-07-01 10:00:00',
@@ -717,24 +743,49 @@ it('exports admin pedidos with canonical fecha hora and employee role fields', f
 
     pedidoTestPedido($cliente, $empleado, [
         'numero_pedido' => 'PED-202606-EXPORT-PENDING',
-        'fecha' => '2026-06-04',
-        'hora' => '09:00:00',
+        'fecha' => '2026-06-03',
+        'hora' => '12:00:00',
         'estado' => 'pendiente',
         'total' => 99.00,
     ]);
 
-    $response = $this->actingAs($user)->get(route('admin.pedidos.exportar', [
+    $otherEmpleado = pedidoTestEmpleado(['nombre' => 'Other Export Worker']);
+    pedidoTestPedido($cliente, $otherEmpleado, [
+        'numero_pedido' => 'PED-202606-EXPORT-OTHER-WORKER',
+        'fecha' => '2026-06-03',
+        'hora' => '10:00:00',
         'estado' => 'completado',
+    ]);
+
+    pedidoTestPedido($cliente, $empleado, [
+        'numero_pedido' => 'PED-202606-EXPORT-OTHER-DATE',
+        'fecha' => '2026-06-04',
+        'hora' => '10:00:00',
+        'estado' => 'completado',
+    ]);
+
+    $response = $this->actingAs($user)->get(route('admin.pedidos.exportar', [
+        'search' => 'Export',
+        'estado' => 'completado',
+        'fecha_desde' => '2026-06-03',
+        'fecha_hasta' => '2026-06-03',
+        'fecha' => '2026-06-03',
+        'empleado_id' => $empleado->id,
     ]));
 
-    $response->assertOk();
+    $response->assertOk()
+        ->assertHeader('Content-Type', 'text/csv; charset=UTF-8')
+        ->assertHeader('Content-Disposition');
 
     $csv = $response->streamedContent();
 
-    expect($csv)->toContain('Número,Cliente,Empleado,Rol,Fecha,Total,Estado')
+    expect($csv)->toStartWith("\xEF\xBB\xBF")
+        ->and($csv)->toContain('Número,Cliente,Empleado,Rol,Fecha,Total,Estado')
         ->and($csv)->toContain('"Export Worker",barista,"03/06/2026 11:30",18.50,Completado')
-        ->and($csv)->toContain('"Export Worker",barista,"02/06/2026 15:45",12.00,Completado')
-        ->and($csv)->not->toContain('PED-202606-EXPORT-PENDING');
+        ->and($csv)->toContain('"Export Worker",barista,"03/06/2026 09:45",12.00,Completado')
+        ->and($csv)->not->toContain('PED-202606-EXPORT-PENDING')
+        ->and($csv)->not->toContain('PED-202606-EXPORT-OTHER-WORKER')
+        ->and($csv)->not->toContain('PED-202606-EXPORT-OTHER-DATE');
 
     expect(strpos($csv, $latest->numero_pedido))->toBeLessThan(strpos($csv, $earlier->numero_pedido));
 });

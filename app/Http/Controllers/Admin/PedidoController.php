@@ -237,19 +237,12 @@ class PedidoController extends Controller
     /**
      * Exportar pedidos
      */
-    public function exportar(Request $request)
+    public function exportar(Request $request, PedidoQuery $pedidoQuery)
     {
         Gate::authorize('export', Pedido::class);
 
-        // Load canonical employee fields.
-        $query = Pedido::with(['cliente:id,nombre,apellido', 'empleado:id,nombre,rol_operativo']);
-
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
-        }
-
-        $pedidos = $query->orderBy('fecha', 'desc')
-            ->orderBy('hora', 'desc')
+        $pedidos = $pedidoQuery->filtered($request)
+            ->with(['cliente:id,nombre,apellido', 'empleado:id,nombre,rol_operativo'])
             ->get();
 
         $filename = 'pedidos_'.now()->format('Y-m-d_His').'.csv';

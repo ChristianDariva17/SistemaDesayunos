@@ -13,9 +13,17 @@ final class PedidoQuery
 {
     public function paginate(Request $request): LengthAwarePaginator
     {
-        $query = Pedido::query()
+        return $this->filtered($request)
             ->with(['empleado:id,nombre,rol_operativo', 'cliente:id,nombre,apellido,email'])
-            ->withCount('productos');
+            ->withCount('productos')
+            ->paginate(15)
+            ->withQueryString();
+    }
+
+    /** @return Builder<Pedido> */
+    public function filtered(Request $request): Builder
+    {
+        $query = Pedido::query();
 
         if ($request->filled('search')) {
             $search = $request->get('search');
@@ -49,8 +57,6 @@ final class PedidoQuery
         }
 
         return $query->orderBy('fecha', 'desc')
-            ->orderBy('hora', 'desc')
-            ->paginate(15)
-            ->withQueryString();
+            ->orderBy('hora', 'desc');
     }
 }
