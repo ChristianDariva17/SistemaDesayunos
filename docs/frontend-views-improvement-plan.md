@@ -12,7 +12,7 @@ This document captures the current state of the Laravel Blade views and the reco
 
 ## Current Status
 
-Frontend Slices 1 through 7 are complete through searchable order-flow selects, report/chart loading cleanup is complete, progressive AJAX filters were added for admin productos/clientes/pedidos, unsafe sticky side-panel behavior was corrected, and the audited table/list scalability work is complete.
+Frontend Slices 1 through 7 are complete through searchable order-flow selects, report/chart loading cleanup is complete, progressive AJAX filters were added for admin productos/clientes/pedidos, unsafe sticky side-panel behavior was corrected, and the audited table/list scalability and product thumbnail work are complete.
 
 Completed baseline:
 
@@ -25,6 +25,7 @@ Completed baseline:
 - Sticky side-panel fixes: side cards are constrained to desktop-safe sticky behavior and should not cover page content while scrolling.
 - Product detail loading: recent-order clients are nested eager-loaded for admin and worker views; order timestamps are qualified and the redundant worker-side result limit was removed.
 - Product image lifecycle: create, replace, and delete operations use transactional compensation and focused regression coverage without adding a media-library dependency.
+- Product image delivery: list and search contexts use generated 160-pixel JPEG thumbnails, explicit dimensions, below-the-fold lazy loading, and a bounded backfill command for existing images.
 
 ## Latest Frontend Assessment
 
@@ -43,7 +44,7 @@ The highest-value improvement is not changing frameworks. It is making the curre
 
 ## Executive Summary
 
-The current UI is functional and has a clear domain split between admin, worker, auth, profile, and components. The completed foundation reduced the original layout, asset, component, rendering, and audited list-scalability issues; the remaining work is concentrated in image delivery and incremental visual consistency.
+The current UI is functional and has a clear domain split between admin, worker, auth, profile, and components. The completed foundation reduced the original layout, asset, component, rendering, audited list-scalability, and product thumbnail issues; the remaining work is concentrated in public asset integrity, dead or placeholder controls, and incremental visual consistency.
 
 The main risk is no longer the absence of a shared frontend foundation. It is allowing new screens to bypass the established Blade components, Vite assets, progressive-enhancement patterns, and accessibility guardrails.
 
@@ -284,9 +285,10 @@ Improve product/public image loading.
 
 Acceptance checklist:
 
-- [ ] Product images use explicit width/height where possible.
-- [ ] Below-the-fold images use `loading="lazy"`.
-- [ ] Images are compressed and preferably served as WebP/AVIF.
+- [x] Product list and search images use generated 160-pixel JPEG thumbnails with explicit width/height.
+- [x] Below-the-fold product images use `loading="lazy"`.
+- [x] Existing product images can be processed with the bounded `products:generate-thumbnails` backfill command.
+- [ ] Evaluate WebP/AVIF only if measured byte savings justify the additional encoding and deployment complexity.
 - [ ] External image dependencies are reviewed.
 
 ## Accessibility Improvement Plan
@@ -363,7 +365,7 @@ Public-page checklist:
 
 - Keep server-side pagination and AJAX filtering.
 - Add clearer stock badges: low, out, available.
-- Add image thumbnails only after image dimensions, lazy loading, and delivery formats are standardized.
+- Keep generated product thumbnails, dimensions, and lazy-loading behavior covered by focused regression tests.
 - Consider bulk actions only when the workflow needs them.
 
 ### Clients
@@ -473,4 +475,4 @@ Goal: add libraries where they solve real product problems.
 
 ## Next Step
 
-Frontend Slices 1 through 7, report/chart loading cleanup, progressive admin filters, sticky-panel corrections, audited table/list scalability, and transactional product image handling are complete. The next recommended concrete frontend work is **image delivery optimization**: add explicit image dimensions, lazy-load below-the-fold images, adopt measured WebP/AVIF delivery, and review remaining external image dependencies.
+Frontend Slices 1 through 7, report/chart loading cleanup, progressive admin filters, sticky-panel corrections, audited table/list scalability, transactional product image handling, and bounded thumbnail delivery are complete. The next recommended concrete frontend work is **public asset integrity and dead-UI cleanup**: correct favicon/touch-icon delivery, review remaining external image dependencies, and hide or implement placeholder export controls. WebP/AVIF remains a measurement-led follow-up rather than a prerequisite.
