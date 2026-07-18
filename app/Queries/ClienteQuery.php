@@ -47,7 +47,8 @@ final class ClienteQuery
                 break;
         }
 
-        $perPage = $request->get('per_page', 10);
+        $requestedPerPage = filter_var($request->input('per_page', 10), FILTER_VALIDATE_INT);
+        $perPage = in_array($requestedPerPage, [10, 25, 50, 100], true) ? $requestedPerPage : 10;
 
         return $query->withCount('pedidos')->paginate($perPage)->withQueryString();
     }

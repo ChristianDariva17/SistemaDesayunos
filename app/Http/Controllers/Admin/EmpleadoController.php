@@ -43,7 +43,10 @@ class EmpleadoController extends Controller
 
         // Ordenamiento dinámico
         $sortBy = $request->get('sort', 'nombre');
-        $sortDirection = $request->get('direction', 'asc');
+        $requestedDirection = $request->input('direction', 'asc');
+        $sortDirection = is_string($requestedDirection) && in_array($requestedDirection, ['asc', 'desc'], true)
+            ? $requestedDirection
+            : 'asc';
 
         // Validar columnas permitidas para ordenar
         $allowedSorts = ['nombre', 'rol_operativo', 'estado', 'created_at'];
@@ -54,7 +57,8 @@ class EmpleadoController extends Controller
         }
 
         // Paginación configurable
-        $perPage = $request->get('per_page', 10);
+        $requestedPerPage = filter_var($request->input('per_page', 10), FILTER_VALIDATE_INT);
+        $perPage = in_array($requestedPerPage, [10, 25, 50, 100], true) ? $requestedPerPage : 10;
         $empleados = $query->paginate($perPage)->withQueryString();
 
         return view('admin.empleados.index', compact('empleados'));

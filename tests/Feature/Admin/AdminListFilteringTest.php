@@ -230,3 +230,74 @@ it('uses client per page and keeps pagination parameters', function (): void {
             'page' => '1',
         ]);
 });
+
+it('bounds admin client page sizes', function (mixed $requested, int $expected): void {
+    $parameters = $requested === null ? [] : ['per_page' => $requested];
+
+    $clientes = adminListResponse(
+        $this->actingAs($this->admin)->get(route('admin.clientes.index', $parameters)),
+        'clientes',
+    );
+
+    expect($clientes->perPage())->toBe($expected);
+})->with([
+    'missing' => [null, 10],
+    'ten' => [10, 10],
+    'twenty five' => [25, 25],
+    'fifty' => [50, 50],
+    'one hundred' => [100, 100],
+    'nonnumeric' => ['many', 10],
+    'zero' => [0, 10],
+    'negative' => [-10, 10],
+    'unsupported' => [75, 10],
+    'oversized' => [1000, 10],
+]);
+
+it('bounds admin employee page sizes', function (mixed $requested, int $expected): void {
+    $parameters = $requested === null ? [] : ['per_page' => $requested];
+
+    $empleados = adminListResponse(
+        $this->actingAs($this->admin)->get(route('admin.empleados.index', $parameters)),
+        'empleados',
+    );
+
+    expect($empleados->perPage())->toBe($expected);
+})->with([
+    'missing' => [null, 10],
+    'ten' => [10, 10],
+    'twenty five' => [25, 25],
+    'fifty' => [50, 50],
+    'one hundred' => [100, 100],
+    'nonnumeric' => ['many', 10],
+    'zero' => [0, 10],
+    'negative' => [-10, 10],
+    'unsupported' => [75, 10],
+    'oversized' => [1000, 10],
+]);
+
+it('allows only safe employee sort directions', function (mixed $direction, array $expectedNames): void {
+    Empleado::create([
+        'nombre' => 'Alpha Employee',
+        'rol_operativo' => 'ventas',
+        'estado' => 'activo',
+    ]);
+    Empleado::create([
+        'nombre' => 'Beta Employee',
+        'rol_operativo' => 'ventas',
+        'estado' => 'activo',
+    ]);
+
+    $empleados = adminListResponse(
+        $this->actingAs($this->admin)->get(route('admin.empleados.index', [
+            'sort' => 'nombre',
+            'direction' => $direction,
+        ])),
+        'empleados',
+    );
+
+    expect($empleados->pluck('nombre')->all())->toBe($expectedNames);
+})->with([
+    'ascending' => ['asc', ['Alpha Employee', 'Beta Employee']],
+    'descending' => ['desc', ['Beta Employee', 'Alpha Employee']],
+    'invalid' => ['sideways', ['Alpha Employee', 'Beta Employee']],
+]);
