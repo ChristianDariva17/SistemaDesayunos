@@ -44,7 +44,7 @@ The highest-value improvement is not changing frameworks. It is making the curre
 
 ## Executive Summary
 
-The current UI is functional and has a clear domain split between admin, worker, auth, profile, and components. The completed foundation reduced the original layout, asset, component, rendering, audited list-scalability, and product thumbnail issues; the remaining work is concentrated in public asset integrity, dead or placeholder controls, and incremental visual consistency.
+The current UI is functional and has a clear domain split between admin, worker, auth, profile, and components. The completed foundation reduced the original layout, asset, component, rendering, audited list-scalability, product thumbnail, and public-icon integrity issues; the remaining work is concentrated in dead or placeholder controls and incremental visual consistency.
 
 The main risk is no longer the absence of a shared frontend foundation. It is allowing new screens to bypass the established Blade components, Vite assets, progressive-enhancement patterns, and accessibility guardrails.
 
@@ -289,7 +289,8 @@ Acceptance checklist:
 - [x] Below-the-fold product images use `loading="lazy"`.
 - [x] Existing product images can be processed with the bounded `products:generate-thumbnails` backfill command.
 - [ ] Evaluate WebP/AVIF only if measured byte savings justify the additional encoding and deployment complexity.
-- [ ] External image dependencies are reviewed.
+- [x] External image dependencies are reviewed; rendered product images are local, and no external image URLs remain.
+- [x] Public favicon and Apple touch icon assets are valid, locally served, and covered by structural regression tests.
 
 ## Accessibility Improvement Plan
 
@@ -475,4 +476,4 @@ Goal: add libraries where they solve real product problems.
 
 ## Next Step
 
-Frontend Slices 1 through 7, report/chart loading cleanup, progressive admin filters, sticky-panel corrections, audited table/list scalability, transactional product image handling, and bounded thumbnail delivery are complete. The next recommended concrete frontend work is **public asset integrity and dead-UI cleanup**: correct favicon/touch-icon delivery, review remaining external image dependencies, and hide or implement placeholder export controls. WebP/AVIF remains a measurement-led follow-up rather than a prerequisite.
+Frontend Slices 1 through 7, report/chart loading cleanup, progressive admin filters, sticky-panel corrections, audited table/list scalability, transactional product image handling, bounded thumbnail delivery, external image dependency review, and public icon repair are complete. The next recommended concrete frontend work is **dead and placeholder export controls**: hide controls that do not perform an action or connect them to real routes with focused authorization and rendering coverage. WebP/AVIF remains pending as a measurement-led follow-up rather than a prerequisite.
