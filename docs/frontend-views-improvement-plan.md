@@ -1,16 +1,18 @@
 # Frontend Views Improvement Plan
 
-This document captures the current state of the Laravel Blade views and the recommended path to improve maintainability, performance, accessibility, and UI functionality.
+This document captures the current state of the Laravel Blade views and the recommended path to improve maintainability, performance, accessibility, UI usefulness, and rendering speed.
 
 ## Quick Path
 
-1. Treat frontend Slices 1 through 7 plus the report/chart loading cleanup as the completed Blade foundation and first functional enhancement baseline.
-2. Keep future UI work slice-based and backed by focused rendering or feature tests.
-3. Continue with product image handling only when that workflow is the next product priority.
+1. Keep Laravel Blade as the main frontend architecture; do not switch to a SPA unless the product becomes interaction-heavy enough to justify it.
+2. Centralize repeated admin UI patterns into Blade components and shared Vite assets.
+3. Keep AJAX partial refresh for admin lists and extend it carefully to other dense screens.
+4. Add lightweight libraries only when they solve a specific workflow: Alpine.js for small UI state and Chart.js/ApexCharts for decision-oriented dashboards.
+5. Keep future UI work slice-based and backed by focused rendering, feature, or JavaScript tests.
 
 ## Current Status
 
-Frontend Slices 1 through 7 are complete through searchable order-flow selects, and report/chart loading cleanup is complete. The follow-up admin order summary overlap fix and Profile/Settings dropdown links/settings page were committed and pushed as `7312dac fix: cover admin summary card and settings links`.
+Frontend Slices 1 through 7 are complete through searchable order-flow selects, report/chart loading cleanup is complete, progressive AJAX filters were added for admin productos/clientes/pedidos, and unsafe sticky side-panel behavior was corrected on the affected admin pages.
 
 Completed baseline:
 
@@ -19,12 +21,30 @@ Completed baseline:
 - Table/modal performance: reusable admin product modals, eager-loaded order listings, responsive card-table behavior, and focused regression coverage.
 - Functional enhancement: Tom Select searchable product/user selects in admin and worker order flows, with idempotent dynamic-row initialization and focused rendering tests.
 - Report/chart loading cleanup: Chart.js stays out of shared app assets; report pages currently rely on static/PDF-safe chart markup and do not render Chart.js hooks.
+- Progressive enhancement: admin list filtering/pagination can update partial content without full-page reloads.
+- Sticky side-panel fixes: side cards are constrained to desktop-safe sticky behavior and should not cover page content while scrolling.
+- Product image lifecycle: create, replace, and delete operations use transactional compensation and focused regression coverage without adding a media-library dependency.
+
+## Latest Frontend Assessment
+
+The frontend is a good fit for a **Laravel Blade + Vite + progressive enhancement** approach. The current system does not need React, Vue, Inertia, or a full SPA layer yet.
+
+The highest-value improvement is not changing frameworks. It is making the current Blade frontend more reusable, consistent, accessible, and measurable.
+
+| Area | Assessment | Next action |
+|------|------------|-------------|
+| Frontend architecture | Blade-first with progressive JavaScript is appropriate | Keep this direction |
+| Interactivity | AJAX filters are useful and should stay | Extract repeatable patterns |
+| Visual consistency | Functional but uneven across admin pages | Standardize shared components |
+| Performance | Acceptable, but inline/per-page assets create future cost | Move repeated CSS/JS to Vite |
+| Accessibility | Good basics exist, but needs full pass on dense screens | Audit filters, tables, modals, buttons |
+| Dashboards | Useful but can become more actionable | Add focused charts only where they help decisions |
 
 ## Executive Summary
 
-The current UI is functional and has a clear domain split between admin, worker, auth, profile, and components. However, the views are tightly coupled and duplicate a lot of layout, styling, scripts, and rendering logic.
+The current UI is functional and has a clear domain split between admin, worker, auth, profile, and components. The completed foundation reduced the original layout, asset, component, and rendering duplication; the remaining work is concentrated in list scalability, image delivery, and incremental visual consistency.
 
-The main risk is not visual quality. The main risk is that every future UI change will be more expensive than necessary because the frontend foundation is not reusable enough.
+The main risk is no longer the absence of a shared frontend foundation. It is allowing new screens to bypass the established Blade components, Vite assets, progressive-enhancement patterns, and accessibility guardrails.
 
 ## View Map
 
@@ -46,9 +66,11 @@ The main risk is not visual quality. The main risk is that every future UI chang
 - Empty states, badges, alerts, KPI cards, tables, and modal patterns are already present.
 - Order flows show useful business guidance: totals, product quantities, and contextual summaries.
 
-## Main Issues
+## Findings and Remaining Issues
 
-### Critical: Database Queries in Blade
+The first five findings below describe the original baseline and are retained as architectural context. Their recommended fixes have been completed unless a section explicitly says otherwise.
+
+### Resolved: Database Queries in Blade
 
 Some layout-level values are calculated directly in Blade, especially in `resources/views/layouts/app.blade.php`.
 
@@ -77,7 +99,7 @@ View::composer('layouts.app', function ($view) {
 });
 ```
 
-### Critical: Duplicated Layouts and Full-Page Shells
+### Resolved: Duplicated Layouts and Full-Page Shells
 
 Several admin and worker views define full HTML documents, CDNs, styles, and scripts independently, even though shared layouts exist.
 
@@ -108,7 +130,7 @@ resources/views/components/stat-card.blade.php
 resources/views/components/table-actions.blade.php
 ```
 
-### High: Inline CSS and JavaScript
+### Resolved: Inline CSS and JavaScript
 
 Many views include large inline `<style>` and `<script>` blocks.
 
@@ -125,7 +147,7 @@ Recommended fix:
 - Keep only truly page-specific initialization in Blade.
 - Use Vite as the primary asset pipeline.
 
-### High: Repeated CDN Dependencies
+### Resolved: Repeated CDN Dependencies
 
 Several views load Bootstrap, Font Awesome, Animate.css, SweetAlert2, jQuery, or similar dependencies independently.
 
@@ -141,7 +163,7 @@ Recommended fix:
 - Load page-specific libraries only on pages that need them.
 - Prefer Alpine.js or vanilla JS over jQuery for small interactions.
 
-### High: Accessibility Gaps
+### Baseline Complete: Accessibility Gaps
 
 Common issues found:
 
@@ -315,13 +337,52 @@ Public-page checklist:
 | Library / Tool | Use | Tradeoff |
 |----------------|-----|----------|
 | Blade components | Buttons, cards, alerts, badges, table actions, empty states | No external dependency, but requires refactor work. |
-| Alpine.js | Sidebar, dropdowns, modals, toggles, small reactive interactions | Good fit for Blade; avoid mixing too much with jQuery. |
+| Alpine.js | Sidebar, dropdowns, tabs, modals, toggles, filter panels, small reactive interactions | Good fit for Blade; avoid mixing too much with jQuery or turning Blade into a pseudo-SPA. |
 | Tom Select or Choices.js | Searchable product/client selects | Useful when lists are large; unnecessary for small datasets. |
-| Chart.js | Dashboards and reports | Load only on pages that render charts. |
+| Chart.js | Simple dashboards and reports | Lightweight enough for focused charts; load only on pages that render charts. |
+| ApexCharts | More visual, interactive dashboards | Heavier than Chart.js; use only if richer dashboard UX is needed. |
 | Blade Icons | Replace or reduce Font Awesome payload | Requires choosing and standardizing an icon set. |
-| Spatie Laravel Medialibrary | Product image management, conversions, thumbnails | Adds complexity, but improves image handling significantly. |
+| Spatie Laravel Medialibrary | Future image conversions, responsive variants, or a media catalog | Current transactional image handling does not require it; add only if those capabilities become necessary. |
 | HTMX | Partial updates, filters, status changes without SPA complexity | Introduce after cleaning layouts/components. |
 | DataTables / simple-datatables | Rich table interactions and exports | Must decide client-side vs server-side; can conflict with Laravel pagination if used carelessly. |
+| IntersectionObserver API | Lazy-load charts, dashboard blocks, images, or secondary panels | Native browser API; requires careful fallback only for older browsers if needed. |
+| Lighthouse | Performance, accessibility, SEO, and best-practice audits | Measures symptoms; still requires developer judgment to fix root causes. |
+| axe-core | Automated accessibility checks | Finds many issues, but does not replace keyboard/screen-reader manual testing. |
+| SweetAlert2 | High-risk confirmations and readable alerts | Use sparingly; routine actions should not all become modal interruptions. |
+
+## Useful View Ideas
+
+### Dashboard
+
+- Add compact KPI cards for today's orders, pending orders, low stock, revenue, and cancelled orders.
+- Add focused charts only where they help decisions: orders by status, sales by day, top products, and low-stock trend.
+- Lazy-load chart blocks so the initial dashboard stays fast.
+
+### Products
+
+- Keep server-side pagination and AJAX filtering.
+- Add clearer stock badges: low, out, available.
+- Add image thumbnails only after image dimensions, lazy loading, and delivery formats are standardized.
+- Consider bulk actions only when the workflow needs them.
+
+### Clients
+
+- Keep quick search and AJAX pagination.
+- Add visible status filters and last-order indicators if useful for daily work.
+- Preserve the `Clientes varios` workflow without overcomplicating client selection.
+
+### Pedidos
+
+- Keep the current AJAX filtering direction.
+- Improve status badges and action visibility by current state.
+- Add a compact order timeline only if users need to understand order history quickly.
+- Avoid changing business status rules unless explicitly requested.
+
+### Reports
+
+- Keep static/PDF-safe report output as the baseline.
+- Add Chart.js or ApexCharts only to rendered report pages that actually expose chart data.
+- Load report charts page-by-page, not globally in `app.js`.
 
 ## What Not To Add Yet
 
@@ -398,7 +459,8 @@ Goal: add libraries where they solve real product problems.
 
 - [x] Added Tom Select-powered searchable selects for order-flow client and product selectors in admin create/edit orders and worker create/edit order views, using explicit `data-enhance="searchable-select"` hooks and idempotent initialization for dynamically added product rows. Worker edit route coverage is intentionally absent because `trabajador.pedidos.edit` is not registered; rendered worker coverage currently exercises the create route instead of scanning Blade source.
 - [x] Keep Chart.js out of shared report assets until a rendered page exposes real chart hooks/config.
-- [ ] Add image handling through Medialibrary if product images are important.
+- [x] Standardize transactional product image create, replace, and delete handling with focused regression coverage.
+- [ ] Add Medialibrary only if responsive conversions, thumbnails, or a broader media catalog become product requirements.
 
 ## Review Guardrails
 
@@ -410,4 +472,4 @@ Goal: add libraries where they solve real product problems.
 
 ## Next Step
 
-Frontend Slices 1 through 7 and report/chart loading cleanup are complete. The next recommended work is **product image handling** if product images become a higher product priority; keep it as a separate image-management slice instead of mixing it with reports.
+Frontend Slices 1 through 7, report/chart loading cleanup, progressive admin filters, sticky-panel corrections, and transactional product image handling are complete. The next recommended work is **table/list scalability and image delivery optimization**: finish the unchecked eager-loading and server-side filtering checks, then add explicit image dimensions, lazy loading, and modern formats where measurements justify them.
