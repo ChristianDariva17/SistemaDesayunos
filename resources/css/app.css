@@ -224,4 +224,14 @@
     text-transform: uppercase;
     letter-spacing: 0.03em;
   }
+
+  .responsive-card-table tbody td[colspan] {
+    display: block;
+    width: 100%;
+    text-align: center !important;
+  }
+
+  .responsive-card-table tbody td[colspan]::before {
+    content: none;
+  }
 }

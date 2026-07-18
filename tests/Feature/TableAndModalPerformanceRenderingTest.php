@@ -245,6 +245,32 @@ it('renders admin inventory reports as responsive tables with complete cell labe
     );
 });
 
+it('renders responsive report empty states full width without a mobile label region', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-responsive-report-empty-states@example.test',
+        'rol' => 'administrador',
+    ]);
+
+    assertResponsiveTableEmptyState(
+        $this->actingAs($admin)->get(route('admin.reportes.stock-movimientos'))->assertOk(),
+        'No hay movimientos para mostrar',
+    );
+    assertResponsiveTableEmptyState(
+        $this->actingAs($admin)->get(route('admin.reportes.resumen-inventario'))->assertOk(),
+        'No hay productos para mostrar',
+    );
+
+    $css = file_get_contents(resource_path('css/app.css'));
+    $mobileBreakpoint = '@media (max-width: 767.98px)';
+
+    expect($css)->toContain($mobileBreakpoint);
+
+    $mobileCss = substr($css, strpos($css, $mobileBreakpoint));
+
+    expect($mobileCss)->toMatch('/\.responsive-card-table tbody td\[colspan\]\s*\{[^}]*display:\s*block;[^}]*width:\s*100%;[^}]*text-align:\s*center\s*!important;[^}]*\}/s')
+        ->toMatch('/\.responsive-card-table tbody td\[colspan\]::before\s*\{[^}]*content:\s*none;[^}]*\}/s');
+});
+
 function assertResponsiveTableLabels(TestResponse $response, array $expectedLabels): void
 {
     $document = new DOMDocument;
@@ -262,6 +288,18 @@ function assertResponsiveTableLabels(TestResponse $response, array $expectedLabe
     }
 
     expect($labels)->toBe($expectedLabels);
+}
+
+function assertResponsiveTableEmptyState(TestResponse $response, string $expectedText): void
+{
+    $document = new DOMDocument;
+    @$document->loadHTML($response->getContent());
+    $xpath = new DOMXPath($document);
+    $cell = $xpath->query('//table[contains(concat(" ", normalize-space(@class), " "), " responsive-card-table ")]//tbody/tr/td[@colspan = "9"]')->item(0);
+
+    expect($cell)->not->toBeNull()
+        ->and($cell->hasAttribute('data-label'))->toBeFalse()
+        ->and($cell->textContent)->toContain($expectedText);
 }
 
 function tableModalPerformanceProductStockModalScript(array $products): string
