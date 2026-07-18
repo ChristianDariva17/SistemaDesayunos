@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Producto\ToggleProductoStatusAction;
@@ -12,15 +14,20 @@ use App\Http\Requests\Admin\UpdateProductoRequest;
 use App\Models\Producto;
 use App\Models\User;
 use App\Queries\ProductoQuery;
+use App\Services\ProductImageService;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
+use RuntimeException;
+use Throwable;
 
 class ProductoController extends Controller
 {
+    public function __construct(private readonly ProductImageService $productImageService) {}
+
     /**
      * ==========================================
      * MÉTODO: INDEX - LISTADO DE PRODUCTOS
@@ -75,14 +82,16 @@ class ProductoController extends Controller
      */
     public function store(StoreProductoRequest $request)
     {
+        $newImagePath = null;
+
         try {
             $validated = $request->validated();
 
             DB::beginTransaction();
 
-            // Manejar upload de imagen
             if ($request->hasFile('imagen')) {
-                $validated['imagen'] = $this->handleImageUpload($request);
+                $newImagePath = $this->handleImageUpload($request);
+                $validated['imagen'] = $newImagePath;
             }
 
             // Crear producto
@@ -96,8 +105,11 @@ class ProductoController extends Controller
             return redirect()->route('admin.productos.index')
                 ->with('success', "✅ Producto '{$producto->nombre}' creado exitosamente");
 
-        } catch (Exception $e) {
-            DB::rollBack();
+        } catch (Throwable $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+            $this->cleanupImage($newImagePath, 'create compensation');
             Log::error('Error al crear producto: '.$e->getMessage());
 
             return back()
@@ -147,8 +159,14 @@ class ProductoController extends Controller
      */
     public function update(UpdateProductoRequest $request, Producto $producto)
     {
+        $newImagePath = null;
+        $oldImagePath = null;
+        $shouldDeleteOldImage = false;
+
         try {
             $validated = $request->validated();
+            $removeImage = (bool) ($validated['eliminar_imagen'] ?? false);
+            unset($validated['eliminar_imagen']);
 
             DB::beginTransaction();
 
@@ -157,10 +175,15 @@ class ProductoController extends Controller
                 ->findOrFail($producto->getKey());
 
             $stockAnterior = (int) $producto->stock;
+            $oldImagePath = $producto->imagen;
 
-            // Manejar imagen solo si se subió una nueva
             if ($request->hasFile('imagen')) {
-                $validated['imagen'] = $this->handleImageUpload($request, $producto);
+                $newImagePath = $this->handleImageUpload($request);
+                $validated['imagen'] = $newImagePath;
+                $shouldDeleteOldImage = true;
+            } elseif ($removeImage) {
+                $validated['imagen'] = null;
+                $shouldDeleteOldImage = true;
             }
 
             // Actualizar producto
@@ -176,20 +199,43 @@ class ProductoController extends Controller
 
             DB::commit();
 
+            if ($shouldDeleteOldImage && $oldImagePath !== $newImagePath) {
+                $this->cleanupImage($oldImagePath, 'post-update cleanup', ['producto_id' => $producto->id]);
+            }
+
             // Log de auditoría
             Log::info("Producto actualizado: {$producto->nombre}", ['id' => $producto->id]);
 
             return redirect()->route('admin.productos.show', $producto)
                 ->with('success', "✅ Producto '{$producto->nombre}' actualizado correctamente");
 
-        } catch (Exception $e) {
-            DB::rollBack();
+        } catch (Throwable $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+            $this->cleanupImage($newImagePath, 'update compensation', ['producto_id' => $producto->id]);
             Log::error('Error al actualizar producto: '.$e->getMessage());
 
             return back()
                 ->withInput()
                 ->with('error', '❌ Error al actualizar el producto. Por favor intenta nuevamente.');
         }
+    }
+
+    /**
+     * ==========================================
+     * MÉTODO PRIVADO: MANEJAR SUBIDA DE IMAGEN
+     * ==========================================
+     */
+    private function handleImageUpload(Request $request): string
+    {
+        $image = $request->file('imagen');
+
+        if (! $image instanceof UploadedFile) {
+            throw new RuntimeException('The uploaded product image is invalid.');
+        }
+
+        return $this->productImageService->store($image);
     }
 
     /**
@@ -204,6 +250,7 @@ class ProductoController extends Controller
         try {
             $nombre = $producto->nombre;
             $productoId = $producto->id;
+            $imagePath = $producto->imagen;
 
             // ==========================================
             // VALIDACIÓN: Verificar si tiene pedidos
@@ -218,16 +265,13 @@ class ProductoController extends Controller
             // Usar transacción
             DB::beginTransaction();
 
-            // Eliminar la imagen si existe
-            if ($producto->imagen && Storage::disk('public')->exists($producto->imagen)) {
-                Storage::disk('public')->delete($producto->imagen);
-            }
-
             // Eliminar el producto
             $producto->delete();
 
             // Confirmar transacción
             DB::commit();
+
+            $this->cleanupImage($imagePath, 'post-destroy cleanup', ['producto_id' => $productoId]);
 
             // Log de auditoría
             Log::warning('Producto eliminado', [
@@ -239,9 +283,11 @@ class ProductoController extends Controller
             return redirect()->route('admin.productos.index')
                 ->with('success', "🗑️ Producto '{$nombre}' eliminado correctamente");
 
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             // Revertir transacción
-            DB::rollBack();
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
 
             // Registrar el error
             Log::error('Error al eliminar producto', [
@@ -252,27 +298,6 @@ class ProductoController extends Controller
             return redirect()->back()
                 ->with('error', '❌ Error al eliminar el producto. Por favor, intenta nuevamente.');
         }
-    }
-
-    /**
-     * ==========================================
-     * MÉTODO PRIVADO: MANEJAR SUBIDA DE IMAGEN
-     * ==========================================
-     * ✅ MEJORADO: Retorna string en lugar de ?string
-     */
-    private function handleImageUpload(Request $request, ?Producto $producto = null): ?string
-    {
-        if (! $request->hasFile('imagen')) {
-            return null;
-        }
-
-        // Si hay un producto existente y tiene imagen, eliminarla
-        if ($producto && $producto->imagen && Storage::disk('public')->exists($producto->imagen)) {
-            Storage::disk('public')->delete($producto->imagen);
-        }
-
-        // Guardar nueva imagen
-        return $request->file('imagen')->store('productos', 'public');
     }
 
     /**
@@ -482,6 +507,7 @@ class ProductoController extends Controller
     public function duplicar(Producto $producto)
     {
         Gate::authorize('duplicate', $producto);
+        $copiedImagePath = null;
 
         try {
             DB::beginTransaction();
@@ -493,13 +519,8 @@ class ProductoController extends Controller
             $nuevoProducto->sku = null;
             $nuevoProducto->stock = 0; // Reset stock
 
-            // Copiar imagen si existe
-            if ($producto->imagen && Storage::disk('public')->exists($producto->imagen)) {
-                $extension = pathinfo($producto->imagen, PATHINFO_EXTENSION);
-                $nuevoNombre = 'productos/'.uniqid().'.'.$extension;
-                Storage::disk('public')->copy($producto->imagen, $nuevoNombre);
-                $nuevoProducto->imagen = $nuevoNombre;
-            }
+            $copiedImagePath = $this->productImageService->copy($producto->imagen);
+            $nuevoProducto->imagen = $copiedImagePath;
 
             $nuevoProducto->save();
 
@@ -513,8 +534,11 @@ class ProductoController extends Controller
             return redirect()->route('admin.productos.edit', $nuevoProducto)
                 ->with('success', '✅ Producto duplicado correctamente. Edita los detalles necesarios.');
 
-        } catch (Exception $e) {
-            DB::rollBack();
+        } catch (Throwable $e) {
+            if (DB::transactionLevel() > 0) {
+                DB::rollBack();
+            }
+            $this->cleanupImage($copiedImagePath, 'duplicate compensation', ['producto_id' => $producto->id]);
 
             Log::error('Error al duplicar producto', [
                 'producto_id' => $producto->id,
@@ -523,6 +547,22 @@ class ProductoController extends Controller
 
             return redirect()->back()
                 ->with('error', '❌ Error al duplicar el producto.');
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $context
+     */
+    private function cleanupImage(?string $path, string $operation, array $context = []): void
+    {
+        try {
+            $this->productImageService->delete($path);
+        } catch (Throwable $e) {
+            Log::warning('Product image cleanup failed', $context + [
+                'operation' => $operation,
+                'path' => $path,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

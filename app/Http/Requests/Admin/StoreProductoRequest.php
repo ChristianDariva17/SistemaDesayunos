@@ -126,7 +126,7 @@ final class StoreProductoRequest extends FormRequest
             'stock' => ['required', 'integer', 'min:0', 'max:999999'],
             'stock_minimo' => ['nullable', 'integer', 'min:0', 'max:999999'],
             'estado' => ['required', Rule::enum(ProductoEstado::class)],
-            'imagen' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048'],
+            'imagen' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048', 'dimensions:max_width=4096,max_height=4096'],
         ];
     }
 
