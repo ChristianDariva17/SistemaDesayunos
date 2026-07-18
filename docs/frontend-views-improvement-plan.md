@@ -12,7 +12,7 @@ This document captures the current state of the Laravel Blade views and the reco
 
 ## Current Status
 
-Frontend Slices 1 through 7 are complete through searchable order-flow selects, report/chart loading cleanup is complete, progressive AJAX filters were added for admin productos/clientes/pedidos, unsafe sticky side-panel behavior was corrected, and the audited table/list scalability and product thumbnail work are complete.
+Frontend Slices 1 through 7 are complete through searchable order-flow selects, report/chart loading cleanup is complete, progressive AJAX filters were added for admin productos/clientes/pedidos, unsafe sticky side-panel behavior was corrected, and the audited table/list scalability, product thumbnail, and filtered pedido CSV export work are complete.
 
 Completed baseline:
 
@@ -26,6 +26,7 @@ Completed baseline:
 - Product detail loading: recent-order clients are nested eager-loaded for admin and worker views; order timestamps are qualified and the redundant worker-side result limit was removed.
 - Product image lifecycle: create, replace, and delete operations use transactional compensation and focused regression coverage without adding a media-library dependency.
 - Product image delivery: list and search contexts use generated 160-pixel JPEG thumbnails, explicit dimensions, below-the-fold lazy loading, and a bounded backfill command for existing images.
+- Pedido export controls: unsupported Excel/PDF actions were removed, and the real CSV export preserves active index filters and administrator authorization.
 
 ## Latest Frontend Assessment
 
@@ -44,7 +45,7 @@ The highest-value improvement is not changing frameworks. It is making the curre
 
 ## Executive Summary
 
-The current UI is functional and has a clear domain split between admin, worker, auth, profile, and components. The completed foundation reduced the original layout, asset, component, rendering, audited list-scalability, product thumbnail, and public-icon integrity issues; the remaining work is concentrated in dead or placeholder controls and incremental visual consistency.
+The current UI is functional and has a clear domain split between admin, worker, auth, profile, and components. The completed foundation reduced the original layout, asset, component, rendering, audited list-scalability, product thumbnail, public-icon integrity, and pedido export-control issues; the remaining work is concentrated in auditing other dead or placeholder controls and improving visual consistency incrementally.
 
 The main risk is no longer the absence of a shared frontend foundation. It is allowing new screens to bypass the established Blade components, Vite assets, progressive-enhancement patterns, and accessibility guardrails.
 
@@ -201,13 +202,14 @@ Also add:
 - `role="alert"` or `aria-live="polite"` for status messages.
 - Visible focus styles for keyboard users.
 
-### Medium: Placeholder Links and Dead UI
+### Partially Resolved: Placeholder Links and Dead UI
 
 Some controls use `href="#"` for actions that are not implemented yet.
 
-Examples:
+Current status:
 
-- Export buttons such as Excel/PDF/CSV in some screens.
+- Admin pedido export controls are resolved: unsupported Excel/PDF actions were removed, and CSV is connected to the authorized filtered export route.
+- Other screens still require a bounded audit before this finding can be considered fully resolved.
 
 Why this matters:
 
@@ -476,4 +478,4 @@ Goal: add libraries where they solve real product problems.
 
 ## Next Step
 
-Frontend Slices 1 through 7, report/chart loading cleanup, progressive admin filters, sticky-panel corrections, audited table/list scalability, transactional product image handling, bounded thumbnail delivery, external image dependency review, and public icon repair are complete. The next recommended concrete frontend work is **dead and placeholder export controls**: hide controls that do not perform an action or connect them to real routes with focused authorization and rendering coverage. WebP/AVIF remains pending as a measurement-led follow-up rather than a prerequisite.
+Frontend Slices 1 through 7, report/chart loading cleanup, progressive admin filters, sticky-panel corrections, audited table/list scalability, transactional product image handling, bounded thumbnail delivery, external image dependency review, public icon repair, and filtered admin pedido CSV export are complete. The next recommended concrete frontend work is a **bounded audit of remaining dead or placeholder controls**. If no additional broken controls are found, continue with incremental visual-consistency work. WebP/AVIF remains pending as a measurement-led follow-up rather than a prerequisite.
