@@ -5,12 +5,9 @@ namespace App\Http\Controllers\Trabajador;
 use App\Actions\Pedido\CreatePedidoAction;
 use App\Actions\Pedido\DeletePedidoAction;
 use App\Actions\Pedido\DuplicatePedidoAction;
-use App\Actions\Pedido\UpdatePedidoAction;
-use App\Enums\PedidoStatus;
 use App\Enums\ProductoEstado;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Pedido\StorePedidoRequest;
-use App\Http\Requests\Pedido\UpdatePedidoRequest;
 use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\Pedido;
@@ -23,7 +20,6 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Validation\Rule;
 
 class PedidoController extends Controller
 {
@@ -110,47 +106,6 @@ class PedidoController extends Controller
     }
 
     /**
-     * Mostrar formulario de edición
-     */
-    public function edit(Pedido $pedido)
-    {
-        Gate::authorize('update', $pedido);
-
-        // ✅ Cargar relaciones con validación
-        $pedido->loadDetails();
-
-        // Obtener listas completas
-        $clientes = Cliente::orderBy('nombre')->get();
-        $empleados = Empleado::where('estado', 'activo')->orderBy('nombre')->get();
-        $productos = Producto::where('stock', '>', 0)->orderBy('nombre')->get();
-
-        return view('trabajador.pedidos.edit', compact('pedido', 'clientes', 'empleados', 'productos'));
-    }
-
-    /**
-     * Actualizar pedido
-     */
-    public function update(UpdatePedidoRequest $request, Pedido $pedido, UpdatePedidoAction $updatePedidoAction)
-    {
-        $validated = $request->validated();
-
-        try {
-            $updatePedidoAction->handle($validated, $pedido, auth()->id());
-
-            return redirect()->route('trabajador.pedidos.show', $pedido)
-                ->with('success', '✅ Pedido actualizado exitosamente');
-        } catch (Exception $e) {
-            Log::error('Error al actualizar pedido', [
-                'pedido_id' => $pedido->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return redirect()->back()
-                ->with('error', '❌ '.$e->getMessage());
-        }
-    }
-
-    /**
      * Eliminar pedido
      */
     public function destroy(Pedido $pedido, DeletePedidoAction $deletePedidoAction)
@@ -182,39 +137,6 @@ class PedidoController extends Controller
 
             return redirect()->back()
                 ->with('error', '❌ Error al eliminar el pedido');
-        }
-    }
-
-    /**
-     * Cambiar estado del pedido (AJAX)
-     */
-    public function cambiarEstado(Request $request, Pedido $pedido, UpdatePedidoAction $updatePedidoAction)
-    {
-        Gate::authorize('changeStatus', $pedido);
-
-        $request->validate([
-            'estado' => ['required', Rule::enum(PedidoStatus::class)],
-        ]);
-
-        try {
-            $nuevoEstado = $request->estado;
-
-            $updatePedidoAction->handle([
-                'estado' => $nuevoEstado,
-            ], $pedido, auth()->id());
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Estado cambiado a: '.ucfirst($nuevoEstado),
-                'nuevo_estado' => $nuevoEstado,
-            ]);
-        } catch (Exception $e) {
-            $status = str_contains($e->getMessage(), 'Stock insuficiente') ? 400 : 500;
-
-            return response()->json([
-                'success' => false,
-                'message' => $status === 400 ? $e->getMessage() : 'Error al cambiar estado',
-            ], $status);
         }
     }
 

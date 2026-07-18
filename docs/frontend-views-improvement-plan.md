@@ -463,7 +463,7 @@ Goal: reduce DOM weight and improve list scalability.
 
 Goal: add libraries where they solve real product problems.
 
-- [x] Added Tom Select-powered searchable selects for order-flow client and product selectors in admin create/edit orders and worker create/edit order views, using explicit `data-enhance="searchable-select"` hooks and idempotent initialization for dynamically added product rows. Worker edit route coverage is intentionally absent because `trabajador.pedidos.edit` is not registered; rendered worker coverage currently exercises the create route instead of scanning Blade source.
+- [x] Added Tom Select-powered searchable selects for order-flow client and product selectors in admin create/edit orders and the worker create order view, using explicit `data-enhance="searchable-select"` hooks and idempotent initialization for dynamically added product rows. Dead worker edit/mutation controller methods and the unreachable edit view were removed because the corresponding routes are intentionally not registered; rendered worker coverage exercises the create route instead of scanning Blade source.
 - [x] Keep Chart.js out of shared report assets until a rendered page exposes real chart hooks/config.
 - [x] Standardize transactional product image create, replace, and delete handling with focused regression coverage.
 - [ ] Add Medialibrary only if responsive conversions, thumbnails, or a broader media catalog become product requirements.

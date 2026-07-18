@@ -178,10 +178,34 @@ it('redirects back with validation errors when admin update receives a disallowe
     $this->assertDatabaseCount('stock_movimientos', 0);
 });
 
-it('does not expose trabajador pedido update or status-change routes', function (): void {
+it('does not expose or accept trabajador pedido update or status-change requests', function (): void {
+    $worker = User::factory()->create([
+        'rol' => 'trabajador',
+    ]);
+    [$pedido] = createPedidoForStatusTransitionTest('pendiente');
+
     expect(Route::has('trabajador.pedidos.edit'))->toBeFalse()
         ->and(Route::has('trabajador.pedidos.update'))->toBeFalse()
         ->and(Route::has('trabajador.pedidos.cambiar-estado'))->toBeFalse();
+
+    $this->actingAs($worker)
+        ->put("/trabajador/pedidos/{$pedido->id}", [
+            'estado' => 'procesando',
+            'observaciones' => 'Forbidden worker update',
+        ])
+        ->assertStatus(405);
+
+    $this->actingAs($worker)
+        ->patchJson("/trabajador/pedidos/{$pedido->id}/cambiar-estado", [
+            'estado' => 'procesando',
+        ])
+        ->assertNotFound();
+
+    $this->assertDatabaseHas('pedidos', [
+        'id' => $pedido->id,
+        'estado' => 'pendiente',
+        'observaciones' => null,
+    ]);
 });
 
 it('updates a pedido through the admin HTTP flow and restores stock on cancel', function (): void {
