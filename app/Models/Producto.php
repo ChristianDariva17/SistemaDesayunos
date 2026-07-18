@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\ProductoEstado;
 use App\Events\ProductPriceChanged;
 use App\Models\Concerns\Auditable;
+use App\Services\ProductImageService;
 use App\Support\InventoryLimits;
 use App\Support\MoneyDecimal;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -263,6 +264,19 @@ class Producto extends Model
         }
 
         return null;
+    }
+
+    public function getImagenThumbnailUrl(): ?string
+    {
+        if (! $this->tieneImagen()) {
+            return null;
+        }
+
+        $thumbnailPath = ProductImageService::thumbnailPath((string) $this->imagen);
+
+        return \Storage::disk('public')->exists($thumbnailPath)
+            ? asset('storage/'.$thumbnailPath)
+            : null;
     }
 
     /**

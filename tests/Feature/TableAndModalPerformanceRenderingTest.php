@@ -8,10 +8,12 @@ use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\Process\Process;
 
 it('renders one reusable admin product image and stock modal instead of per-row modals', function (): void {
+    Storage::fake('public');
     $admin = User::factory()->create([
         'email' => 'admin-table-modal-performance@example.test',
         'rol' => 'administrador',
@@ -38,6 +40,8 @@ it('renders one reusable admin product image and stock modal instead of per-row 
         'estado' => 'activo',
         'imagen' => 'productos/cafe.jpg',
     ]);
+    Storage::disk('public')->put('productos/pan.jpg', 'image');
+    Storage::disk('public')->put('productos/cafe.jpg', 'image');
 
     $response = $this->actingAs($admin)
         ->get(route('admin.productos.index'))

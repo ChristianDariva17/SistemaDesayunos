@@ -13,12 +13,24 @@ final class ProductImageService
 {
     private const DIRECTORY = 'productos';
 
+    private const THUMBNAIL_DIRECTORY = self::DIRECTORY.'/thumbnails';
+
+    private const THUMBNAIL_SIZE = 160;
+
     public function store(UploadedFile $image): string
     {
         $path = $image->store(self::DIRECTORY, 'public');
 
         if (! is_string($path) || ! $this->isManagedPath($path) || ! Storage::disk('public')->exists($path)) {
             throw new RuntimeException('The product image could not be stored.');
+        }
+
+        try {
+            $this->generateThumbnail($path);
+        } catch (\Throwable $exception) {
+            Storage::disk('public')->delete($path);
+
+            throw $exception;
         }
 
         return $path;
@@ -48,6 +60,14 @@ final class ProductImageService
             throw new RuntimeException('The product image could not be copied.');
         }
 
+        try {
+            $this->generateThumbnail($destination);
+        } catch (\Throwable $exception) {
+            $this->delete($destination);
+
+            throw $exception;
+        }
+
         return $destination;
     }
 
@@ -61,9 +81,98 @@ final class ProductImageService
             throw new RuntimeException('Refusing to delete an unmanaged product image.');
         }
 
-        if (! Storage::disk('public')->delete($path) || Storage::disk('public')->exists($path)) {
+        $thumbnailPath = self::thumbnailPath($path);
+
+        if (! Storage::disk('public')->delete([$path, $thumbnailPath])
+            || Storage::disk('public')->exists($path)
+            || Storage::disk('public')->exists($thumbnailPath)) {
             throw new RuntimeException('The product image could not be deleted.');
         }
+    }
+
+    public static function thumbnailPath(string $path): string
+    {
+        return self::THUMBNAIL_DIRECTORY.'/'.hash('sha256', $path).'.jpg';
+    }
+
+    public function generateThumbnail(string $path): bool
+    {
+        if (! $this->isManagedPath($path)) {
+            throw new RuntimeException('Refusing to process an unmanaged product image.');
+        }
+
+        $disk = Storage::disk('public');
+        $thumbnailPath = self::thumbnailPath($path);
+
+        if (! $disk->exists($path)) {
+            $disk->delete($thumbnailPath);
+
+            return false;
+        }
+
+        $contents = $disk->get($path);
+        $dimensions = @getimagesizefromstring($contents);
+        $source = @imagecreatefromstring($contents);
+
+        if ($dimensions === false || $source === false) {
+            throw new RuntimeException('The product image could not be decoded.');
+        }
+
+        [$width, $height] = $dimensions;
+        $scale = min(self::THUMBNAIL_SIZE / $width, self::THUMBNAIL_SIZE / $height, 1);
+        $thumbnailWidth = max(1, (int) floor($width * $scale));
+        $thumbnailHeight = max(1, (int) floor($height * $scale));
+
+        if (($thumbnailWidth * $thumbnailHeight) >= ($width * $height)) {
+            imagedestroy($source);
+            $disk->delete($thumbnailPath);
+
+            return false;
+        }
+
+        $thumbnail = imagecreatetruecolor($thumbnailWidth, $thumbnailHeight);
+
+        if ($thumbnail === false) {
+            imagedestroy($source);
+
+            throw new RuntimeException('The product thumbnail canvas could not be created.');
+        }
+
+        imagefill($thumbnail, 0, 0, imagecolorallocate($thumbnail, 255, 255, 255));
+        imagecopyresampled(
+            $thumbnail,
+            $source,
+            0,
+            0,
+            0,
+            0,
+            $thumbnailWidth,
+            $thumbnailHeight,
+            $width,
+            $height,
+        );
+
+        ob_start();
+        $encoded = imagejpeg($thumbnail, null, 78);
+        $thumbnailContents = ob_get_clean();
+        imagedestroy($thumbnail);
+        imagedestroy($source);
+
+        if (! $encoded) {
+            throw new RuntimeException('The product thumbnail could not be encoded.');
+        }
+
+        if (strlen($thumbnailContents) >= strlen($contents)) {
+            $disk->delete($thumbnailPath);
+
+            return false;
+        }
+
+        if (! $disk->put($thumbnailPath, $thumbnailContents) || ! $disk->exists($thumbnailPath)) {
+            throw new RuntimeException('The product thumbnail could not be stored.');
+        }
+
+        return true;
     }
 
     private function isManagedPath(string $path): bool

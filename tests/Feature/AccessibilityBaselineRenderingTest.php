@@ -6,6 +6,7 @@ use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\Producto;
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 it('renders admin and worker layouts with skip links, landmarks, and named navigation controls', function (): void {
     $admin = User::factory()->create([
@@ -40,6 +41,7 @@ it('renders admin and worker layouts with skip links, landmarks, and named navig
 });
 
 it('renders icon-only product actions with accessible names', function (): void {
+    Storage::fake('public');
     $admin = User::factory()->create([
         'email' => 'admin-product-a11y@example.test',
         'rol' => 'administrador',
@@ -56,6 +58,7 @@ it('renders icon-only product actions with accessible names', function (): void 
         'estado' => 'activo',
         'imagen' => 'productos/tamal.jpg',
     ]);
+    Storage::disk('public')->put($producto->imagen, 'image');
 
     $this->actingAs($admin)
         ->get(route('admin.productos.index'))

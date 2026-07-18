@@ -513,7 +513,7 @@
                                     {{-- IMAGEN --}}
                                     <td class="text-center" data-label="Imagen">
                                         @php
-                                            $imageUrl = $producto->getImagenUrl();
+                                            $imageUrl = $producto->getImagenThumbnailUrl();
                                         @endphp
                                         @if($imageUrl)
                                             <img src="{{ $imageUrl }}"
@@ -521,7 +521,7 @@
                                                  class="rounded shadow-sm" 
                                                  width="50" 
                                                  height="50" 
-                                                 loading="lazy"
+                                                 loading="{{ $loop->index < 4 ? 'eager' : 'lazy' }}"
                                                  style="object-fit: cover;">
                                         @else
                                             <div class="bg-secondary bg-opacity-10 rounded d-inline-flex align-items-center justify-content-center" 

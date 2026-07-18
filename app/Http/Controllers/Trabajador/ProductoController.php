@@ -117,7 +117,7 @@ class ProductoController extends Controller
                         'nombre' => $producto->nombre,
                         'precio' => number_format((float) $producto->precio, 2),
                         'stock' => $producto->stock,
-                        'imagen_url' => $producto->getImagenUrl(),
+                        'imagen_url' => $producto->getImagenThumbnailUrl(),
                     ];
                 }),
             ]);

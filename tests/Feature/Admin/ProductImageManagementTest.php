@@ -5,17 +5,19 @@ declare(strict_types=1);
 use App\Http\Controllers\Trabajador\ProductoController as TrabajadorProductoController;
 use App\Models\Producto;
 use App\Models\User;
+use App\Services\ProductImageService;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
-function productImageUpload(string $name = 'product.png', int $width = 1, int $height = 1): UploadedFile
+function productImageUpload(string $name = 'product.png', int $width = 800, int $height = 600): UploadedFile
 {
     $chunk = static fn (string $type, string $data): string => pack('N', strlen($data))
         .$type.$data.pack('N', crc32($type.$data));
     $header = pack('NNCCCCC', $width, $height, 8, 2, 0, 0, 0);
-    $pixels = str_repeat("\0", 1 + ($width * 3 * $height));
+    $row = "\0".str_repeat("\x7f\x32\xc8", $width);
+    $pixels = str_repeat($row, $height);
     $png = "\x89PNG\r\n\x1a\n"
         .$chunk('IHDR', $header)
         .$chunk('IDAT', gzcompress($pixels))
@@ -63,6 +65,13 @@ it('stores a validated product image on create', function (): void {
     $path = Producto::query()->where('nombre', 'Image product')->value('imagen');
     expect($path)->toBeString()->toStartWith('productos/');
     Storage::disk('public')->assertExists($path);
+
+    $thumbnailPath = ProductImageService::thumbnailPath($path);
+    Storage::disk('public')->assertExists($thumbnailPath);
+    [$originalWidth, $originalHeight] = getimagesize(Storage::disk('public')->path($path));
+    [$thumbnailWidth, $thumbnailHeight] = getimagesize(Storage::disk('public')->path($thumbnailPath));
+    expect($thumbnailWidth * $thumbnailHeight)->toBeLessThan($originalWidth * $originalHeight)
+        ->and(Storage::disk('public')->size($thumbnailPath))->toBeLessThan(Storage::disk('public')->size($path));
 });
 
 it('rejects product images above the dimension limit', function (): void {
@@ -91,7 +100,9 @@ it('preserves the current image when an update has no image instruction', functi
 
 it('replaces the current image and gives upload precedence over removal', function (): void {
     $producto = productWithImage();
-    Storage::disk('public')->put($producto->imagen, 'original');
+    Storage::disk('public')->put($producto->imagen, productImageUpload()->getContent());
+    app(ProductImageService::class)->generateThumbnail($producto->imagen);
+    $oldThumbnailPath = ProductImageService::thumbnailPath($producto->imagen);
 
     $this->actingAs($this->admin)->put(
         route('admin.productos.update', $producto),
@@ -102,11 +113,14 @@ it('replaces the current image and gives upload precedence over removal', functi
     expect($newPath)->not->toBeNull()->not->toBe('productos/original.png');
     Storage::disk('public')->assertExists($newPath);
     Storage::disk('public')->assertMissing('productos/original.png');
+    Storage::disk('public')->assertMissing($oldThumbnailPath);
 });
 
 it('removes the current image only after persisting the explicit removal', function (): void {
     $producto = productWithImage();
-    Storage::disk('public')->put($producto->imagen, 'original');
+    Storage::disk('public')->put($producto->imagen, productImageUpload()->getContent());
+    app(ProductImageService::class)->generateThumbnail($producto->imagen);
+    $thumbnailPath = ProductImageService::thumbnailPath($producto->imagen);
 
     $this->actingAs($this->admin)->put(
         route('admin.productos.update', $producto),
@@ -115,6 +129,7 @@ it('removes the current image only after persisting the explicit removal', funct
 
     expect($producto->fresh()->imagen)->toBeNull();
     Storage::disk('public')->assertMissing('productos/original.png');
+    Storage::disk('public')->assertMissing($thumbnailPath);
 });
 
 it('cleans new files when create or update persistence fails', function (): void {
@@ -151,12 +166,13 @@ it('deletes the database row before cleaning its image', function (): void {
 
 it('copies images for duplication and cleans the copy when saving fails', function (): void {
     $producto = productWithImage();
-    Storage::disk('public')->put($producto->imagen, 'original');
+    Storage::disk('public')->put($producto->imagen, productImageUpload()->getContent());
 
     $this->actingAs($this->admin)->post(route('admin.productos.duplicar', $producto));
     $copy = Producto::query()->whereKeyNot($producto->id)->firstOrFail();
     expect($copy->imagen)->not->toBe($producto->imagen);
     Storage::disk('public')->assertExists($copy->imagen);
+    Storage::disk('public')->assertExists(ProductImageService::thumbnailPath($copy->imagen));
 
     DB::unprepared("CREATE TRIGGER fail_product_duplicate BEFORE INSERT ON productos BEGIN SELECT RAISE(ABORT, 'forced duplicate failure'); END");
     $filesBeforeFailure = Storage::disk('public')->allFiles('productos');
@@ -206,15 +222,23 @@ it('renders placeholders instead of stale product image requests', function (): 
     expect($withoutImage->imagen)->toBeNull();
 });
 
-it('preserves stored product image URLs and list image attributes', function (): void {
+it('uses thumbnails in lists with dimensions and below-fold lazy loading', function (): void {
     $producto = productWithImage(['categoria' => 'comidas']);
-    Storage::disk('public')->put($producto->imagen, 'original');
+    Storage::disk('public')->put($producto->imagen, productImageUpload()->getContent());
+    app(ProductImageService::class)->generateThumbnail($producto->imagen);
     $imageUrl = asset('storage/'.$producto->imagen);
+    $thumbnailUrl = asset('storage/'.ProductImageService::thumbnailPath($producto->imagen));
+
+    foreach (range(2, 5) as $number) {
+        productWithImage(['nombre' => "Image product {$number}", 'categoria' => 'comidas']);
+    }
 
     $adminIndex = $this->actingAs($this->admin)->get(route('admin.productos.index'));
-    $adminIndex->assertOk()->assertSee($imageUrl, false);
+    $adminIndex->assertOk()->assertSee($thumbnailUrl, false);
 
-    expect($adminIndex->getContent())->toMatch('/src="'.preg_quote($imageUrl, '/').'"[^>]*width="50"[^>]*height="50"[^>]*loading="lazy"/s');
+    expect($adminIndex->getContent())
+        ->toMatch('/src="'.preg_quote($thumbnailUrl, '/').'"[^>]*width="50"[^>]*height="50"[^>]*loading="eager"/s')
+        ->toContain('loading="lazy"');
 
     foreach ([
         route('admin.productos.show', $producto),
@@ -227,10 +251,31 @@ it('preserves stored product image URLs and list image attributes', function ():
 
     $worker = User::factory()->create(['rol' => 'trabajador']);
     $workerIndex = $this->actingAs($worker)->get(route('trabajador.productos.index'));
-    $workerIndex->assertOk()->assertSee($imageUrl, false);
+    $workerIndex->assertOk()->assertSee($thumbnailUrl, false);
     $workerIndexHtml = $workerIndex->getContent();
 
-    expect($workerIndexHtml)->toMatch('/src="'.preg_quote($imageUrl, '/').'"[^>]*width="50"[^>]*height="50"[^>]*loading="lazy"/s');
+    expect($workerIndexHtml)
+        ->toMatch('/src="'.preg_quote($thumbnailUrl, '/').'"[^>]*width="50"[^>]*height="50"[^>]*loading="eager"/s')
+        ->toContain('loading="lazy"');
+
+    $this->actingAs($this->admin)
+        ->getJson(route('admin.productos.buscar', ['q' => 'Existing image']))
+        ->assertJsonPath('productos.0.imagen_url', $thumbnailUrl);
+
+    $this->actingAs($worker);
+    $workerSearch = app(TrabajadorProductoController::class)->buscar(
+        Request::create('/trabajador/productos/buscar', 'GET', ['q' => 'Existing image']),
+    );
+    expect($workerSearch->getData(true)['productos'][0]['imagen_url'])->toBe($thumbnailUrl);
+});
+
+it('backfills thumbnails for existing stored originals', function (): void {
+    $producto = productWithImage();
+    Storage::disk('public')->put($producto->imagen, productImageUpload()->getContent());
+
+    $this->artisan('products:generate-thumbnails')->assertSuccessful();
+
+    Storage::disk('public')->assertExists(ProductImageService::thumbnailPath($producto->imagen));
 });
 
 it('returns null image URLs from product searches when stored files are missing', function (): void {

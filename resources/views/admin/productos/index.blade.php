@@ -242,6 +242,7 @@
                                 <td class="text-center" data-label="Imagen">
                                      @php
                                          $imageUrl = $producto->getImagenUrl();
+                                         $thumbnailUrl = $producto->getImagenThumbnailUrl();
                                      @endphp
                                      @if($imageUrl)
                                          <button type="button"
@@ -252,15 +253,22 @@
                                                  data-product-image-alt="{{ $producto->nombre }}"
                                                  data-product-image-title="{{ $producto->nombre }}"
                                                  aria-label="Ver imagen de {{ $producto->nombre }}">
-                                             <img
-                                                 src="{{ $imageUrl }}"
-                                                 alt="{{ $producto->nombre }}"
-                                                 class="rounded shadow-sm"
-                                                 width="50"
-                                                 height="50"
-                                                 loading="lazy"
-                                                 style="object-fit: cover; cursor: pointer;"
-                                             >
+                                             @if($thumbnailUrl)
+                                                 <img
+                                                     src="{{ $thumbnailUrl }}"
+                                                     alt="{{ $producto->nombre }}"
+                                                     class="rounded shadow-sm"
+                                                     width="50"
+                                                     height="50"
+                                                     loading="{{ $loop->index < 4 ? 'eager' : 'lazy' }}"
+                                                     style="object-fit: cover; cursor: pointer;"
+                                                 >
+                                             @else
+                                                 <span class="bg-secondary bg-opacity-10 rounded d-inline-flex align-items-center justify-content-center"
+                                                       style="width: 50px; height: 50px;">
+                                                     <i class="fas fa-image text-secondary"></i>
+                                                 </span>
+                                             @endif
                                          </button>
                                     @else
                                         <div class="bg-secondary bg-opacity-10 rounded d-inline-flex align-items-center justify-content-center" 

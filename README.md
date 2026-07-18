@@ -31,6 +31,16 @@ composer analyse
 
 PHPStan analyzes `app/` at level 5. The committed baseline records the existing legacy findings; new findings must be fixed instead of added to the baseline. Reduce the baseline as existing findings are remediated.
 
+## Runtime Requirements
+
+Product thumbnails require PHP GD with JPEG, PNG, GIF, and WebP support in web, CLI, and worker runtimes. New uploads generate derivatives automatically.
+
+After deploying this requirement, backfill existing product images before serving list traffic:
+
+```bash
+php artisan products:generate-thumbnails
+```
+
 ## Learning Laravel
 
 Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
