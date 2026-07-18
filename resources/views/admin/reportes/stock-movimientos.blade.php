@@ -117,7 +117,7 @@
 
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 responsive-card-table">
                     <thead class="bg-light">
                         <tr>
                             <th>Producto</th>
@@ -134,30 +134,30 @@
                     <tbody>
                         @forelse($movimientos as $movimiento)
                             <tr>
-                                <td>
-                                    <span class="fw-bold">{{ $movimiento->producto?->nombre ?? 'Producto no disponible' }}</span>
+                                <td data-label="Producto">
+                                    <span class="fw-bold text-break">{{ $movimiento->producto?->nombre ?? 'Producto no disponible' }}</span>
                                 </td>
-                                <td>
+                                <td class="text-break" data-label="Pedido">
                                     {{ $movimiento->pedido_numero ?: ($movimiento->pedido?->numero_pedido ?? 'Sin pedido') }}
                                 </td>
-                                <td>
+                                <td data-label="Usuario / Actor">
                                     @if($movimiento->user)
                                         <span class="fw-semibold">{{ $movimiento->user->name }}</span>
-                                        <small class="text-muted d-block">{{ $movimiento->user->email }}</small>
+                                        <small class="text-muted d-block text-break">{{ $movimiento->user->email }}</small>
                                     @else
                                         <span class="text-muted">Sistema</span>
                                     @endif
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center" data-label="Tipo">
                                     <span class="badge bg-{{ $movimiento->tipo === \App\Enums\StockMovimientoTipo::Exit->value ? 'danger' : ($movimiento->tipo === \App\Enums\StockMovimientoTipo::Entry->value ? 'success' : 'secondary') }} bg-opacity-10 text-{{ $movimiento->tipo === \App\Enums\StockMovimientoTipo::Exit->value ? 'danger' : ($movimiento->tipo === \App\Enums\StockMovimientoTipo::Entry->value ? 'success' : 'secondary') }} border">
                                         {{ ucfirst($movimiento->tipo) }}
                                     </span>
                                 </td>
-                                <td class="text-center fw-bold">{{ number_format($movimiento->cantidad) }}</td>
-                                <td class="text-center">{{ number_format($movimiento->stock_anterior) }}</td>
-                                <td class="text-center">{{ number_format($movimiento->stock_nuevo) }}</td>
-                                <td>{{ $movimiento->motivo ?? 'Sin motivo' }}</td>
-                                <td class="text-center">
+                                <td class="text-center fw-bold" data-label="Cantidad">{{ number_format($movimiento->cantidad) }}</td>
+                                <td class="text-center" data-label="Stock anterior">{{ number_format($movimiento->stock_anterior) }}</td>
+                                <td class="text-center" data-label="Stock nuevo">{{ number_format($movimiento->stock_nuevo) }}</td>
+                                <td class="text-break" data-label="Motivo">{{ $movimiento->motivo ?? 'Sin motivo' }}</td>
+                                <td class="text-center" data-label="Fecha">
                                     <span class="fw-semibold">{{ $movimiento->created_at?->format('d/m/Y') }}</span>
                                     <small class="text-muted d-block">{{ $movimiento->created_at?->format('H:i') }}</small>
                                 </td>

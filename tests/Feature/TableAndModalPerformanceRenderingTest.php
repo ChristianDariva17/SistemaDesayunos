@@ -6,6 +6,7 @@ use App\Models\Cliente;
 use App\Models\Empleado;
 use App\Models\Pedido;
 use App\Models\Producto;
+use App\Models\StockMovimiento;
 use App\Models\User;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\Process\Process;
@@ -205,6 +206,42 @@ it('renders client and employee indexes as responsive tables with complete cell 
     assertResponsiveTableLabels(
         $this->actingAs($admin)->get(route('admin.empleados.index'))->assertOk(),
         ['#', 'Empleado', 'Rol', 'Estado', 'Fecha Registro', 'Acciones'],
+    );
+});
+
+it('renders admin inventory reports as responsive tables with complete cell labels', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-responsive-reports@example.test',
+        'rol' => 'administrador',
+    ]);
+    $producto = Producto::create([
+        'nombre' => 'Café de reporte',
+        'categoria' => 'bebidas',
+        'stock' => 14,
+        'stock_minimo' => 5,
+        'estado' => 'activo',
+        'precio' => 4.50,
+    ]);
+
+    StockMovimiento::create([
+        'producto_id' => $producto->id,
+        'pedido_id' => null,
+        'pedido_numero' => 'PED-RESPONSIVE-001',
+        'user_id' => $admin->id,
+        'tipo' => StockMovimiento::TIPO_ENTRADA,
+        'cantidad' => 4,
+        'stock_anterior' => 10,
+        'stock_nuevo' => 14,
+        'motivo' => 'Responsive report fixture',
+    ]);
+
+    assertResponsiveTableLabels(
+        $this->actingAs($admin)->get(route('admin.reportes.stock-movimientos'))->assertOk(),
+        ['Producto', 'Pedido', 'Usuario / Actor', 'Tipo', 'Cantidad', 'Stock anterior', 'Stock nuevo', 'Motivo', 'Fecha'],
+    );
+    assertResponsiveTableLabels(
+        $this->actingAs($admin)->get(route('admin.reportes.resumen-inventario'))->assertOk(),
+        ['Producto', 'Estado', 'Stock actual', 'Stock mínimo', 'Entradas', 'Salidas', 'Ajustes', 'Último movimiento', 'Situación'],
     );
 });
 

@@ -89,7 +89,7 @@
 
         <div class="card-body p-0">
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 responsive-card-table">
                     <thead class="bg-light">
                         <tr>
                             <th>Producto</th>
@@ -115,21 +115,21 @@
                                         : ['label' => 'OK', 'class' => 'success']);
                             @endphp
                             <tr>
-                                <td>
-                                    <span class="fw-bold">{{ $producto->nombre }}</span>
+                                <td data-label="Producto">
+                                    <span class="fw-bold text-break">{{ $producto->nombre }}</span>
                                     <small class="text-muted d-block">{{ ucfirst($producto->categoria) }}</small>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center" data-label="Estado">
                                     <span class="badge bg-{{ $producto->isActive() ? 'success' : 'danger' }} bg-opacity-10 text-{{ $producto->isActive() ? 'success' : 'danger' }} border">
                                         {{ ucfirst($producto->estado) }}
                                     </span>
                                 </td>
-                                <td class="text-center fw-bold">{{ number_format($currentStock) }}</td>
-                                <td class="text-center">{{ number_format($minimumStock) }}</td>
-                                <td class="text-center text-success fw-semibold">{{ number_format((int) ($producto->total_entradas ?? 0)) }}</td>
-                                <td class="text-center text-danger fw-semibold">{{ number_format((int) ($producto->total_salidas ?? 0)) }}</td>
-                                <td class="text-center text-secondary fw-semibold">{{ number_format((int) ($producto->total_ajustes ?? 0)) }}</td>
-                                <td class="text-center">
+                                <td class="text-center fw-bold" data-label="Stock actual">{{ number_format($currentStock) }}</td>
+                                <td class="text-center" data-label="Stock mínimo">{{ number_format($minimumStock) }}</td>
+                                <td class="text-center text-success fw-semibold" data-label="Entradas">{{ number_format((int) ($producto->total_entradas ?? 0)) }}</td>
+                                <td class="text-center text-danger fw-semibold" data-label="Salidas">{{ number_format((int) ($producto->total_salidas ?? 0)) }}</td>
+                                <td class="text-center text-secondary fw-semibold" data-label="Ajustes">{{ number_format((int) ($producto->total_ajustes ?? 0)) }}</td>
+                                <td class="text-center" data-label="Último movimiento">
                                     @if($producto->ultimo_movimiento_fecha)
                                         <span class="fw-semibold">{{ \Carbon\Carbon::parse($producto->ultimo_movimiento_fecha)->format('d/m/Y') }}</span>
                                         <small class="text-muted d-block">{{ ucfirst($producto->ultimo_movimiento_tipo) }}</small>
@@ -137,7 +137,7 @@
                                         <span class="text-muted">Sin movimientos</span>
                                     @endif
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center" data-label="Situación">
                                     <span class="badge bg-{{ $stockStatus['class'] }} bg-opacity-10 text-{{ $stockStatus['class'] }} border">
                                         {{ $stockStatus['label'] }}
                                     </span>
