@@ -12,17 +12,18 @@ This document captures the current state of the Laravel Blade views and the reco
 
 ## Current Status
 
-Frontend Slices 1 through 7 are complete through searchable order-flow selects, report/chart loading cleanup is complete, progressive AJAX filters were added for admin productos/clientes/pedidos, and unsafe sticky side-panel behavior was corrected on the affected admin pages.
+Frontend Slices 1 through 7 are complete through searchable order-flow selects, report/chart loading cleanup is complete, progressive AJAX filters were added for admin productos/clientes/pedidos, unsafe sticky side-panel behavior was corrected, and the audited table/list scalability work is complete.
 
 Completed baseline:
 
 - Layout data cleanup, shared layouts, Blade components, and Vite-managed shared assets.
 - Accessibility baseline: skip links/main landmarks, accessible names for icon-only controls, alert/live-region semantics, labeled dynamic order quantity controls, and focused rendering tests.
-- Table/modal performance: reusable admin product modals, eager-loaded order listings, responsive card-table behavior, and focused regression coverage.
+- Table/list performance: reusable admin product modals, audited eager loading, bounded configurable pagination, responsive card-table coverage for large lists and paginated reports, and full-width centered mobile empty states.
 - Functional enhancement: Tom Select searchable product/user selects in admin and worker order flows, with idempotent dynamic-row initialization and focused rendering tests.
 - Report/chart loading cleanup: Chart.js stays out of shared app assets; report pages currently rely on static/PDF-safe chart markup and do not render Chart.js hooks.
 - Progressive enhancement: admin list filtering/pagination can update partial content without full-page reloads.
 - Sticky side-panel fixes: side cards are constrained to desktop-safe sticky behavior and should not cover page content while scrolling.
+- Product detail loading: recent-order clients are nested eager-loaded for admin and worker views; order timestamps are qualified and the redundant worker-side result limit was removed.
 - Product image lifecycle: create, replace, and delete operations use transactional compensation and focused regression coverage without adding a media-library dependency.
 
 ## Latest Frontend Assessment
@@ -42,7 +43,7 @@ The highest-value improvement is not changing frameworks. It is making the curre
 
 ## Executive Summary
 
-The current UI is functional and has a clear domain split between admin, worker, auth, profile, and components. The completed foundation reduced the original layout, asset, component, and rendering duplication; the remaining work is concentrated in list scalability, image delivery, and incremental visual consistency.
+The current UI is functional and has a clear domain split between admin, worker, auth, profile, and components. The completed foundation reduced the original layout, asset, component, rendering, and audited list-scalability issues; the remaining work is concentrated in image delivery and incremental visual consistency.
 
 The main risk is no longer the absence of a shared frontend foundation. It is allowing new screens to bypass the established Blade components, Vite assets, progressive-enhancement patterns, and accessibility guardrails.
 
@@ -217,7 +218,7 @@ Recommended fix:
 - Hide actions until implemented, or connect them to real routes.
 - If an action is intentionally disabled, render it as disabled with a clear reason.
 
-### Medium: Per-Row Modals Inflate the DOM
+### Resolved: Per-Row Modals Inflated the DOM
 
 Some listing pages generate modals inside each row, especially product image or stock modals.
 
@@ -272,10 +273,10 @@ Keep server-side pagination for large data.
 
 Acceptance checklist:
 
-- [ ] Controllers eager-load relationships used by views.
-- [ ] Views avoid relationship queries inside loops.
-- [ ] Large tables have server-side filters/search.
-- [ ] Mobile layouts avoid unreadable dense tables where possible.
+- [x] Audited list/detail controllers eager-load relationships rendered by views, including nested recent-order clients on admin and worker product details.
+- [x] Audited list/detail loops consume preloaded relationship data rather than issuing relationship queries while rendering.
+- [x] Genuinely large interactive tables use server-side filters/search; configurable client/employee page sizes allow only 10, 25, 50, or 100, invalid values fall back to 10, and employee direction is limited to `asc`/`desc`.
+- [x] Responsive card-table behavior covers admin/worker product and order lists, admin/worker clients, admin employees, paginated stock movements, and paginated inventory summaries; mobile colspan empty states remain full-width and centered.
 
 ### 5. Optimize Images
 
@@ -472,4 +473,4 @@ Goal: add libraries where they solve real product problems.
 
 ## Next Step
 
-Frontend Slices 1 through 7, report/chart loading cleanup, progressive admin filters, sticky-panel corrections, and transactional product image handling are complete. The next recommended work is **table/list scalability and image delivery optimization**: finish the unchecked eager-loading and server-side filtering checks, then add explicit image dimensions, lazy loading, and modern formats where measurements justify them.
+Frontend Slices 1 through 7, report/chart loading cleanup, progressive admin filters, sticky-panel corrections, audited table/list scalability, and transactional product image handling are complete. The next recommended concrete frontend work is **image delivery optimization**: add explicit image dimensions, lazy-load below-the-fold images, adopt measured WebP/AVIF delivery, and review remaining external image dependencies.
