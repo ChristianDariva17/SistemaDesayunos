@@ -301,7 +301,7 @@
         <div class="card-body p-0">
             @if($clientes->count() > 0)
                 <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0">
+                    <table class="table table-hover align-middle mb-0 responsive-card-table">
                         <thead class="table-light">
                             <tr>
                                 <th class="ps-3">
@@ -334,14 +334,14 @@
                             @foreach($clientes as $cliente)
                                 <tr>
                                     {{-- ID --}}
-                                    <td class="ps-3">
+                                    <td class="ps-3" data-label="ID">
                                         <span class="badge bg-light text-dark fs-6">
                                             #{{ $cliente->id }}
                                         </span>
                                     </td>
 
                                     {{-- Cliente (Avatar + Nombre) --}}
-                                    <td>
+                                    <td data-label="Cliente">
                                         <div class="d-flex align-items-center">
                                             {{-- Avatar con iniciales --}}
                                             <div class="avatar me-3">
@@ -363,7 +363,7 @@
                                     </td>
 
                                     {{-- Contacto --}}
-                                    <td>
+                                    <td data-label="Contacto">
                                         @if($cliente->email)
                                             <div class="mb-1">
                                                 <i class="fas fa-envelope text-primary me-1"></i>
@@ -385,7 +385,7 @@
                                     </td>
 
                                     {{-- Pedidos --}}
-                                    <td class="text-center">
+                                    <td class="text-center" data-label="Pedidos">
                                         <span class="badge {{ $cliente->pedidos_count > 0 ? 'bg-info' : 'bg-light text-dark' }} fs-6">
                                             <i class="fas fa-shopping-cart me-1"></i>
                                             {{ $cliente->pedidos_count ?? 0 }} Pedidos
@@ -393,7 +393,7 @@
                                     </td>
 
                                     {{-- Estado con Toggle --}}
-                                    <td class="text-center">
+                                    <td class="text-center" data-label="Estado">
                                         <div class="form-check form-switch d-flex justify-content-center">
                                             <input class="form-check-input toggle-estado" 
                                                    type="checkbox" 
@@ -412,7 +412,7 @@
                                     </td>
 
                                     {{-- Acciones --}}
-                                    <td class="text-center pe-3">
+                                    <td class="text-center pe-3" data-label="Acciones">
                                         <div class="btn-group" role="group">
                                             {{-- Ver --}}
                                             <a href="{{ route('admin.clientes.show', $cliente) }}" 

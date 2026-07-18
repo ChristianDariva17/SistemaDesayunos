@@ -7,6 +7,7 @@ use App\Models\Empleado;
 use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\User;
+use Illuminate\Testing\TestResponse;
 use Symfony\Component\Process\Process;
 
 it('renders one reusable admin product image and stock modal instead of per-row modals', function (): void {
@@ -168,6 +169,63 @@ it('renders order indexes with eager product counts and responsive table metadat
         ->assertSee('data-label="Total"', false)
         ->assertSee('1 productos');
 });
+
+it('renders client and employee indexes as responsive tables with complete cell labels', function (): void {
+    $admin = User::factory()->create([
+        'email' => 'admin-responsive-lists@example.test',
+        'rol' => 'administrador',
+    ]);
+    $worker = User::factory()->create([
+        'email' => 'worker-responsive-lists@example.test',
+        'rol' => 'trabajador',
+    ]);
+
+    Cliente::create([
+        'nombre' => 'Ana',
+        'apellido' => 'Paredes',
+        'email' => 'ana.responsive@example.test',
+        'telefono' => '555-0101',
+        'ciudad' => 'Lima',
+        'estado' => 'activo',
+    ]);
+    Empleado::create([
+        'nombre' => 'Luis Gomez',
+        'rol_operativo' => 'mesero',
+        'estado' => 'activo',
+    ]);
+
+    assertResponsiveTableLabels(
+        $this->actingAs($admin)->get(route('admin.clientes.index'))->assertOk(),
+        ['ID', 'Cliente', 'Contacto', 'Pedidos', 'Estado', 'Acciones'],
+    );
+    assertResponsiveTableLabels(
+        $this->actingAs($worker)->get(route('trabajador.clientes.index'))->assertOk(),
+        ['ID', 'Cliente', 'Teléfono', 'Ciudad', 'Estado'],
+    );
+    assertResponsiveTableLabels(
+        $this->actingAs($admin)->get(route('admin.empleados.index'))->assertOk(),
+        ['#', 'Empleado', 'Rol', 'Estado', 'Fecha Registro', 'Acciones'],
+    );
+});
+
+function assertResponsiveTableLabels(TestResponse $response, array $expectedLabels): void
+{
+    $document = new DOMDocument;
+    @$document->loadHTML($response->getContent());
+    $xpath = new DOMXPath($document);
+    $table = $xpath->query('//table[contains(concat(" ", normalize-space(@class), " "), " responsive-card-table ")]')->item(0);
+
+    expect($table)->not->toBeNull();
+
+    $cells = $xpath->query('.//tbody/tr[td[@data-label]][1]/td', $table);
+    $labels = [];
+
+    foreach ($cells as $cell) {
+        $labels[] = $cell->getAttribute('data-label');
+    }
+
+    expect($labels)->toBe($expectedLabels);
+}
 
 function tableModalPerformanceProductStockModalScript(array $products): string
 {

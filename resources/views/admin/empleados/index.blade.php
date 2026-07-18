@@ -268,7 +268,7 @@
     <div class="card-body p-0">
         @if($empleados->count() > 0)
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
+                <table class="table table-hover align-middle mb-0 responsive-card-table">
                     <thead class="table-light">
                         <tr>
                             <th style="width: 5%">#</th>
@@ -323,14 +323,14 @@
                         @foreach($empleados as $empleado)
                         <tr>
                             {{-- # --}}
-                            <td>
+                            <td data-label="#">
                                 <span class="text-muted fw-semibold">
                                     {{ $loop->iteration + ($empleados->currentPage() - 1) * $empleados->perPage() }}
                                 </span>
                             </td>
 
                             {{-- Empleado --}}
-                            <td>
+                            <td data-label="Empleado">
                                 <div class="d-flex align-items-center">
                                     {{-- Avatar --}}
                                     <div class="avatar-circle me-3 {{ 'avatar-' . strtolower(substr($empleado->nombre, 0, 1)) }}">
@@ -349,7 +349,7 @@
                             </td>
 
                             {{-- Rol --}}
-                            <td>
+                            <td data-label="Rol">
                                 @php
                                     $roleConfig = [
                                         'mesero' => ['emoji' => '👨‍🍳', 'bg' => 'bg-info', 'text' => 'Mesero'],
@@ -367,7 +367,7 @@
                             </td>
 
                             {{-- Estado --}}
-                            <td class="text-center">
+                            <td class="text-center" data-label="Estado">
                                 @if($empleado->estado === 'activo')
                                     <span class="badge bg-success-soft text-success px-3 py-2">
                                         <i class="fas fa-check-circle me-1"></i> Activo
@@ -380,7 +380,7 @@
                             </td>
 
                             {{-- Fecha --}}
-                            <td>
+                            <td data-label="Fecha Registro">
                                 <div>
                                     <strong class="d-block">{{ $empleado->created_at->format('d/m/Y') }}</strong>
                                     <small class="text-muted">
@@ -390,7 +390,7 @@
                             </td>
 
                             {{-- Acciones --}}
-                            <td class="text-center">
+                            <td class="text-center" data-label="Acciones">
                                 <div class="btn-group" role="group">
                                     <a href="{{ route('admin.empleados.show', $empleado->id) }}" 
                                        class="btn btn-sm btn-outline-info"

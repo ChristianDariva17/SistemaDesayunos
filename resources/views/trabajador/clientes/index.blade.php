@@ -477,7 +477,7 @@
                 {{-- TABLA DE CLIENTES --}}
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover align-middle mb-0">
+                        <table class="table table-hover align-middle mb-0 responsive-card-table">
                             <thead class="table-light">
                                 <tr>
                                     <th width="5%">ID</th>
@@ -491,12 +491,12 @@
                                 @forelse($clientes as $cliente)
                                 <tr>
                                     {{-- ID --}}
-                                    <td>
+                                    <td data-label="ID">
                                         <strong class="text-primary">#{{ $cliente->id }}</strong>
                                     </td>
 
                                     {{-- CLIENTE --}}
-                                    <td>
+                                    <td data-label="Cliente">
                                         <div class="d-flex align-items-center">
                                             <div class="bg-success bg-opacity-10 rounded-circle d-flex align-items-center justify-content-center me-3"
                                                  style="width: 40px; height: 40px;">
@@ -512,7 +512,7 @@
                                     </td>
 
                                     {{-- TELÉFONO --}}
-                                    <td>
+                                    <td data-label="Teléfono">
                                         @if($cliente->telefono)
                                             <i class="fas fa-phone text-success me-1"></i>
                                             {{ $cliente->telefono }}
@@ -522,7 +522,7 @@
                                     </td>
 
                                     {{-- CIUDAD --}}
-                                    <td>
+                                    <td data-label="Ciudad">
                                         @if($cliente->ciudad)
                                             <i class="fas fa-map-marker-alt text-danger me-1"></i>
                                             {{ $cliente->ciudad }}
@@ -532,7 +532,7 @@
                                     </td>
 
                                     {{-- ESTADO --}}
-                                    <td class="text-center">
+                                    <td class="text-center" data-label="Estado">
                                         @if($cliente->estado == 'activo')
                                             <span class="badge bg-success">
                                                 <i class="fas fa-check me-1"></i>Activo
@@ -547,7 +547,7 @@
 
                                 @empty
                                 <tr>
-                                    <td colspan="6" class="text-center py-5">
+                                    <td colspan="6" class="text-center py-5" data-label="Clientes">
                                         <div class="text-muted">
                                             <i class="fas fa-inbox fa-4x mb-3 d-block opacity-25"></i>
                                             @if(request()->hasAny(['search', 'estado']))
