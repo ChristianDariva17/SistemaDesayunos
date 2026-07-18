@@ -662,7 +662,7 @@
         <div class="login-footer">
             <p>
                 ¿Olvidaste tu contraseña? 
-                <a href="#" onclick="alert('Contacta al administrador del sistema'); return false;">
+                <a href="{{ route('password.request') }}">
                     Recuperar acceso
                 </a>
             </p>

@@ -10,6 +10,12 @@ test('login screen can be rendered', function () {
     $response->assertStatus(200);
 });
 
+test('login screen links to the password recovery form', function () {
+    $response = $this->get('/login');
+
+    $response->assertSee('href="'.route('password.request').'"', false);
+});
+
 test('login form submits to the POST login route contract', function () {
     $view = File::get(resource_path('views/auth/login.blade.php'));
 
