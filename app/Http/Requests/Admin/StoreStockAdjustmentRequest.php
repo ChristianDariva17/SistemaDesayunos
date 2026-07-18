@@ -21,7 +21,7 @@ final class StoreStockAdjustmentRequest extends FormRequest
     {
         return [
             'producto_id' => ['required', 'integer', 'exists:productos,id'],
-            'stock_nuevo' => ['required', 'integer', 'min:0', 'max:' . InventoryLimits::MAX_STOCK_LEVEL],
+            'stock_nuevo' => ['required', 'integer', 'min:0', 'max:'.InventoryLimits::MAX_STOCK_LEVEL],
             'motivo' => ['required', 'string', 'not_regex:/^\s*$/', 'max:255'],
         ];
     }

@@ -47,12 +47,11 @@ it('renders products at or below their configured minimum in the admin low-stock
         'precio' => 3.50,
     ]);
 
-    $fakePdf = new class () extends DomPdfDocument {
+    $fakePdf = new class extends DomPdfDocument
+    {
         public string $renderedHtml = '';
 
-        public function __construct()
-        {
-        }
+        public function __construct() {}
 
         public function loadView(string $view, array $data = [], array $mergeData = [], ?string $encoding = null): self
         {

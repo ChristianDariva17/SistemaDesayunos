@@ -17,7 +17,7 @@ class Cliente extends Model
         'direccion',
         'fecha_nacimiento',
         'estado',
-        'notas'
+        'notas',
     ];
 
     protected $casts = [
@@ -27,7 +27,7 @@ class Cliente extends Model
     // Accessor para obtener nombre completo
     public function getNombreCompletoAttribute()
     {
-        return $this->nombre . ' ' . $this->apellido;
+        return $this->nombre.' '.$this->apellido;
     }
 
     // Relación con pedidos

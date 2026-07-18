@@ -16,7 +16,7 @@ return new class extends Migration
                 ->default('trabajador')
                 ->after('password');
         });
-    }   
+    }
 
     /**
      * Reverse the migrations.

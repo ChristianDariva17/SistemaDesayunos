@@ -53,8 +53,8 @@ it('counts ventas items from the canonical productos relation', function (): voi
         'telefono' => '999999999',
     ]);
     $pedido->setRelation('productos', collect([
-        (new Producto())->forceFill(['id' => 1, 'nombre' => 'Cafe']),
-        (new Producto())->forceFill(['id' => 2, 'nombre' => 'Sandwich']),
+        (new Producto)->forceFill(['id' => 1, 'nombre' => 'Cafe']),
+        (new Producto)->forceFill(['id' => 2, 'nombre' => 'Sandwich']),
     ]));
 
     $html = view('admin.reportes.ventas', [

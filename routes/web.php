@@ -1,9 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-
+use App\Http\Controllers\Admin\ClienteController as AdminClienteController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\EmpleadoController as AdminEmpleadoController;
 /*
 |--------------------------------------------------------------------------
 | ⚠️ IMPORTS DE CONTROLADORES - OBLIGATORIOS
@@ -11,24 +10,22 @@ use Illuminate\Support\Facades\Auth;
 */
 
 // Autenticación
+use App\Http\Controllers\Admin\PedidoController as AdminPedidoController;
+use App\Http\Controllers\Admin\ProductoController as AdminProductoController;
+// Controladores de ADMINISTRADOR (con alias "Admin" para evitar conflictos)
+use App\Http\Controllers\Admin\ReporteController as AdminReporteController;
+use App\Http\Controllers\Admin\StockAdjustmentController as AdminStockAdjustmentController;
+use App\Http\Controllers\Admin\StockEntryController as AdminStockEntryController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProfileController;
-
-// Controladores de ADMINISTRADOR (con alias "Admin" para evitar conflictos)
-use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
-use App\Http\Controllers\Admin\ProductoController as AdminProductoController;
-use App\Http\Controllers\Admin\ClienteController as AdminClienteController;
-use App\Http\Controllers\Admin\PedidoController as AdminPedidoController;
-use App\Http\Controllers\Admin\EmpleadoController as AdminEmpleadoController;
-use App\Http\Controllers\Admin\ReporteController as AdminReporteController;
-use App\Http\Controllers\Admin\StockEntryController as AdminStockEntryController;
-use App\Http\Controllers\Admin\StockAdjustmentController as AdminStockAdjustmentController;
-
-// Controladores de TRABAJADOR (con alias "Trabajador" para evitar conflictos)
-use App\Http\Controllers\Trabajador\DashboardController as TrabajadorDashboardController;
-use App\Http\Controllers\Trabajador\ProductoController as TrabajadorProductoController;
 use App\Http\Controllers\Trabajador\ClienteController as TrabajadorClienteController;
+use App\Http\Controllers\Trabajador\DashboardController as TrabajadorDashboardController;
 use App\Http\Controllers\Trabajador\PedidoController as TrabajadorPedidoController;
+// Controladores de TRABAJADOR (con alias "Trabajador" para evitar conflictos)
+use App\Http\Controllers\Trabajador\ProductoController as TrabajadorProductoController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -88,10 +85,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'valid.role', 'rol:a
     // DASHBOARD
     // ══════════════════════════════════════════════════════════════════
     Route::get('/dashboard', [AdminDashboardController::class, 'index'])
-         ->name('dashboard');
+        ->name('dashboard');
 
     Route::view('/configuracion', 'admin.settings.index')
-         ->name('settings.index');
+        ->name('settings.index');
 
     // ══════════════════════════════════════════════════════════════════
     // PRODUCTOS - CRUD COMPLETO
@@ -99,38 +96,38 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'valid.role', 'rol:a
 
     // Rutas especiales ANTES del resource
     Route::get('productos/buscar', [AdminProductoController::class, 'buscar'])
-         ->name('productos.buscar');
+        ->name('productos.buscar');
 
     Route::get('productos/exportar', [AdminProductoController::class, 'exportar'])
-         ->name('productos.exportar');
+        ->name('productos.exportar');
 
     Route::get('productos/estadisticas', [AdminProductoController::class, 'estadisticas'])
-         ->name('productos.estadisticas');
+        ->name('productos.estadisticas');
 
     // Resource: index, create, store, show, edit, update, destroy
     Route::resource('productos', AdminProductoController::class);
 
     // Rutas adicionales
     Route::patch('productos/{producto}/actualizar-stock', [AdminProductoController::class, 'actualizarStock'])
-         ->name('productos.actualizar-stock');
+        ->name('productos.actualizar-stock');
 
     Route::patch('productos/{producto}/toggle-estado', [AdminProductoController::class, 'toggleEstado'])
-         ->name('productos.toggle-estado');
+        ->name('productos.toggle-estado');
 
     Route::post('productos/{producto}/duplicar', [AdminProductoController::class, 'duplicar'])
-          ->name('productos.duplicar');
+        ->name('productos.duplicar');
 
     Route::get('stock-entries/create', [AdminStockEntryController::class, 'create'])
-         ->name('stock-entries.create');
+        ->name('stock-entries.create');
 
     Route::post('stock-entries', [AdminStockEntryController::class, 'store'])
-         ->name('stock-entries.store');
+        ->name('stock-entries.store');
 
     Route::get('stock-adjustments/create', [AdminStockAdjustmentController::class, 'create'])
-         ->name('stock-adjustments.create');
+        ->name('stock-adjustments.create');
 
     Route::post('stock-adjustments', [AdminStockAdjustmentController::class, 'store'])
-         ->name('stock-adjustments.store');
+        ->name('stock-adjustments.store');
 
     // ══════════════════════════════════════════════════════════════════
     // CLIENTES - CRUD COMPLETO
@@ -138,23 +135,23 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'valid.role', 'rol:a
 
     // Rutas especiales ANTES del resource
     Route::get('clientes/buscar', [AdminClienteController::class, 'buscar'])
-         ->name('clientes.buscar');
+        ->name('clientes.buscar');
 
     Route::get('clientes/exportar', [AdminClienteController::class, 'exportar'])
-         ->name('clientes.exportar');
+        ->name('clientes.exportar');
 
     Route::get('clientes/estadisticas', [AdminClienteController::class, 'estadisticas'])
-         ->name('clientes.estadisticas');
+        ->name('clientes.estadisticas');
 
     // Resource
     Route::resource('clientes', AdminClienteController::class);
 
     // Rutas adicionales
     Route::patch('clientes/{cliente}/toggle-estado', [AdminClienteController::class, 'toggleEstado'])
-         ->name('clientes.toggle-estado');
+        ->name('clientes.toggle-estado');
 
     Route::post('clientes/{cliente}/duplicar', [AdminClienteController::class, 'duplicar'])
-         ->name('clientes.duplicar');
+        ->name('clientes.duplicar');
 
     // ══════════════════════════════════════════════════════════════════
     // PEDIDOS - CRUD COMPLETO
@@ -162,20 +159,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'valid.role', 'rol:a
 
     // Rutas especiales ANTES del resource
     Route::get('pedidos/exportar', [AdminPedidoController::class, 'exportar'])
-         ->name('pedidos.exportar');
+        ->name('pedidos.exportar');
 
     // Resource
     Route::resource('pedidos', AdminPedidoController::class);
 
     // Rutas adicionales
     Route::patch('pedidos/{pedido}/cambiar-estado', [AdminPedidoController::class, 'cambiarEstado'])
-         ->name('pedidos.cambiar-estado');
+        ->name('pedidos.cambiar-estado');
 
     Route::get('pedidos/{pedido}/imprimir', [AdminPedidoController::class, 'imprimir'])
-         ->name('pedidos.imprimir');
+        ->name('pedidos.imprimir');
 
     Route::post('pedidos/{pedido}/duplicar', [AdminPedidoController::class, 'duplicar'])
-         ->name('pedidos.duplicar');
+        ->name('pedidos.duplicar');
 
     // ══════════════════════════════════════════════════════════════════
     // EMPLEADOS - CRUD COMPLETO (Solo Admin)
@@ -188,31 +185,31 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'valid.role', 'rol:a
     Route::prefix('reportes')->name('reportes.')->group(function () {
         // Vista principal de reportes
         Route::get('/', [AdminReporteController::class, 'index'])
-             ->name('index');
+            ->name('index');
 
         // Reporte de inventario completo
         Route::get('/inventario', [AdminReporteController::class, 'inventario'])
-             ->name('inventario');
+            ->name('inventario');
 
         // Reporte de stock bajo
         Route::get('/stock-bajo', [AdminReporteController::class, 'stockBajo'])
-             ->name('stock-bajo');
+            ->name('stock-bajo');
 
         // Reporte de movimientos de stock
         Route::get('/stock-movimientos', [AdminReporteController::class, 'stockMovimientos'])
-             ->name('stock-movimientos');
+            ->name('stock-movimientos');
 
         // Resumen de inventario por producto
         Route::get('/resumen-inventario', [AdminReporteController::class, 'resumenInventario'])
-             ->name('resumen-inventario');
+            ->name('resumen-inventario');
 
         // Reporte de ventas
         Route::get('/ventas', [AdminReporteController::class, 'ventas'])
-             ->name('ventas');
+            ->name('ventas');
 
         // Reporte de ventas por cliente
         Route::get('/ventas-por-cliente', [AdminReporteController::class, 'ventasPorCliente'])
-             ->name('ventas-por-cliente');
+            ->name('ventas-por-cliente');
     });
 
 });
@@ -229,45 +226,45 @@ Route::prefix('trabajador')->name('trabajador.')->middleware(['auth', 'valid.rol
     // DASHBOARD
     // ══════════════════════════════════════════════════════════════════
     Route::get('/dashboard', [TrabajadorDashboardController::class, 'index'])
-         ->name('dashboard');
+        ->name('dashboard');
 
     // ══════════════════════════════════════════════════════════════════
     // PRODUCTOS - SOLO LECTURA
     // ══════════════════════════════════════════════════════════════════
     Route::get('productos', [TrabajadorProductoController::class, 'index'])
-         ->name('productos.index');
+        ->name('productos.index');
 
     Route::get('productos/{producto}', [TrabajadorProductoController::class, 'show'])
-         ->name('productos.show');
+        ->name('productos.show');
 
     // ══════════════════════════════════════════════════════════════════
     // CLIENTES - SOLO LECTURA
     // ══════════════════════════════════════════════════════════════════
     Route::get('clientes', [TrabajadorClienteController::class, 'index'])
-         ->name('clientes.index');
+        ->name('clientes.index');
 
     Route::get('clientes/{cliente}', [TrabajadorClienteController::class, 'show'])
-         ->name('clientes.show');
+        ->name('clientes.show');
 
     // ══════════════════════════════════════════════════════════════════
     // PEDIDOS - LECTURA Y CREACIÓN
     // ══════════════════════════════════════════════════════════════════
     Route::get('pedidos', [TrabajadorPedidoController::class, 'index'])
-         ->name('pedidos.index');
+        ->name('pedidos.index');
 
     Route::get('pedidos/create', [TrabajadorPedidoController::class, 'create'])
-         ->name('pedidos.create');
+        ->name('pedidos.create');
 
     Route::post('pedidos', [TrabajadorPedidoController::class, 'store'])
-         ->name('pedidos.store');
+        ->name('pedidos.store');
 
     Route::post('pedidos/{pedido}/duplicar', [TrabajadorPedidoController::class, 'duplicar'])
-         ->name('pedidos.duplicar');
+        ->name('pedidos.duplicar');
 
     Route::delete('pedidos/{pedido}', [TrabajadorPedidoController::class, 'destroy'])
-         ->name('pedidos.destroy');
+        ->name('pedidos.destroy');
 
     Route::get('pedidos/{pedido}', [TrabajadorPedidoController::class, 'show'])
-         ->name('pedidos.show');
+        ->name('pedidos.show');
 
 });

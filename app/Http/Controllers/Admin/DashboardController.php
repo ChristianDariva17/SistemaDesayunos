@@ -11,7 +11,7 @@ class DashboardController extends Controller
     public function index(DashboardSummaryService $dashboardSummary)
     {
         $summary = $dashboardSummary->summary();
-        
+
         // ==========================================
         // ÚLTIMOS PEDIDOS
         // ==========================================
@@ -19,7 +19,7 @@ class DashboardController extends Controller
             ->latest()
             ->take(5)
             ->get();
-        
+
         // ==========================================
         // RETORNAR VISTA CON DATOS
         // ==========================================

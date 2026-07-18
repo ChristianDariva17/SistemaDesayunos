@@ -8,7 +8,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 class GenerarReporteInventario implements ShouldQueue
 {
     use Queueable;
-    
+
     public function handle()
     {
         // Generar reporte en segundo plano

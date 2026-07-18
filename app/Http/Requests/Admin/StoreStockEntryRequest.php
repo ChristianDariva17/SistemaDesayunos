@@ -47,7 +47,7 @@ final class StoreStockEntryRequest extends FormRequest
     {
         return [
             'producto_id' => ['required', 'integer', 'exists:productos,id'],
-            'cantidad' => ['required', 'integer', 'min:1', 'max:' . InventoryLimits::MAX_STOCK_LEVEL],
+            'cantidad' => ['required', 'integer', 'min:1', 'max:'.InventoryLimits::MAX_STOCK_LEVEL],
             'motivo' => ['nullable', 'string', 'max:255'],
         ];
     }
