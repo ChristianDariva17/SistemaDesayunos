@@ -115,9 +115,9 @@ class ProductoController extends Controller
                     return [
                         'id' => $producto->id,
                         'nombre' => $producto->nombre,
-                        'precio' => number_format($producto->precio, 2),
+                        'precio' => number_format((float) $producto->precio, 2),
                         'stock' => $producto->stock,
-                        'imagen_url' => $producto->imagen ? asset('storage/'.$producto->imagen) : null,
+                        'imagen_url' => $producto->getImagenUrl(),
                     ];
                 }),
             ]);

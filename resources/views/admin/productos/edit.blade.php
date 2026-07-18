@@ -430,10 +430,13 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold">Imagen Actual</label>
                             <div class="text-center">
-                                @if($producto->imagen)
+                                @php
+                                    $imageUrl = $producto->getImagenUrl();
+                                @endphp
+                                @if($imageUrl)
                                     <div class="position-relative d-inline-block">
                                         <img 
-                                            src="{{ asset('storage/' . $producto->imagen) }}" 
+                                            src="{{ $imageUrl }}"
                                             alt="{{ $producto->nombre }}" 
                                             class="img-fluid rounded shadow-sm"
                                             style="max-height: 200px; object-fit: cover;"

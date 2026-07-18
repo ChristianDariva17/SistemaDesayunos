@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Trabajador\ProductoController as TrabajadorProductoController;
 use App\Models\Producto;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -172,4 +174,79 @@ it('does not write images for unauthorized product mutations', function (): void
     $this->actingAs($worker)->post(route('admin.productos.duplicar', $producto))->assertForbidden();
 
     expect(Storage::disk('public')->allFiles('productos'))->toBe([]);
+});
+
+it('renders placeholders instead of stale product image requests', function (): void {
+    $missingImage = productWithImage(['nombre' => 'Missing image product', 'categoria' => 'comidas']);
+    $withoutImage = productWithImage(['nombre' => 'No image product', 'categoria' => 'comidas', 'imagen' => null]);
+    $missingUrl = asset('storage/'.$missingImage->imagen);
+
+    foreach ([
+        route('admin.productos.index'),
+        route('admin.productos.show', $missingImage),
+        route('admin.productos.edit', $missingImage),
+    ] as $url) {
+        $this->actingAs($this->admin)->get($url)
+            ->assertOk()
+            ->assertDontSee($missingUrl, false)
+            ->assertDontSee(asset('images/no-image.png'), false);
+    }
+
+    $worker = User::factory()->create(['rol' => 'trabajador']);
+
+    foreach ([
+        route('trabajador.productos.index'),
+        route('trabajador.productos.show', $missingImage),
+    ] as $url) {
+        $this->actingAs($worker)->get($url)
+            ->assertOk()
+            ->assertDontSee($missingUrl, false);
+    }
+
+    expect($withoutImage->imagen)->toBeNull();
+});
+
+it('preserves stored product image URLs and list image attributes', function (): void {
+    $producto = productWithImage(['categoria' => 'comidas']);
+    Storage::disk('public')->put($producto->imagen, 'original');
+    $imageUrl = asset('storage/'.$producto->imagen);
+
+    $adminIndex = $this->actingAs($this->admin)->get(route('admin.productos.index'));
+    $adminIndex->assertOk()->assertSee($imageUrl, false);
+
+    expect($adminIndex->getContent())->toMatch('/src="'.preg_quote($imageUrl, '/').'"[^>]*width="50"[^>]*height="50"[^>]*loading="lazy"/s');
+
+    foreach ([
+        route('admin.productos.show', $producto),
+        route('admin.productos.edit', $producto),
+    ] as $url) {
+        $this->actingAs($this->admin)->get($url)
+            ->assertOk()
+            ->assertSee($imageUrl, false);
+    }
+
+    $worker = User::factory()->create(['rol' => 'trabajador']);
+    $workerIndex = $this->actingAs($worker)->get(route('trabajador.productos.index'));
+    $workerIndex->assertOk()->assertSee($imageUrl, false);
+    $workerIndexHtml = $workerIndex->getContent();
+
+    expect($workerIndexHtml)->toMatch('/src="'.preg_quote($imageUrl, '/').'"[^>]*width="50"[^>]*height="50"[^>]*loading="lazy"/s');
+});
+
+it('returns null image URLs from product searches when stored files are missing', function (): void {
+    $producto = productWithImage(['nombre' => 'Missing searchable image']);
+
+    $this->actingAs($this->admin)
+        ->getJson(route('admin.productos.buscar', ['q' => 'Missing searchable']))
+        ->assertOk()
+        ->assertJsonPath('productos.0.id', $producto->id)
+        ->assertJsonPath('productos.0.imagen_url', null);
+
+    $worker = User::factory()->create(['rol' => 'trabajador']);
+    $this->actingAs($worker);
+    $response = app(TrabajadorProductoController::class)->buscar(
+        Request::create('/trabajador/productos/buscar', 'GET', ['q' => 'Missing searchable']),
+    );
+
+    expect($response->getData(true)['productos'][0]['imagen_url'])->toBeNull();
 });

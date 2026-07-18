@@ -470,8 +470,11 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="product-image-container">
-                        @if($producto->imagen)
-                            <img src="{{ asset('storage/' . $producto->imagen) }}" 
+                        @php
+                            $imageUrl = $producto->getImagenUrl();
+                        @endphp
+                        @if($imageUrl)
+                            <img src="{{ $imageUrl }}"
                                  alt="{{ $producto->nombre }}" 
                                  class="img-fluid">
                             

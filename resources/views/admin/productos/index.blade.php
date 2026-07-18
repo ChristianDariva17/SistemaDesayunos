@@ -240,17 +240,20 @@
                             <tr>
                                 {{-- IMAGEN --}}
                                 <td class="text-center" data-label="Imagen">
-                                     @if($producto->imagen)
+                                     @php
+                                         $imageUrl = $producto->getImagenUrl();
+                                     @endphp
+                                     @if($imageUrl)
                                          <button type="button"
                                                  class="btn p-0 border-0 bg-transparent"
                                                  data-bs-toggle="modal"
                                                  data-bs-target="#productImageModal"
-                                                 data-product-image-src="{{ asset('storage/' . $producto->imagen) }}"
+                                                 data-product-image-src="{{ $imageUrl }}"
                                                  data-product-image-alt="{{ $producto->nombre }}"
                                                  data-product-image-title="{{ $producto->nombre }}"
                                                  aria-label="Ver imagen de {{ $producto->nombre }}">
                                              <img
-                                                 src="{{ asset('storage/' . $producto->imagen) }}"
+                                                 src="{{ $imageUrl }}"
                                                  alt="{{ $producto->nombre }}"
                                                  class="rounded shadow-sm"
                                                  width="50"

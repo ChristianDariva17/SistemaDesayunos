@@ -116,9 +116,12 @@
             {{-- SECCIÓN: IMAGEN DEL PRODUCTO --}}
             <div class="card border-0 shadow-sm mb-4">
                 <div class="card-body text-center">
-                    @if($producto->imagen)
+                    @php
+                        $imageUrl = $producto->getImagenUrl();
+                    @endphp
+                    @if($imageUrl)
                         <img 
-                            src="{{ asset('storage/' . $producto->imagen) }}" 
+                            src="{{ $imageUrl }}"
                             alt="{{ $producto->nombre }}" 
                             class="img-fluid rounded shadow"
                             style="max-height: 500px; object-fit: contain; cursor: pointer;"
@@ -470,7 +473,7 @@
 {{-- ========================================== --}}
 {{-- MODAL: IMAGEN AMPLIADA --}}
 {{-- ========================================== --}}
-@if($producto->imagen)
+@if($imageUrl)
     <div class="modal fade" id="modalImagen" tabindex="-1" aria-labelledby="modalImagenLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content">
@@ -480,7 +483,7 @@
                 </div>
                 <div class="modal-body text-center p-0">
                     <img 
-                        src="{{ asset('storage/' . $producto->imagen) }}" 
+                        src="{{ $imageUrl }}"
                         alt="{{ $producto->nombre }}" 
                         class="img-fluid"
                         style="max-height: 80vh; object-fit: contain;"

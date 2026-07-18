@@ -256,13 +256,13 @@ class Producto extends Model
     /**
      * Obtener la URL completa de la imagen
      */
-    public function getImagenUrl(): string
+    public function getImagenUrl(): ?string
     {
         if ($this->tieneImagen()) {
             return asset('storage/'.$this->imagen);
         }
 
-        return asset('images/no-image.png');
+        return null;
     }
 
     /**
