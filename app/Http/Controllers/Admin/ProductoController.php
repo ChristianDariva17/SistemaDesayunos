@@ -130,7 +130,7 @@ class ProductoController extends Controller
         // Cargar relaciones con pedidos
         $producto->loadCount('pedidos');
         $producto->load(['pedidos' => function ($query) {
-            $query->latest()->take(5);
+            $query->with('cliente')->latest('pedidos.created_at')->take(5);
         }]);
 
         // Calcular total vendido (opcional)

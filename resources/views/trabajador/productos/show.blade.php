@@ -623,7 +623,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($producto->pedidos->take(5) as $pedido)
+                                @foreach($producto->pedidos as $pedido)
                                 <tr>
                                     <td><strong>#{{ $pedido->id }}</strong></td>
                                     <td>{{ $pedido->cliente->nombre ?? 'N/A' }}</td>
