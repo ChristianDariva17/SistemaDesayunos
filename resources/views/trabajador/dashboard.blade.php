@@ -73,7 +73,7 @@
                 subtitle="Total: {{ $totalPedidos ?? 0 }}"
                 icon="fas fa-clock"
                 color="warning"
-                :href="route('trabajador.pedidos.index')"
+                :href="route('trabajador.pedidos.index', ['estado' => 'pendiente'])"
                 :uppercase-title="false"
             />
         </div>

@@ -37,7 +37,7 @@
 
                         {{-- Pedidos Pendientes --}}
                         <div class="col-xl-3 col-md-6 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
-                            <x-stat-card title="Pedidos Pendientes" :value="$pedidosPendientes ?? 0" subtitle="Total: {{ $totalPedidos ?? 0 }}" icon="fas fa-clock" color="warning" :href="route('admin.pedidos.index')" />
+                            <x-stat-card title="Pedidos Pendientes" :value="$pedidosPendientes ?? 0" subtitle="Total: {{ $totalPedidos ?? 0 }}" icon="fas fa-clock" color="warning" :href="route('admin.pedidos.index', ['estado' => 'pendiente'])" />
                         </div>
 
                         {{-- Stock Bajo --}}

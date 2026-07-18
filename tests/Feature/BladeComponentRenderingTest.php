@@ -61,6 +61,9 @@ it('renders admin dashboard component values, alert semantics, and empty states'
         ->assertSee('No hay datos de ventas disponibles')
         ->assertSee('No hay pedidos recientes')
         ->assertSee('aria-hidden="true"', false);
+
+    assertPendingOrderCardTarget($response->getContent(), route('admin.pedidos.index', ['estado' => 'pendiente']));
+    assertAdminPendingOrderNotificationTarget($response->getContent(), route('admin.pedidos.index', ['estado' => 'pendiente']));
 });
 
 it('renders worker dashboard component values with worker routes and empty states', function (): void {
@@ -98,6 +101,8 @@ it('renders worker dashboard component values with worker routes and empty state
         ->assertSee('S/ 0.00')
         ->assertSee('No hay datos de ventas disponibles')
         ->assertSee('No hay pedidos recientes');
+
+    assertPendingOrderCardTarget($response->getContent(), route('trabajador.pedidos.index', ['estado' => 'pendiente']));
 });
 
 it('renders product listing action targets, form methods, alerts, and empty state behavior', function (): void {
@@ -151,3 +156,31 @@ it('renders product listing action targets, form methods, alerts, and empty stat
         ->assertSee('Limpiar filtros')
         ->assertDontSee('role="group" aria-label="Acciones de producto"', false);
 });
+
+function assertPendingOrderCardTarget(string $html, string $expectedHref): void
+{
+    $document = new DOMDocument;
+    @$document->loadHTML($html);
+    $xpath = new DOMXPath($document);
+    $links = $xpath->query(sprintf(
+        '//div[contains(concat(" ", normalize-space(@class), " "), " card ")][.//*[normalize-space() = "Pedidos Pendientes"]]//a[@href = "%s"]',
+        $expectedHref,
+    ));
+
+    expect($links)->not->toBeFalse()
+        ->and($links->length)->toBe(1);
+}
+
+function assertAdminPendingOrderNotificationTarget(string $html, string $expectedHref): void
+{
+    $document = new DOMDocument;
+    @$document->loadHTML($html);
+    $xpath = new DOMXPath($document);
+    $links = $xpath->query(sprintf(
+        '//nav[@aria-label = "Barra superior de administración"]//a[@href = "%s" and contains(normalize-space(), "pedidos pendientes")]',
+        $expectedHref,
+    ));
+
+    expect($links)->not->toBeFalse()
+        ->and($links->length)->toBe(1);
+}

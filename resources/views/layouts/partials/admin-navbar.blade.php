@@ -27,7 +27,7 @@
                             <ul class="dropdown-menu dropdown-menu-end">
                                 <li><h6 class="dropdown-header">Notificaciones</h6></li>
                                 <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item" href="{{ route('admin.pedidos.index') }}">
+                                <li><a class="dropdown-item" href="{{ route('admin.pedidos.index', ['estado' => 'pendiente']) }}">
                                     <i class="fas fa-shopping-cart text-danger" aria-hidden="true"></i>
                                     {{ $pedidosPendientes ?? 0 }} pedidos pendientes
                                 </a></li>
