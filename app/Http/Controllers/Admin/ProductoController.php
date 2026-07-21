@@ -537,29 +537,9 @@ class ProductoController extends Controller
         Gate::authorize('export', Producto::class);
 
         try {
-            $query = Producto::query();
-
-            // Aplicar los mismos filtros que en index()
-            if ($request->filled('search')) {
-                $query->where('nombre', 'like', '%'.$request->search.'%');
-            }
-
-            if ($request->filled('categoria')) {
-                $query->where('categoria', $request->categoria);
-            }
-
-            if ($request->filled('estado')) {
-                $query->where('estado', $request->estado);
-            }
-
-            if ($request->string('stock')->toString() === 'bajo') {
-                $query->stockMinimoBajo();
-            }
-
-            $productos = $query->orderBy('nombre')->get();
-
             // Nombre del archivo
             $filename = 'productos_'.now()->format('Y-m-d_His').'.csv';
+            $chunkSize = max(1, (int) config('reportes.csv_chunk_size', 500));
 
             // Headers para descarga
             $headers = [
@@ -568,7 +548,7 @@ class ProductoController extends Controller
             ];
 
             // Crear CSV
-            $callback = function () use ($productos) {
+            $callback = function () use ($request, $chunkSize) {
                 $file = fopen('php://output', 'w');
 
                 // BOM para UTF-8
@@ -588,29 +568,55 @@ class ProductoController extends Controller
                     'Fecha de Creación',
                 ]);
 
-                // Datos
-                foreach ($productos as $producto) {
-                    fputcsv($file, [
-                        $producto->id,
-                        $producto->nombre,
-                        $producto->descripcion,
-                        $producto->categoria,
-                        $producto->precio,
-                        $producto->stock,
-                        $producto->codigo_barras,
-                        $producto->sku,
-                        ucfirst($producto->estado),
-                        $producto->created_at->format('d/m/Y H:i:s'),
-                    ]);
+                $query = Producto::query();
+
+                // Aplicar los mismos filtros que en index()
+                if ($request->filled('search')) {
+                    $query->where('nombre', 'like', '%'.$request->search.'%');
                 }
 
-                fclose($file);
-            };
+                if ($request->filled('categoria')) {
+                    $query->where('categoria', $request->categoria);
+                }
 
-            Log::info('Productos exportados', [
-                'total' => $productos->count(),
-                'usuario' => auth()->id() ?? 'Sistema',
-            ]);
+                if ($request->filled('estado')) {
+                    $query->where('estado', $request->estado);
+                }
+
+                if ($request->string('stock')->toString() === 'bajo') {
+                    $query->stockMinimoBajo();
+                }
+
+                $total = 0;
+
+                $query->orderBy('nombre')
+                    ->orderBy('id')
+                    ->chunk($chunkSize, function ($productos) use ($file, &$total): void {
+                        foreach ($productos as $producto) {
+                            fputcsv($file, [
+                                $producto->id,
+                                $producto->nombre,
+                                $producto->descripcion,
+                                $producto->categoria,
+                                $producto->precio,
+                                $producto->stock,
+                                $producto->codigo_barras,
+                                $producto->sku,
+                                ucfirst($producto->estado),
+                                $producto->created_at->format('d/m/Y H:i:s'),
+                            ]);
+                        }
+
+                        $total += $productos->count();
+                    });
+
+                fclose($file);
+
+                Log::info('Productos exportados', [
+                    'total' => $total,
+                    'usuario' => auth()->id() ?? 'Sistema',
+                ]);
+            };
 
             return response()->stream($callback, 200, $headers);
 

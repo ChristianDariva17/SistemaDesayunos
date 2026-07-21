@@ -249,34 +249,36 @@ class PedidoController extends Controller
     {
         Gate::authorize('export', Pedido::class);
 
-        $pedidos = $pedidoQuery->filtered($request)
-            ->with(['cliente:id,nombre,apellido', 'empleado:id,nombre,rol_operativo'])
-            ->get();
-
         $filename = 'pedidos_'.now()->format('Y-m-d_His').'.csv';
+        $chunkSize = max(1, (int) config('reportes.csv_chunk_size', 500));
 
         $headers = [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ];
 
-        $callback = function () use ($pedidos) {
+        $callback = function () use ($request, $pedidoQuery, $chunkSize) {
             $file = fopen('php://output', 'w');
             fprintf($file, chr(0xEF).chr(0xBB).chr(0xBF));
 
             fputcsv($file, ['Número', 'Cliente', 'Empleado', 'Rol', 'Fecha', 'Total', 'Estado']);
 
-            foreach ($pedidos as $pedido) {
-                fputcsv($file, [
-                    $pedido->numero_pedido,
-                    $pedido->cliente->nombre ?? 'Sin cliente',
-                    $pedido->empleado->nombre ?? 'Sin empleado',
-                    $pedido->empleado->rol_operativo ?? 'N/A',
-                    $pedido->fecha?->format('d/m/Y').' '.substr((string) $pedido->hora, 0, 5),
-                    number_format($pedido->total, 2),
-                    ucfirst($pedido->estado),
-                ]);
-            }
+            $pedidoQuery->filtered($request)
+                ->orderByDesc('id')
+                ->with(['cliente:id,nombre,apellido', 'empleado:id,nombre,rol_operativo'])
+                ->chunk($chunkSize, function ($pedidos) use ($file): void {
+                    foreach ($pedidos as $pedido) {
+                        fputcsv($file, [
+                            $pedido->numero_pedido,
+                            $pedido->cliente->nombre ?? 'Sin cliente',
+                            $pedido->empleado->nombre ?? 'Sin empleado',
+                            $pedido->empleado->rol_operativo ?? 'N/A',
+                            $pedido->fecha?->format('d/m/Y').' '.substr((string) $pedido->hora, 0, 5),
+                            number_format($pedido->total, 2),
+                            ucfirst($pedido->estado),
+                        ]);
+                    }
+                });
 
             fclose($file);
         };

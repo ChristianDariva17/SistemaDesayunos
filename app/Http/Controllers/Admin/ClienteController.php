@@ -348,27 +348,9 @@ class ClienteController extends Controller
         Gate::authorize('export', Cliente::class);
 
         try {
-            $query = Cliente::query();
-
-            // Aplicar filtro de búsqueda si existe
-            if ($request->filled('search')) {
-                $search = $request->get('search');
-                $query->where(function ($q) use ($search) {
-                    $q->where('nombre', 'like', "%{$search}%")
-                        ->orWhere('apellido', 'like', "%{$search}%")
-                        ->orWhere('email', 'like', "%{$search}%");
-                });
-            }
-
-            // Aplicar filtro de estado si existe
-            if ($request->filled('estado')) {
-                $query->where('estado', $request->estado);
-            }
-
-            $clientes = $query->orderBy('nombre')->get();
-
             // Nombre del archivo
             $filename = 'clientes_'.now()->format('Y-m-d_His').'.csv';
+            $chunkSize = max(1, (int) config('reportes.csv_chunk_size', 500));
 
             // Headers para descarga
             $headers = [
@@ -377,7 +359,7 @@ class ClienteController extends Controller
             ];
 
             // Crear CSV
-            $callback = function () use ($clientes) {
+            $callback = function () use ($request, $chunkSize) {
                 $file = fopen('php://output', 'w');
 
                 // BOM para UTF-8
@@ -398,36 +380,60 @@ class ClienteController extends Controller
                     'Fecha Registro',
                 ]);
 
-                // Datos
-                foreach ($clientes as $cliente) {
-                    // Calcular edad si tiene fecha de nacimiento
-                    $edad = '';
-                    if ($cliente->fecha_nacimiento) {
-                        $edad = now()->diffInYears($cliente->fecha_nacimiento).' años';
-                    }
+                $query = Cliente::query();
 
-                    fputcsv($file, [
-                        $cliente->id,
-                        $cliente->nombre,
-                        $cliente->apellido,
-                        $cliente->telefono,
-                        $cliente->email,
-                        $cliente->direccion,
-                        $cliente->fecha_nacimiento ? $cliente->fecha_nacimiento->format('d/m/Y') : '',
-                        $edad,
-                        ucfirst($cliente->estado),
-                        $cliente->notas,
-                        $cliente->created_at->format('d/m/Y H:i:s'),
-                    ]);
+                // Aplicar filtro de búsqueda si existe
+                if ($request->filled('search')) {
+                    $search = $request->get('search');
+                    $query->where(function ($q) use ($search) {
+                        $q->where('nombre', 'like', "%{$search}%")
+                            ->orWhere('apellido', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    });
                 }
 
-                fclose($file);
-            };
+                // Aplicar filtro de estado si existe
+                if ($request->filled('estado')) {
+                    $query->where('estado', $request->estado);
+                }
 
-            Log::info('Clientes exportados', [
-                'total' => $clientes->count(),
-                'usuario' => auth()->id() ?? 'Sistema',
-            ]);
+                $total = 0;
+
+                $query->orderBy('nombre')
+                    ->orderBy('id')
+                    ->chunk($chunkSize, function ($clientes) use ($file, &$total): void {
+                        foreach ($clientes as $cliente) {
+                            // Calcular edad si tiene fecha de nacimiento
+                            $edad = '';
+                            if ($cliente->fecha_nacimiento) {
+                                $edad = now()->diffInYears($cliente->fecha_nacimiento).' años';
+                            }
+
+                            fputcsv($file, [
+                                $cliente->id,
+                                $cliente->nombre,
+                                $cliente->apellido,
+                                $cliente->telefono,
+                                $cliente->email,
+                                $cliente->direccion,
+                                $cliente->fecha_nacimiento ? $cliente->fecha_nacimiento->format('d/m/Y') : '',
+                                $edad,
+                                ucfirst($cliente->estado),
+                                $cliente->notas,
+                                $cliente->created_at->format('d/m/Y H:i:s'),
+                            ]);
+                        }
+
+                        $total += $clientes->count();
+                    });
+
+                fclose($file);
+
+                Log::info('Clientes exportados', [
+                    'total' => $total,
+                    'usuario' => auth()->id() ?? 'Sistema',
+                ]);
+            };
 
             return response()->stream($callback, 200, $headers);
 
