@@ -5,28 +5,33 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Admin;
 
 use App\Actions\Producto\ToggleProductoStatusAction;
-use App\Actions\Stock\RegisterStockMovementAction;
+use App\Actions\Stock\RegisterStockAdjustmentAction;
 use App\Enums\ProductoEstado;
-use App\Enums\StockMovimientoTipo;
+use App\Enums\StockAdjustmentOperation;
+use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreProductoRequest;
 use App\Http\Requests\Admin\UpdateProductoRequest;
 use App\Models\Producto;
-use App\Models\User;
 use App\Queries\ProductoQuery;
 use App\Services\ProductImageService;
+use App\Support\InventoryLimits;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use Throwable;
 
 class ProductoController extends Controller
 {
-    public function __construct(private readonly ProductImageService $productImageService) {}
+    public function __construct(
+        private readonly ProductImageService $productImageService,
+        private readonly RegisterStockAdjustmentAction $registerStockAdjustment,
+    ) {}
 
     /**
      * ==========================================
@@ -166,7 +171,8 @@ class ProductoController extends Controller
         try {
             $validated = $request->validated();
             $removeImage = (bool) ($validated['eliminar_imagen'] ?? false);
-            unset($validated['eliminar_imagen']);
+            $stockNuevo = (int) $validated['stock'];
+            unset($validated['eliminar_imagen'], $validated['stock']);
 
             DB::beginTransaction();
 
@@ -174,7 +180,6 @@ class ProductoController extends Controller
                 ->lockForUpdate()
                 ->findOrFail($producto->getKey());
 
-            $stockAnterior = (int) $producto->stock;
             $oldImagePath = $producto->imagen;
 
             if ($request->hasFile('imagen')) {
@@ -189,13 +194,14 @@ class ProductoController extends Controller
             // Actualizar producto
             $producto->update($validated);
 
-            $this->registerManualStockAdjustment(
-                producto: $producto,
-                stockAnterior: $stockAnterior,
-                stockNuevo: (int) $producto->stock,
+            $stockAdjustment = $this->registerStockAdjustment->handle(
+                productoId: (int) $producto->getKey(),
+                operation: StockAdjustmentOperation::Set,
+                quantity: $stockNuevo,
                 user: $request->user(),
                 motivo: 'Manual product edit stock adjustment',
             );
+            $producto = $stockAdjustment->producto;
 
             DB::commit();
 
@@ -382,77 +388,53 @@ class ProductoController extends Controller
     {
         Gate::forUser($request->user())->authorize('updateStock', $producto);
 
-        try {
-            if (is_string($request->input('motivo'))) {
-                $request->merge([
-                    'motivo' => $this->normalizeManualStockMotivo($request->input('motivo')),
-                ]);
-            }
-
-            $validated = $request->validate([
-                'cantidad' => 'required|integer|min:0',
-                'tipo' => 'required|in:incrementar,decrementar,establecer',
-                'motivo' => 'nullable|string|max:255',
+        if (is_string($request->input('motivo'))) {
+            $request->merge([
+                'motivo' => $this->normalizeManualStockMotivo($request->input('motivo')),
             ]);
-            $motivo = $this->normalizeManualStockMotivo($validated['motivo'] ?? null);
+        }
 
-            DB::beginTransaction();
+        $validated = $request->validate([
+            'cantidad' => ['required', 'integer', 'min:0', 'max:'.InventoryLimits::MAX_STOCK_LEVEL],
+            'tipo' => ['required', 'in:incrementar,decrementar,establecer'],
+            'motivo' => ['nullable', 'string', 'max:255'],
+        ]);
+        $motivo = $this->normalizeManualStockMotivo($validated['motivo'] ?? null);
+        $operation = match ($validated['tipo']) {
+            'incrementar' => StockAdjustmentOperation::Increment,
+            'decrementar' => StockAdjustmentOperation::Decrement,
+            'establecer' => StockAdjustmentOperation::Set,
+            default => throw ValidationException::withMessages([
+                'tipo' => 'El tipo de ajuste de stock no es válido.',
+            ]),
+        };
 
-            $producto = Producto::query()
-                ->lockForUpdate()
-                ->findOrFail($producto->getKey());
-
-            $stockAnterior = (int) $producto->stock;
-            $stockNuevo = $stockAnterior;
-
-            switch ($validated['tipo']) {
-                case 'incrementar':
-                    $stockNuevo += (int) $validated['cantidad'];
-                    break;
-
-                case 'decrementar':
-                    if ($stockAnterior < (int) $validated['cantidad']) {
-                        DB::rollBack();
-
-                        return redirect()->back()
-                            ->with('error', '❌ Stock insuficiente para realizar esta operación.');
-                    }
-                    $stockNuevo -= (int) $validated['cantidad'];
-                    break;
-
-                case 'establecer':
-                    $stockNuevo = (int) $validated['cantidad'];
-                    break;
-            }
-
-            $producto->stock = $stockNuevo;
-            $producto->save();
-
-            $this->registerManualStockAdjustment(
-                producto: $producto,
-                stockAnterior: (int) $stockAnterior,
-                stockNuevo: (int) $producto->stock,
+        try {
+            $result = $this->registerStockAdjustment->handle(
+                productoId: (int) $producto->getKey(),
+                operation: $operation,
+                quantity: (int) $validated['cantidad'],
                 user: $request->user(),
                 motivo: $motivo,
             );
 
-            DB::commit();
-
             Log::info('Stock actualizado', [
-                'producto_id' => $producto->id,
-                'stock_anterior' => $stockAnterior,
-                'stock_nuevo' => $producto->stock,
+                'producto_id' => $result->producto->id,
+                'stock_anterior' => $result->stockAnterior,
+                'stock_nuevo' => $result->stockNuevo,
                 'tipo' => $validated['tipo'],
                 'motivo' => $motivo ?? 'No especificado',
             ]);
 
             return redirect()->back()
-                ->with('success', "✅ Stock actualizado correctamente. Anterior: {$stockAnterior}, Nuevo: {$producto->stock}");
+                ->with('success', "✅ Stock actualizado correctamente. Anterior: {$result->stockAnterior}, Nuevo: {$result->stockNuevo}");
 
-        } catch (Exception $e) {
-            if (DB::transactionLevel() > 0) {
-                DB::rollBack();
-            }
+        } catch (InsufficientStockException) {
+            return redirect()->back()
+                ->with('error', '❌ Stock insuficiente para realizar esta operación.');
+        } catch (ValidationException $e) {
+            throw $e;
+        } catch (Throwable $e) {
 
             Log::error('Error al actualizar stock', [
                 'producto_id' => $producto->id,
@@ -474,28 +456,6 @@ class ProductoController extends Controller
         $normalized = $normalized ?? $motivo;
 
         return $normalized === '' ? null : $normalized;
-    }
-
-    private function registerManualStockAdjustment(
-        Producto $producto,
-        int $stockAnterior,
-        int $stockNuevo,
-        ?User $user,
-        ?string $motivo = null,
-    ): void {
-        if ($stockAnterior === $stockNuevo) {
-            return;
-        }
-
-        app(RegisterStockMovementAction::class)->handle(
-            producto: $producto,
-            tipo: StockMovimientoTipo::Adjustment->value,
-            cantidad: abs($stockNuevo - $stockAnterior),
-            stockAnterior: $stockAnterior,
-            stockNuevo: $stockNuevo,
-            user: $user,
-            motivo: $motivo,
-        );
     }
 
     /**

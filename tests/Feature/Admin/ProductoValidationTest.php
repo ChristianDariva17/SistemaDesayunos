@@ -2,11 +2,44 @@
 
 use App\Http\Controllers\Admin\ProductoController;
 use App\Http\Requests\Admin\UpdateProductoRequest;
+use App\Models\Cliente;
+use App\Models\Empleado;
+use App\Models\Pedido;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
+use App\Models\StockReservation;
 use App\Models\User;
+use App\Support\InventoryLimits;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+
+function legacyStockWriteProducto(string $name, int $stock = 10): Producto
+{
+    return Producto::create([
+        'nombre' => $name,
+        'categoria' => 'bebida',
+        'precio' => 5,
+        'stock' => $stock,
+        'estado' => 'activo',
+    ]);
+}
+
+function legacyReserveProductoStock(Producto $producto, int $quantity): void
+{
+    $cliente = Cliente::create([
+        'nombre' => 'Reserved', 'apellido' => 'Customer', 'email' => uniqid().'@example.com', 'estado' => 'activo',
+    ]);
+    $empleado = Empleado::create([
+        'nombre' => 'Reservation Employee', 'rol_operativo' => 'mesero', 'estado' => 'activo',
+    ]);
+    $pedido = Pedido::create([
+        'numero_pedido' => 'PED-'.uniqid(), 'cliente_id' => $cliente->id, 'empleado_id' => $empleado->id,
+        'metodo_pago' => 'efectivo', 'fecha' => '2026-07-20', 'hora' => '08:30:00', 'total' => 0, 'estado' => 'pendiente',
+    ]);
+
+    StockReservation::reserve($producto, $pedido, $quantity);
+}
 
 it('rejects an invalid producto estado through enum validation', function (): void {
     $admin = User::factory()->create([
@@ -952,7 +985,7 @@ it('validates producto minimum stock boundaries', function (mixed $minimum): voi
 })->with([
     'negative' => -1,
     'decimal' => 1.5,
-    'overflow' => 1000000,
+    'overflow' => InventoryLimits::MAX_STOCK_LEVEL + 1,
 ]);
 
 it('allows updating a producto without failing its own unique fields', function (): void {
@@ -1032,6 +1065,7 @@ it('records an ajuste stock movement when an admin product edit changes stock', 
     $this->assertDatabaseHas('stock_movimientos', [
         'producto_id' => $producto->id,
         'pedido_id' => null,
+        'pedido_numero' => null,
         'user_id' => $admin->id,
         'tipo' => StockMovimiento::TIPO_AJUSTE,
         'cantidad' => 5,
@@ -1192,6 +1226,7 @@ it('records an ajuste stock movement when the manual stock endpoint changes stoc
         'stock_nuevo' => 6,
         'motivo' => 'Inventory count correction',
     ]);
+    $this->assertDatabaseCount('stock_movimientos', 1);
 });
 
 it('normalizes blank manual stock motivo values to null', function (string $motivo): void {
@@ -1372,5 +1407,160 @@ it('validates manual stock decrements against the reloaded product stock', funct
         'id' => $producto->id,
         'stock' => 3,
     ]);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('increments manual stock from the reloaded database value', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $producto = legacyStockWriteProducto('Stale route stock');
+    $staleProducto = $producto->fresh();
+    Producto::query()->whereKey($producto)->update(['stock' => 20]);
+    $request = Request::create(route('admin.productos.actualizar-stock', $producto), 'PATCH', [
+        'tipo' => 'incrementar',
+        'cantidad' => 3,
+        'motivo' => 'Fresh count',
+    ]);
+    $request->headers->set('referer', route('admin.productos.show', $producto));
+    $request->setLaravelSession($this->app['session.store']);
+    $request->setUserResolver(fn (): User => $admin);
+
+    $response = app(ProductoController::class)->actualizarStock($request, $staleProducto);
+
+    expect($response->getSession()->get('success'))
+        ->toBe('✅ Stock actualizado correctamente. Anterior: 20, Nuevo: 23');
+    $this->assertDatabaseHas('productos', ['id' => $producto->id, 'stock' => 23]);
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'cantidad' => 3,
+        'stock_anterior' => 20,
+        'stock_nuevo' => 23,
+    ]);
+});
+
+it('treats an unchanged manual stock target as successful without a movement', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $producto = legacyStockWriteProducto('Unchanged manual stock');
+    legacyReserveProductoStock($producto, 4);
+
+    $this->actingAs($admin)
+        ->from(route('admin.productos.show', $producto))
+        ->patch(route('admin.productos.actualizar-stock', $producto), [
+            'tipo' => 'establecer',
+            'cantidad' => 10,
+            'motivo' => 'No change',
+        ])
+        ->assertRedirect(route('admin.productos.show', $producto))
+        ->assertSessionHas('success', '✅ Stock actualizado correctamente. Anterior: 10, Nuevo: 10');
+
+    expect($producto->refresh()->stock)->toBe(10);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('rejects a manual stock set below active reservations without writes', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $producto = legacyStockWriteProducto('Reserved manual stock');
+    legacyReserveProductoStock($producto, 4);
+
+    $this->actingAs($admin)
+        ->from(route('admin.productos.show', $producto))
+        ->patch(route('admin.productos.actualizar-stock', $producto), [
+            'tipo' => 'establecer', 'cantidad' => 3,
+        ])->assertSessionHas('error', '❌ Stock insuficiente para realizar esta operación.');
+
+    expect($producto->refresh()->stock)->toBe(10);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('rolls back product attributes when edited stock is below active reservations', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $producto = legacyStockWriteProducto('Reserved product edit');
+    legacyReserveProductoStock($producto, 4);
+
+    $this->actingAs($admin)->put(route('admin.productos.update', $producto), [
+        'nombre' => 'Changed reserved product', 'categoria' => 'bebida', 'precio' => 6,
+        'stock' => 3, 'estado' => 'activo',
+    ])->assertSessionHas('error', '❌ Error al actualizar el producto. Por favor intenta nuevamente.');
+
+    $producto->refresh();
+    expect($producto->nombre)->toBe('Reserved product edit')->and($producto->stock)->toBe(10);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('allows manual stock to equal the active reservation floor', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $producto = legacyStockWriteProducto('Reserved stock floor');
+    legacyReserveProductoStock($producto, 4);
+
+    $this->actingAs($admin)->patch(route('admin.productos.actualizar-stock', $producto), [
+        'tipo' => 'establecer', 'cantidad' => 4,
+    ])->assertSessionHas('success', '✅ Stock actualizado correctamente. Anterior: 10, Nuevo: 4');
+
+    expect($producto->refresh()->stock)->toBe(4);
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id, 'stock_anterior' => 10, 'stock_nuevo' => 4,
+    ]);
+});
+
+it('accepts the maximum manual stock level exactly', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $producto = legacyStockWriteProducto('Maximum manual stock', 1);
+
+    $this->actingAs($admin)->patch(route('admin.productos.actualizar-stock', $producto), [
+        'tipo' => 'establecer',
+        'cantidad' => InventoryLimits::MAX_STOCK_LEVEL,
+    ])->assertSessionHasNoErrors();
+
+    expect($producto->refresh()->stock)->toBe(InventoryLimits::MAX_STOCK_LEVEL);
+});
+
+it('rejects a manual stock result above the maximum without writes', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $producto = legacyStockWriteProducto('Overflow manual stock', 1);
+
+    $this->actingAs($admin)
+        ->from(route('admin.productos.show', $producto))
+        ->patch(route('admin.productos.actualizar-stock', $producto), [
+            'tipo' => 'incrementar',
+            'cantidad' => InventoryLimits::MAX_STOCK_LEVEL,
+        ])
+        ->assertSessionHasErrors('cantidad');
+
+    expect($producto->refresh()->stock)->toBe(1);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('rolls back manual stock when ledger registration fails', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $producto = legacyStockWriteProducto('Manual ledger rollback');
+    DB::unprepared("CREATE TRIGGER fail_manual_stock_ledger BEFORE INSERT ON stock_movimientos BEGIN SELECT RAISE(ABORT, 'forced ledger failure'); END");
+
+    $this->actingAs($admin)->patch(route('admin.productos.actualizar-stock', $producto), [
+        'tipo' => 'incrementar',
+        'cantidad' => 2,
+    ])->assertSessionHas('error', '❌ Error al actualizar el stock.');
+    DB::unprepared('DROP TRIGGER fail_manual_stock_ledger');
+
+    expect($producto->refresh()->stock)->toBe(10);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('rolls back product attributes and stock when edit ledger registration fails', function (): void {
+    $admin = User::factory()->create(['rol' => 'administrador']);
+    $producto = legacyStockWriteProducto('Product edit ledger rollback');
+    DB::unprepared("CREATE TRIGGER fail_product_edit_ledger BEFORE INSERT ON stock_movimientos BEGIN SELECT RAISE(ABORT, 'forced ledger failure'); END");
+
+    $this->actingAs($admin)->put(route('admin.productos.update', $producto), [
+        'nombre' => 'Changed name',
+        'categoria' => 'bebida',
+        'precio' => 6,
+        'stock' => 12,
+        'estado' => 'activo',
+    ])->assertSessionHas('error', '❌ Error al actualizar el producto. Por favor intenta nuevamente.');
+    DB::unprepared('DROP TRIGGER fail_product_edit_ledger');
+
+    $producto->refresh();
+    expect($producto->nombre)->toBe('Product edit ledger rollback')
+        ->and($producto->precio)->toBe('5.00')
+        ->and($producto->stock)->toBe(10);
     $this->assertDatabaseCount('stock_movimientos', 0);
 });

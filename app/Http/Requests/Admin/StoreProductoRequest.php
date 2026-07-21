@@ -6,6 +6,7 @@ namespace App\Http\Requests\Admin;
 
 use App\Enums\ProductoEstado;
 use App\Models\Producto;
+use App\Support\InventoryLimits;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum as EnumRule;
@@ -123,8 +124,8 @@ final class StoreProductoRequest extends FormRequest
             'precio' => ['required', 'numeric', 'min:0', 'max:999999.99'],
             'codigo_barras' => ['nullable', 'string', 'max:50', Rule::unique('productos', 'codigo_barras')],
             'sku' => ['nullable', 'string', 'max:50', Rule::unique('productos', 'sku')],
-            'stock' => ['required', 'integer', 'min:0', 'max:999999'],
-            'stock_minimo' => ['nullable', 'integer', 'min:0', 'max:999999'],
+            'stock' => ['required', 'integer', 'min:0', 'max:'.InventoryLimits::MAX_STOCK_LEVEL],
+            'stock_minimo' => ['nullable', 'integer', 'min:0', 'max:'.InventoryLimits::MAX_STOCK_LEVEL],
             'estado' => ['required', Rule::enum(ProductoEstado::class)],
             'imagen' => ['nullable', 'image', 'mimes:jpeg,png,jpg,gif,webp', 'max:2048', 'dimensions:max_width=4096,max_height=4096'],
         ];
@@ -152,10 +153,10 @@ final class StoreProductoRequest extends FormRequest
             'stock.required' => 'El stock es obligatorio.',
             'stock.integer' => 'El stock debe ser un número entero.',
             'stock.min' => 'El stock no puede ser negativo.',
-            'stock.max' => 'El stock no puede superar las 999,999 unidades.',
+            'stock.max' => 'El stock supera el máximo permitido.',
             'stock_minimo.integer' => 'El stock mínimo debe ser un número entero.',
             'stock_minimo.min' => 'El stock mínimo no puede ser negativo.',
-            'stock_minimo.max' => 'El stock mínimo no puede superar las 999,999 unidades.',
+            'stock_minimo.max' => 'El stock mínimo supera el máximo permitido.',
             'estado.required' => 'Debes seleccionar el estado del producto.',
             'estado.'.EnumRule::class => 'El estado debe ser activo o inactivo.',
             'imagen.image' => 'El archivo debe ser una imagen.',
