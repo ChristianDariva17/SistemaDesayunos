@@ -64,15 +64,11 @@
         ESTADÍSTICAS RÁPIDAS (KPIs)
         ========================================== --}}
     @php
-        // Calcular estadísticas con caché para optimizar performance
         $totalProductos = \App\Models\Producto::count();
         $stockBajo = \App\Models\Producto::stockBajo()->count();
         $pedidosMes = \App\Models\Pedido::whereMonth('fecha', now()->month)
             ->whereYear('fecha', now()->year)
             ->count();
-        $ventasMes = \App\Models\Pedido::whereMonth('fecha', now()->month)
-            ->whereYear('fecha', now()->year)
-            ->sum('total');
     @endphp
 
     <div class="row mb-4">
@@ -158,7 +154,7 @@
                                 Ventas {{ now()->format('F') }}
                             </div>
                             <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                S/ {{ number_format($ventasMes, 2) }}
+                                S/ {{ $estadisticas['ventasMesActual'] }}
                             </div>
                             <div class="text-xs text-muted mt-1">
                                 <i class="fas fa-dollar-sign"></i> Ingresos del mes
@@ -349,13 +345,8 @@
                                 <small class="text-muted d-block mb-1">
                                     <i class="fas fa-dollar-sign"></i> Valor Total
                                 </small>
-                                @php
-                                    $valorInventario = \Illuminate\Support\Facades\DB::table('productos')
-                                        ->selectRaw('SUM(precio * stock) as total')
-                                        ->value('total') ?? 0;
-                                @endphp
                                 <strong class="text-success h5">
-                                    S/ {{ number_format($valorInventario, 0) }}
+                                    S/ {{ $estadisticas['valorInventario'] }}
                                 </strong>
                             </div>
                         </div>

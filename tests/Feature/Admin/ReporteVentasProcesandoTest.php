@@ -2,7 +2,28 @@
 
 use App\Models\Pedido;
 use App\Models\Producto;
+use App\Support\MoneyDecimal;
 use Carbon\Carbon;
+
+function ventasViewData(Pedido $pedido): array
+{
+    $split = MoneyDecimal::splitInclusiveTax((string) $pedido->total, 18);
+    $pedido->setAttribute('report_net', $split['net']);
+    $pedido->setAttribute('report_tax', $split['tax']);
+    $pedido->setAttribute('report_total', $split['gross']);
+    $counts = array_fill_keys(['pedidosCompletados', 'pedidosPendientes', 'pedidosCancelados', 'pedidosProcesando'], 0);
+    $counts['pedidos'.ucfirst((string) $pedido->estado)] = 1;
+    $totals = array_fill_keys(['totalCompletados', 'totalPendientes', 'totalCancelados', 'totalProcesando'], '0.00');
+    $totals['total'.ucfirst((string) $pedido->estado)] = $split['gross'];
+
+    return $counts + $totals + [
+        'pedidos' => collect([$pedido]), 'totalVentas' => $split['gross'], 'cantidadPedidos' => 1,
+        'fechaInicio' => '2026-06-01', 'fechaFin' => '2026-06-01', 'diasPeriodo' => 1,
+        'ticketPromedio' => $split['gross'], 'promedioDiario' => $split['gross'],
+        'subtotalGeneral' => $split['net'], 'igvGeneral' => $split['tax'],
+        'topClientes' => collect(), 'ventasPorDia' => collect(),
+    ];
+}
 
 it('renders procesando totals in the ventas report view', function (): void {
     $pedido = new Pedido([
@@ -20,13 +41,7 @@ it('renders procesando totals in the ventas report view', function (): void {
         'telefono' => '999999999',
     ]);
 
-    $html = view('admin.reportes.ventas', [
-        'pedidos' => collect([$pedido]),
-        'totalVentas' => 45.50,
-        'cantidadPedidos' => 1,
-        'fechaInicio' => '2026-06-01',
-        'fechaFin' => '2026-06-01',
-    ])->render();
+    $html = view('admin.reportes.ventas', ventasViewData($pedido))->render();
 
     $this->assertMatchesRegularExpression(
         '/<td class="status-box status-procesando"[^>]*>.*?<div class="status-number">1<\/div>.*?<div class="status-label">Procesando<\/div>.*?<div class="status-amount">S\/ 45\.50<\/div>/s',
@@ -57,13 +72,7 @@ it('counts ventas items from the canonical productos relation', function (): voi
         (new Producto)->forceFill(['id' => 2, 'nombre' => 'Sandwich']),
     ]));
 
-    $html = view('admin.reportes.ventas', [
-        'pedidos' => collect([$pedido]),
-        'totalVentas' => 32.00,
-        'cantidadPedidos' => 1,
-        'fechaInicio' => '2026-06-01',
-        'fechaFin' => '2026-06-01',
-    ])->render();
+    $html = view('admin.reportes.ventas', ventasViewData($pedido))->render();
 
     $this->assertMatchesRegularExpression('/<td class="text-center">\s*<strong>2<\/strong>\s*<\/td>/s', $html);
 });

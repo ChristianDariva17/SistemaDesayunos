@@ -17,7 +17,7 @@ it('renders products at or below their configured minimum in the admin low-stock
         'stock' => 10,
         'stock_minimo' => 10,
         'estado' => 'activo',
-        'precio' => 5.00,
+        'precio' => 0.10,
     ]);
 
     Producto::create([
@@ -26,7 +26,7 @@ it('renders products at or below their configured minimum in the admin low-stock
         'stock' => 2,
         'stock_minimo' => 10,
         'estado' => 'activo',
-        'precio' => 9.00,
+        'precio' => 0.20,
     ]);
 
     Producto::create([
@@ -83,6 +83,15 @@ it('renders products at or below their configured minimum in the admin low-stock
 
     Pdf::swap($fakePdf);
 
+    $this->actingAs($admin)
+        ->get(route('admin.reportes.inventario', ['accion' => 'ver']))
+        ->assertOk();
+
+    expect($fakePdf->renderedHtml)
+        ->toContain('S/ 0.10')
+        ->toContain('S/ 1.00')
+        ->toContain('S/ 83.90');
+
     $response = $this->actingAs($admin)
         ->get(route('admin.reportes.stock-bajo', ['accion' => 'ver']));
 
@@ -94,6 +103,7 @@ it('renders products at or below their configured minimum in the admin low-stock
         ->toContain('<strong style="font-size: 12px; color: #dc2626;">10</strong>')
         ->toContain('<strong>10</strong>')
         ->toContain('Faltante: 8 unid.')
+        ->toContain('S/ 1.60')
         ->toContain('PRIORIDAD ALTA')
         ->toContain('EN MINIMO')
         ->toContain('PRIORIDAD MEDIA')

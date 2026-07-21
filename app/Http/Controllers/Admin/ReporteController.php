@@ -32,14 +32,14 @@ class ReporteController extends Controller
         try {
             $summary = $dashboardSummary->summary();
             $inventoryStats = Cache::remember(
-                'reporting.inventory-summary.v1',
+                'reporting.inventory-summary.v2',
                 now()->addSeconds(60),
                 fn (): array => [
                     'stockTotal' => (int) Producto::query()->sum('stock'),
                     'stockBajo' => Producto::stockMinimoBajo()->count(),
-                    'valorInventario' => DB::table('productos')
-                        ->selectRaw('SUM(precio * stock) as total')
-                        ->value('total') ?? 0,
+                    'valorInventario' => MoneyDecimal::fromCents(MoneyDecimal::toCents(
+                        DB::table('productos')->selectRaw('SUM(precio * stock) as total')->value('total'),
+                    )),
                 ],
             );
 
@@ -60,8 +60,8 @@ class ReporteController extends Controller
                 'pedidosCompletados' => $summary['pedidosCompletados'],
                 'pedidosPendientes' => $summary['pedidosPendientes'],
                 'pedidosProcesando' => $pedidosProcesando,
-                'totalVentas' => $summary['totalVentas'],
-                'ventasMesActual' => $summary['ventasMes'],
+                'totalVentas' => MoneyDecimal::fromCents(MoneyDecimal::toCents($summary['totalVentas'])),
+                'ventasMesActual' => MoneyDecimal::fromCents(MoneyDecimal::toCents($summary['ventasMes'])),
                 'totalEmpleados' => $summary['totalEmpleados'],
             ];
 
@@ -74,15 +74,15 @@ class ReporteController extends Controller
                 'productosActivos' => 0,
                 'stockTotal' => 0,
                 'stockBajo' => 0,
-                'valorInventario' => 0,
+                'valorInventario' => '0.00',
                 'totalClientes' => 0,
                 'clientesActivos' => 0,
                 'totalPedidos' => 0,
                 'pedidosCompletados' => 0,
                 'pedidosPendientes' => 0,
                 'pedidosProcesando' => 0,
-                'totalVentas' => 0,
-                'ventasMesActual' => 0,
+                'totalVentas' => '0.00',
+                'ventasMesActual' => '0.00',
                 'totalEmpleados' => 0,
             ];
 
@@ -108,16 +108,20 @@ class ReporteController extends Controller
             }
 
             // 2. OBTENER TODOS LOS PRODUCTOS
-            $productos = Producto::all();
+            $productos = Producto::all()->each(function (Producto $producto): void {
+                $producto->setAttribute('report_price', MoneyDecimal::fromCents(MoneyDecimal::toCents($producto->precio)));
+                $producto->setAttribute('report_value', MoneyDecimal::multiply(
+                    (string) $producto->precio,
+                    (int) $producto->stock,
+                ));
+            });
 
             // 3. CALCULAR TOTALES
             $totalProductos = $productos->count();
             $stockTotal = $productos->sum('stock');
 
             // 4. CALCULAR VALOR DEL INVENTARIO (precio * stock)
-            $valorInventario = DB::table('productos')
-                ->selectRaw('SUM(precio * stock) as total')
-                ->value('total') ?? 0;
+            $valorInventario = MoneyDecimal::sum($productos->pluck('report_value'));
 
             // 5. GENERAR PDF
             $pdf = PDF::loadView('admin.reportes.inventario', compact(
@@ -173,14 +177,21 @@ class ReporteController extends Controller
             // 2. OBTENER PRODUCTOS CON STOCK BAJO SEGUN SU MINIMO CONFIGURADO
             $productos = $productosQuery
                 ->orderBy('stock', 'asc')
-                ->get();
+                ->get()
+                ->each(function (Producto $producto): void {
+                    $cantidadReposicion = max((int) $producto->stock_minimo - (int) $producto->stock, 0);
+                    $producto->setAttribute('report_price', MoneyDecimal::fromCents(MoneyDecimal::toCents($producto->precio)));
+                    $producto->setAttribute('report_reorder_quantity', $cantidadReposicion);
+                    $producto->setAttribute('report_reorder_cost', MoneyDecimal::multiply(
+                        (string) $producto->precio,
+                        $cantidadReposicion,
+                    ));
+                });
 
             // 3. CALCULAR ESTADÍSTICAS
             $totalProductosBajo = $productos->count();
             $stockCritico = $productos->where('stock', '<=', 5)->count();
-            $valorEnRiesgo = $productos->sum(function ($producto) {
-                return floatval($producto->precio) * floatval($producto->stock);
-            });
+            $valorEnRiesgo = MoneyDecimal::sum($productos->pluck('report_reorder_cost'));
 
             // 4. GENERAR PDF
             $pdf = PDF::loadView('admin.reportes.stock-bajo', compact(
@@ -382,46 +393,42 @@ class ReporteController extends Controller
                 ->orderBy('hora', 'desc')
                 ->get();
 
-            // ==========================================
-            // 3. CALCULAR TOTALES DE FORMA SEGURA
-            // ==========================================
-            // ✅ CONVERSIÓN EXPLÍCITA A FLOAT
-            $totalVentas = 0.0;
-            foreach ($pedidos as $pedido) {
-                $totalVentas = $totalVentas + floatval($pedido->total);
-            }
-
-            // ✅ CONVERSIÓN EXPLÍCITA A INT
             $cantidadPedidos = $pedidos->count();
-
-            // ==========================================
-            // 4. CALCULAR ESTADÍSTICAS ADICIONALES
-            // ==========================================
-            // Pedidos por estado
+            $pedidos->each(function (Pedido $pedido): void {
+                $taxSplit = MoneyDecimal::splitInclusiveTax((string) $pedido->total, 18);
+                $pedido->setAttribute('report_total', $taxSplit['gross']);
+                $pedido->setAttribute('report_net', $taxSplit['net']);
+                $pedido->setAttribute('report_tax', $taxSplit['tax']);
+            });
+            $totalVentas = MoneyDecimal::sum($pedidos->pluck('report_total'));
             $pedidosCompletados = $pedidos->where('estado', 'completado')->count();
             $pedidosPendientes = $pedidos->where('estado', 'pendiente')->count();
             $pedidosCancelados = $pedidos->where('estado', 'cancelado')->count();
             $pedidosProcesando = $pedidos->where('estado', 'procesando')->count();
+            $totalCompletados = MoneyDecimal::sum($pedidos->where('estado', 'completado')->pluck('report_total'));
+            $totalPendientes = MoneyDecimal::sum($pedidos->where('estado', 'pendiente')->pluck('report_total'));
+            $totalCancelados = MoneyDecimal::sum($pedidos->where('estado', 'cancelado')->pluck('report_total'));
+            $totalProcesando = MoneyDecimal::sum($pedidos->where('estado', 'procesando')->pluck('report_total'));
+            $diasPeriodo = max(CarbonImmutable::parse($fechaInicio)->diffInDays(CarbonImmutable::parse($fechaFin)) + 1, 1);
+            $ticketPromedio = $cantidadPedidos > 0 ? MoneyDecimal::divide($totalVentas, $cantidadPedidos) : '0.00';
+            $promedioDiario = MoneyDecimal::divide($totalVentas, $diasPeriodo);
+            $subtotalGeneral = MoneyDecimal::sum($pedidos->pluck('report_net'));
+            $igvGeneral = MoneyDecimal::sum($pedidos->pluck('report_tax'));
+            $topClientes = $pedidos->groupBy('cliente_id')->map(function ($grupo): array {
+                $total = MoneyDecimal::sum($grupo->pluck('report_total'));
 
-            // Totales por estado
-            $totalCompletados = 0.0;
-            $totalPendientes = 0.0;
-            $totalCancelados = 0.0;
-            $totalProcesando = 0.0;
-
-            foreach ($pedidos as $pedido) {
-                $monto = floatval($pedido->total);
-
-                if ($pedido->estado === 'completado') {
-                    $totalCompletados += $monto;
-                } elseif ($pedido->estado === 'pendiente') {
-                    $totalPendientes += $monto;
-                } elseif ($pedido->estado === 'procesando') {
-                    $totalProcesando += $monto;
-                } elseif ($pedido->estado === 'cancelado') {
-                    $totalCancelados += $monto;
-                }
-            }
+                return ['cliente' => $grupo->first()->cliente, 'total' => $total, 'total_cents' => MoneyDecimal::toCents($total), 'pedidos' => $grupo->count()];
+            })->sortByDesc('total_cents')->take(5)->values();
+            $ventasPorDia = $pedidos->groupBy(fn (Pedido $pedido): string => $pedido->fecha->format('Y-m-d'))
+                ->map(fn ($grupo): string => MoneyDecimal::sum($grupo->pluck('report_total')))
+                ->sortKeys()
+                ->take(7);
+            $maxVentaCents = max($ventasPorDia->map(fn (string $total): int => MoneyDecimal::toCents($total))->max() ?? 0, 1);
+            $ventasPorDia = $ventasPorDia->map(fn (string $total, string $fecha): array => [
+                'fecha' => $fecha,
+                'total' => $total,
+                'width' => max(5, min(60, intdiv(MoneyDecimal::toCents($total) * 60, $maxVentaCents))),
+            ])->values();
 
             // ==========================================
             // 5. PREPARAR DATOS PARA LA VISTA
@@ -433,6 +440,13 @@ class ReporteController extends Controller
                 'cantidadPedidos' => $cantidadPedidos,
                 'fechaInicio' => $fechaInicio,
                 'fechaFin' => $fechaFin,
+                'diasPeriodo' => $diasPeriodo,
+                'ticketPromedio' => $ticketPromedio,
+                'promedioDiario' => $promedioDiario,
+                'subtotalGeneral' => $subtotalGeneral,
+                'igvGeneral' => $igvGeneral,
+                'topClientes' => $topClientes,
+                'ventasPorDia' => $ventasPorDia,
 
                 // Estadísticas por estado
                 'pedidosCompletados' => $pedidosCompletados,

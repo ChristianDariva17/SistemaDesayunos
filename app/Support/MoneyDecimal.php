@@ -56,4 +56,36 @@ final class MoneyDecimal
 
         return self::fromCents($totalCents);
     }
+
+    public static function divide(string|int|float $amount, int $divisor): string
+    {
+        if ($divisor <= 0) {
+            throw new \InvalidArgumentException('Money divisor must be greater than zero.');
+        }
+
+        $cents = self::toCents($amount);
+        $sign = $cents < 0 ? -1 : 1;
+        $absoluteCents = abs($cents);
+        $roundedCents = intdiv($absoluteCents, $divisor);
+
+        if (($absoluteCents % $divisor) * 2 >= $divisor) {
+            $roundedCents++;
+        }
+
+        return self::fromCents($roundedCents * $sign);
+    }
+
+    /** @return array{net:string,tax:string,gross:string} */
+    public static function splitInclusiveTax(string|int|float $gross, int $taxRate): array
+    {
+        $grossCents = self::toCents($gross);
+        $net = self::divide(self::fromCents($grossCents * 100), 100 + $taxRate);
+        $netCents = self::toCents($net);
+
+        return [
+            'net' => $net,
+            'tax' => self::fromCents($grossCents - $netCents),
+            'gross' => self::fromCents($grossCents),
+        ];
+    }
 }

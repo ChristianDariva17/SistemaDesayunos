@@ -421,13 +421,12 @@
             <tbody>
                 @php
                     $contador = 1;
-                    $totalReposicion = 0;
                 @endphp
 
                 @foreach($productos as $producto)
                     @php
                         // Determinar nivel de criticidad
-                        $cantidadSugerida = max($producto->stock_minimo - $producto->stock, 0);
+                        $cantidadSugerida = $producto->report_reorder_quantity;
                         if ($producto->stock == 0) {
                             $criticidad = 'agotado';
                             $badge = '<span class="badge badge-agotado">AGOTADO</span>';
@@ -445,8 +444,6 @@
                             $urgenciaPorcentaje = 50;
                         }
 
-                        $costoReposicion = $cantidadSugerida * $producto->precio;
-                        $totalReposicion += $costoReposicion;
                     @endphp
 
                     <tr class="criticidad-{{ $criticidad }}">
@@ -475,10 +472,10 @@
                                 </tr>
                             </table>
                         </td>
-                        <td class="text-right">S/ {{ number_format($producto->precio, 2) }}</td>
+                        <td class="text-right">S/ {{ $producto->report_price }}</td>
                         <td class="text-right">
                             <strong style="color: #1e40af;">{{ $cantidadSugerida }} unid.</strong>
-                            <br><small style="color: #666;">S/ {{ number_format($costoReposicion, 2) }}</small>
+                            <br><small style="color: #666;">S/ {{ $producto->report_reorder_cost }}</small>
                         </td>
                         <td class="text-center">
                             @if($producto->stock == 0)
@@ -498,7 +495,7 @@
                         <strong>COSTO ESTIMADO PARA ALCANZAR MINIMOS:</strong>
                     </td>
                     <td class="text-right" style="font-size: 11px; color: #1e40af;">
-                        S/ {{ number_format($totalReposicion, 2) }}
+                        S/ {{ $valorEnRiesgo }}
                     </td>
                     <td></td>
                 </tr>
@@ -537,7 +534,7 @@
 
             <div class="action-item">
                 <strong>$ COSTO ESTIMADO:</strong>
-                Se estima <strong>S/ {{ number_format($totalReposicion, 2) }}</strong>
+                Se estima <strong>S/ {{ $valorEnRiesgo }}</strong>
                 para llevar los productos alertados a su minimo configurado.
             </div>
         </div>
@@ -553,7 +550,7 @@
                     Stock actual: {{ $producto->stock }} unid. | 
                     Minimo: {{ $producto->stock_minimo }} unid. |
                     Faltante: {{ max($producto->stock_minimo - $producto->stock, 0) }} unid.
-                    | Costo: S/ {{ number_format(max($producto->stock_minimo - $producto->stock, 0) * $producto->precio, 2) }}
+                    | Costo: S/ {{ $producto->report_reorder_cost }}
                 </div>
             @endforeach
         </div>
@@ -578,7 +575,7 @@
             <ul style="font-size: 9px;">
                 <li><strong>Nivel de Stock Minimo:</strong> configurable por producto.</li>
                 <li><strong>Productos Criticos:</strong> {{ $productos->count() }} requieren atencion.</li>
-                <li><strong>Inversion Estimada:</strong> S/ {{ number_format($totalReposicion, 2) }} para alcanzar los minimos configurados.</li>
+                <li><strong>Inversion Estimada:</strong> S/ {{ $valorEnRiesgo }} para alcanzar los minimos configurados.</li>
                 <li>Este reporte fue generado el {{ now()->format('d/m/Y') }} a las {{ now()->format('h:i A') }}.</li>
             </ul>
         </div>

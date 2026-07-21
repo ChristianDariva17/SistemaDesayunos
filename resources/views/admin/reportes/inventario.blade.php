@@ -278,7 +278,7 @@
             </td>
             <td style="width: 33.33%;">
                 <div class="card-label">Valor Inventario</div>
-                <div class="card-value">S/ {{ number_format($valorInventario, 2) }}</div>
+                <div class="card-value">S/ {{ $valorInventario }}</div>
             </td>
         </tr>
     </table>
@@ -305,7 +305,6 @@
 
             @foreach($productos as $producto)
                 @php
-                    $valorTotal = $producto->precio * $producto->stock;
                     $stockClase = '';
                     $stockBadge = '';
                     
@@ -330,9 +329,9 @@
                         @endif
                     </td>
                     <td>{{ ucfirst($producto->categoria ?? 'N/A') }}</td>
-                    <td class="text-right">S/ {{ number_format($producto->precio, 2) }}</td>
+                    <td class="text-right">S/ {{ $producto->report_price }}</td>
                     <td class="text-center text-bold">{{ number_format($producto->stock) }}</td>
-                    <td class="text-right text-bold">S/ {{ number_format($valorTotal, 2) }}</td>
+                    <td class="text-right text-bold">S/ {{ $producto->report_value }}</td>
                     <td class="text-center">{!! $stockBadge !!}</td>
                 </tr>
             @endforeach
@@ -353,7 +352,7 @@
                 </td>
                 <td style="width: 25%;">
                     <div class="total-label">Valor Inventario</div>
-                    <div class="total-value">S/ {{ number_format($valorInventario, 2) }}</div>
+                    <div class="total-value">S/ {{ $valorInventario }}</div>
                 </td>
                 <td style="width: 25%;">
                     <div class="total-label">Productos Criticos</div>
@@ -369,7 +368,7 @@
         <ul>
             <li>Hay <strong>{{ $productos->where('stock', '<=', 10)->count() }}</strong> productos con stock bajo (10 unidades o menos).</li>
             <li>Se recomienda reabastecer los productos marcados en rojo y naranja.</li>
-            <li>El valor total del inventario es de <strong>S/ {{ number_format($valorInventario, 2) }}</strong>.</li>
+            <li>El valor total del inventario es de <strong>S/ {{ $valorInventario }}</strong>.</li>
             <li>Este reporte fue generado el {{ now()->format('d/m/Y') }} a las {{ now()->format('h:i A') }}.</li>
         </ul>
     </div>

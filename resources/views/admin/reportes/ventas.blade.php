@@ -539,75 +539,6 @@
 </head>
 <body>
 
-    @php
-        // ==========================================
-        // ✅ INICIALIZACIÓN SEGURA DE VARIABLES
-        // ==========================================
-        
-        // Validar que $pedidos existe
-        if (!isset($pedidos)) {
-            $pedidos = collect([]);
-        }
-        
-        // Convertir valores a tipos seguros
-        $totalVentasNum = isset($totalVentas) ? floatval($totalVentas) : 0;
-        $cantidadPedidosNum = isset($cantidadPedidos) ? intval($cantidadPedidos) : 0;
-        
-        // Fechas seguras
-        $fechaInicioSafe = $fechaInicio ?? now()->startOfMonth()->format('Y-m-d');
-        $fechaFinSafe = $fechaFin ?? now()->format('Y-m-d');
-        
-        // ==========================================
-        // ✅ CALCULAR DÍAS DEL PERÍODO
-        // ==========================================
-        $diasPeriodo = 1;
-        try {
-            $inicio = \Carbon\Carbon::parse($fechaInicioSafe);
-            $fin = \Carbon\Carbon::parse($fechaFinSafe);
-            $diasPeriodo = $inicio->diffInDays($fin) + 1;
-            $diasPeriodo = ($diasPeriodo > 0) ? $diasPeriodo : 1;
-        } catch (\Exception $e) {
-            $diasPeriodo = 1;
-        }
-        
-        // ==========================================
-        // ✅ CALCULAR MÉTRICAS
-        // ==========================================
-        $ventasPorDia = ($diasPeriodo > 0 && $totalVentasNum > 0) 
-            ? $totalVentasNum / $diasPeriodo 
-            : 0;
-        
-        $ticketPromedio = ($cantidadPedidosNum > 0 && $totalVentasNum > 0)
-            ? $totalVentasNum / $cantidadPedidosNum
-            : 0;
-        
-        // ==========================================
-        // ✅ ESTADÍSTICAS POR ESTADO
-        // ==========================================
-        $completados = $pedidos->where('estado', 'completado');
-        $pendientes = $pedidos->where('estado', 'pendiente');
-        $cancelados = $pedidos->where('estado', 'cancelado');
-        $procesando = $pedidos->where('estado', 'procesando');
-        
-        $totalCompletados = 0;
-        $totalPendientes = 0;
-        $totalCancelados = 0;
-        $totalProcesando = 0;
-        
-        foreach ($completados as $p) {
-            $totalCompletados += floatval($p->total ?? 0);
-        }
-        foreach ($pendientes as $p) {
-            $totalPendientes += floatval($p->total ?? 0);
-        }
-        foreach ($cancelados as $p) {
-            $totalCancelados += floatval($p->total ?? 0);
-        }
-        foreach ($procesando as $p) {
-            $totalProcesando += floatval($p->total ?? 0);
-        }
-    @endphp
-
     {{-- ==========================================
         HEADER PRINCIPAL
         ========================================== --}}
@@ -639,9 +570,9 @@
     <div class="period-banner">
         <div class="period-label">[CALENDARIO] PERÍODO DE ANÁLISIS</div>
         <div class="period-dates">
-            {{ \Carbon\Carbon::parse($fechaInicioSafe)->format('d/m/Y') }} 
+            {{ \Carbon\Carbon::parse($fechaInicio)->format('d/m/Y') }}
             - 
-            {{ \Carbon\Carbon::parse($fechaFinSafe)->format('d/m/Y') }}
+            {{ \Carbon\Carbon::parse($fechaFin)->format('d/m/Y') }}
         </div>
         <div class="period-days">({{ $diasPeriodo }} día{{ $diasPeriodo != 1 ? 's' : '' }})</div>
     </div>
@@ -654,25 +585,25 @@
             <td class="kpi-card kpi-green" style="width: 25%;">
                 <div class="kpi-icon">$</div>
                 <div class="kpi-label">Total Ventas</div>
-                <div class="kpi-value">S/ {{ number_format($totalVentasNum, 2) }}</div>
+                <div class="kpi-value">S/ {{ $totalVentas }}</div>
                 <div class="kpi-subtitle">Ingresos del período</div>
             </td>
             <td class="kpi-card kpi-blue" style="width: 25%;">
                 <div class="kpi-icon">#</div>
                 <div class="kpi-label">Pedidos</div>
-                <div class="kpi-value">{{ $cantidadPedidosNum }}</div>
+                <div class="kpi-value">{{ $cantidadPedidos }}</div>
                 <div class="kpi-subtitle">Total de órdenes</div>
             </td>
             <td class="kpi-card kpi-purple" style="width: 25%;">
                 <div class="kpi-icon">~</div>
                 <div class="kpi-label">Ticket Promedio</div>
-                <div class="kpi-value">S/ {{ number_format($ticketPromedio, 2) }}</div>
+                <div class="kpi-value">S/ {{ $ticketPromedio }}</div>
                 <div class="kpi-subtitle">Por pedido</div>
             </td>
             <td class="kpi-card kpi-orange" style="width: 25%;">
                 <div class="kpi-icon">/</div>
                 <div class="kpi-label">Ventas/Día</div>
-                <div class="kpi-value">S/ {{ number_format($ventasPorDia, 2) }}</div>
+                <div class="kpi-value">S/ {{ $promedioDiario }}</div>
                 <div class="kpi-subtitle">Promedio diario</div>
             </td>
         </tr>
@@ -686,24 +617,24 @@
         <table class="status-grid">
             <tr>
                 <td class="status-box status-completado" style="width: 25%;">
-                    <div class="status-number">{{ $completados->count() }}</div>
+                    <div class="status-number">{{ $pedidosCompletados }}</div>
                     <div class="status-label">Completados</div>
-                    <div class="status-amount">S/ {{ number_format($totalCompletados, 2) }}</div>
+                    <div class="status-amount">S/ {{ $totalCompletados }}</div>
                 </td>
                 <td class="status-box status-pendiente" style="width: 25%;">
-                    <div class="status-number">{{ $pendientes->count() }}</div>
+                    <div class="status-number">{{ $pedidosPendientes }}</div>
                     <div class="status-label">Pendientes</div>
-                    <div class="status-amount">S/ {{ number_format($totalPendientes, 2) }}</div>
+                    <div class="status-amount">S/ {{ $totalPendientes }}</div>
                 </td>
                 <td class="status-box status-procesando" style="width: 25%;">
-                    <div class="status-number">{{ $procesando->count() }}</div>
+                    <div class="status-number">{{ $pedidosProcesando }}</div>
                     <div class="status-label">Procesando</div>
-                    <div class="status-amount">S/ {{ number_format($totalProcesando, 2) }}</div>
+                    <div class="status-amount">S/ {{ $totalProcesando }}</div>
                 </td>
                 <td class="status-box status-cancelado" style="width: 25%;">
-                    <div class="status-number">{{ $cancelados->count() }}</div>
+                    <div class="status-number">{{ $pedidosCancelados }}</div>
                     <div class="status-label">Cancelados</div>
-                    <div class="status-amount">S/ {{ number_format($totalCancelados, 2) }}</div>
+                    <div class="status-amount">S/ {{ $totalCancelados }}</div>
                 </td>
             </tr>
         </table>
@@ -718,24 +649,6 @@
             <td style="width: 50%;">
                 <div class="info-card">
                     <div class="card-title">[TROFEO] Top 5 Mejores Clientes</div>
-                    @php
-                        $topClientes = $pedidos->groupBy('cliente_id')
-                            ->map(function($pedidosCliente) {
-                                $cliente = $pedidosCliente->first()->cliente ?? null;
-                                $total = 0;
-                                foreach ($pedidosCliente as $p) {
-                                    $total += floatval($p->total ?? 0);
-                                }
-                                return [
-                                    'cliente' => $cliente,
-                                    'total' => $total,
-                                    'pedidos' => $pedidosCliente->count()
-                                ];
-                            })
-                            ->sortByDesc('total')
-                            ->take(5);
-                    @endphp
-
                     @if($topClientes->count() > 0)
                         <table class="top-clients-table">
                             @foreach($topClientes as $index => $data)
@@ -750,7 +663,7 @@
                                         </div>
                                     </td>
                                     <td class="client-amount">
-                                        S/ {{ number_format($data['total'], 2) }}
+                                        S/ {{ $data['total'] }}
                                     </td>
                                 </tr>
                             @endforeach
@@ -767,37 +680,16 @@
             <td style="width: 50%;">
                 <div class="info-card">
                     <div class="card-title">[CALENDARIO] Ventas por Día (Últimos 7)</div>
-                    @php
-                        $ventasPorDia = $pedidos->groupBy(function($pedido) {
-                            return $pedido->fecha->format('Y-m-d');
-                        })->map(function($pedidosDia) {
-                            $total = 0;
-                            foreach ($pedidosDia as $p) {
-                                $total += floatval($p->total ?? 0);
-                            }
-                            return $total;
-                        })->sortKeys()->take(7);
-
-                        $maxVenta = $ventasPorDia->max();
-                        if (!$maxVenta || $maxVenta <= 0) {
-                            $maxVenta = 1;
-                        }
-                    @endphp
-
                     @if($ventasPorDia->count() > 0)
-                        @foreach($ventasPorDia as $fecha => $total)
+                        @foreach($ventasPorDia as $venta)
                             <div class="chart-bar">
                                 <div class="chart-bar-label">
-                                    {{ \Carbon\Carbon::parse($fecha)->format('d/m/Y') }}
+                                    {{ \Carbon\Carbon::parse($venta['fecha'])->format('d/m/Y') }}
                                 </div>
                                 <table class="chart-bar-container">
                                     <tr>
-                                        @php
-                                            $porcentaje = ($total / $maxVenta) * 60;
-                                            $porcentaje = max(5, min(60, $porcentaje));
-                                        @endphp
-                                        <td class="chart-bar-fill" style="width: {{ $porcentaje }}%;"></td>
-                                        <td class="chart-bar-value">S/ {{ number_format($total, 2) }}</td>
+                                        <td class="chart-bar-fill" style="width: {{ $venta['width'] }}%;"></td>
+                                        <td class="chart-bar-value">S/ {{ $venta['total'] }}</td>
                                     </tr>
                                 </table>
                             </div>
@@ -832,20 +724,8 @@
                 </tr>
             </thead>
             <tbody>
-                @php
-                    $subtotalGeneral = 0;
-                    $igvGeneral = 0;
-                @endphp
-
                 @foreach($pedidos as $pedido)
                     @php
-                        $totalPedido = floatval($pedido->total ?? 0);
-                        $subtotal = $totalPedido / 1.18;
-                        $igv = $totalPedido - $subtotal;
-                        
-                        $subtotalGeneral += $subtotal;
-                        $igvGeneral += $igv;
-
                         $estadoPedido = strtolower($pedido->estado ?? 'pendiente');
                         
                         switch($estadoPedido) {
@@ -886,9 +766,9 @@
                             <strong>{{ $cantidadItems }}</strong>
                         </td>
                         <td>{!! $estadoBadge !!}</td>
-                        <td class="text-right">S/ {{ number_format($subtotal, 2) }}</td>
-                        <td class="text-right" style="color: #6b7280;">S/ {{ number_format($igv, 2) }}</td>
-                        <td class="order-total">S/ {{ number_format($totalPedido, 2) }}</td>
+                        <td class="text-right">S/ {{ $pedido->report_net }}</td>
+                        <td class="text-right" style="color: #6b7280;">S/ {{ $pedido->report_tax }}</td>
+                        <td class="order-total">S/ {{ $pedido->report_total }}</td>
                     </tr>
                 @endforeach
 
@@ -897,9 +777,9 @@
                     <td colspan="5" class="text-right">
                         <strong>TOTALES DEL PERÍODO:</strong>
                     </td>
-                    <td class="text-right">S/ {{ number_format($subtotalGeneral, 2) }}</td>
-                    <td class="text-right">S/ {{ number_format($igvGeneral, 2) }}</td>
-                    <td class="text-right">S/ {{ number_format($totalVentasNum, 2) }}</td>
+                    <td class="text-right">S/ {{ $subtotalGeneral }}</td>
+                    <td class="text-right">S/ {{ $igvGeneral }}</td>
+                    <td class="text-right">S/ {{ $totalVentas }}</td>
                 </tr>
             </tbody>
         </table>
@@ -912,8 +792,8 @@
             <div class="empty-text">
                 No hay ventas registradas en el período seleccionado:<br>
                 <strong>
-                    {{ \Carbon\Carbon::parse($fechaInicioSafe)->format('d/m/Y') }} - 
-                    {{ \Carbon\Carbon::parse($fechaFinSafe)->format('d/m/Y') }}
+                    {{ \Carbon\Carbon::parse($fechaInicio)->format('d/m/Y') }} -
+                    {{ \Carbon\Carbon::parse($fechaFin)->format('d/m/Y') }}
                 </strong>
             </div>
         </div>
@@ -928,21 +808,21 @@
                 <tr>
                     <td style="width: 25%;">
                         <div class="summary-label">Total Ventas</div>
-                        <div class="summary-value">S/ {{ number_format($totalVentasNum, 2) }}</div>
+                        <div class="summary-value">S/ {{ $totalVentas }}</div>
                     </td>
                     <td style="width: 25%;">
                         <div class="summary-label">Pedidos</div>
-                        <div class="summary-value">{{ $cantidadPedidosNum }}</div>
+                        <div class="summary-value">{{ $cantidadPedidos }}</div>
                     </td>
                     <td style="width: 25%;">
                         <div class="summary-label">Ticket Promedio</div>
-                        <div class="summary-value">S/ {{ number_format($ticketPromedio, 2) }}</div>
+                        <div class="summary-value">S/ {{ $ticketPromedio }}</div>
                     </td>
                     <td style="width: 25%;">
                         <div class="summary-label">Tasa de Éxito</div>
                         @php
-                            $tasaExito = $cantidadPedidosNum > 0 
-                                ? round(($completados->count() / $cantidadPedidosNum) * 100) 
+                            $tasaExito = $cantidadPedidos > 0
+                                ? round(($pedidosCompletados / $cantidadPedidos) * 100)
                                 : 0;
                         @endphp
                         <div class="summary-value">{{ $tasaExito }}%</div>
