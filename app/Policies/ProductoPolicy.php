@@ -40,9 +40,11 @@ final class ProductoPolicy
         return $this->update($user, $producto);
     }
 
-    public function updateStock(User $user, Producto $producto): bool
+    public function updateStock(User $user, ?Producto $producto = null): bool
     {
-        return $this->update($user, $producto);
+        return $producto === null
+            ? $this->isAdmin($user)
+            : $this->update($user, $producto);
     }
 
     public function duplicate(User $user, Producto $producto): bool

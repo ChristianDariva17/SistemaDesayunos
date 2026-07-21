@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Requests\Admin\StoreStockAdjustmentRequest;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
@@ -22,6 +23,7 @@ it('requires an administrator to access stock adjustment routes', function (): v
     $worker = User::factory()->create([
         'rol' => 'trabajador',
     ]);
+    $producto = stockAdjustmentProducto(['stock' => 6]);
 
     $this->get(route('admin.stock-adjustments.create'))
         ->assertRedirect(route('login', absolute: false));
@@ -34,8 +36,35 @@ it('requires an administrator to access stock adjustment routes', function (): v
         ->assertForbidden();
 
     $this->actingAs($worker)
-        ->post(route('admin.stock-adjustments.store'), [])
+        ->post(route('admin.stock-adjustments.store'), [
+            'producto_id' => $producto->id,
+            'stock_nuevo' => 9,
+            'motivo' => 'Unauthorized correction',
+        ])
         ->assertForbidden();
+
+    expect($producto->refresh()->stock)->toBe(6);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('authorizes stock adjustments through the updateStock policy', function (string $role, bool $authorized): void {
+    $user = User::factory()->make(['rol' => $role]);
+    $request = StoreStockAdjustmentRequest::create('/stock-adjustments', 'POST');
+    $request->setUserResolver(static fn (): User => $user);
+
+    expect($request->authorize())->toBe($authorized);
+})->with([
+    'administrator' => ['administrador', true],
+    'legacy administrator' => ['admin', true],
+    'worker' => ['trabajador', false],
+    'legacy worker' => ['empleado', false],
+]);
+
+it('denies stock adjustment authorization to guests', function (): void {
+    $request = StoreStockAdjustmentRequest::create('/stock-adjustments', 'POST');
+    $request->setUserResolver(static fn (): null => null);
+
+    expect($request->authorize())->toBeFalse();
 });
 
 it('renders the stock adjustment form for administrators', function (): void {
@@ -156,6 +185,101 @@ it('rejects blank stock adjustment reasons', function (): void {
         ->assertSessionHasErrors(['motivo']);
 
     expect($producto->refresh()->stock)->toBe(5);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('rejects unicode-only stock adjustment reasons', function (string $motivo): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    $producto = stockAdjustmentProducto([
+        'stock' => 5,
+    ]);
+
+    $this->actingAs($admin)
+        ->from(route('admin.stock-adjustments.create'))
+        ->post(route('admin.stock-adjustments.store'), [
+            'producto_id' => $producto->id,
+            'stock_nuevo' => 8,
+            'motivo' => $motivo,
+        ])
+        ->assertRedirect(route('admin.stock-adjustments.create'))
+        ->assertSessionHasErrors(['motivo']);
+
+    expect($producto->refresh()->stock)->toBe(5);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+})->with([
+    'non-breaking spaces' => ["\u{00A0}\u{00A0}"],
+    'unicode separators' => ["\u{2002}\u{2003}"],
+    'byte order marks' => ["\u{FEFF}\u{FEFF}"],
+]);
+
+it('trims unicode whitespace around a stock adjustment reason', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    $producto = stockAdjustmentProducto([
+        'stock' => 5,
+    ]);
+
+    $this->actingAs($admin)
+        ->post(route('admin.stock-adjustments.store'), [
+            'producto_id' => $producto->id,
+            'stock_nuevo' => 8,
+            'motivo' => "\u{00A0}\u{FEFF}Physical count correction\u{2003}",
+        ])
+        ->assertRedirect(route('admin.reportes.stock-movimientos', [
+            'producto_id' => $producto->id,
+        ]));
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'tipo' => StockMovimiento::TIPO_AJUSTE,
+        'motivo' => 'Physical count correction',
+    ]);
+});
+
+it('accepts 255 meaningful adjustment reason characters wrapped in unicode whitespace', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+    $producto = stockAdjustmentProducto([
+        'stock' => 5,
+    ]);
+    $motivo = str_repeat('x', 255);
+
+    $this->actingAs($admin)
+        ->post(route('admin.stock-adjustments.store'), [
+            'producto_id' => $producto->id,
+            'stock_nuevo' => 8,
+            'motivo' => "\u{00A0}{$motivo}\u{FEFF}",
+        ])
+        ->assertRedirect(route('admin.reportes.stock-movimientos', [
+            'producto_id' => $producto->id,
+        ]));
+
+    $this->assertDatabaseHas('stock_movimientos', [
+        'producto_id' => $producto->id,
+        'tipo' => StockMovimiento::TIPO_AJUSTE,
+        'motivo' => $motivo,
+    ]);
+});
+
+it('keeps invalid adjustment product IDs as validation errors for authorized users', function (): void {
+    $admin = User::factory()->create([
+        'rol' => 'administrador',
+    ]);
+
+    $this->actingAs($admin)
+        ->from(route('admin.stock-adjustments.create'))
+        ->post(route('admin.stock-adjustments.store'), [
+            'producto_id' => 999999,
+            'stock_nuevo' => 8,
+            'motivo' => 'Physical count correction',
+        ])
+        ->assertRedirect(route('admin.stock-adjustments.create'))
+        ->assertSessionHasErrors(['producto_id']);
+
     $this->assertDatabaseCount('stock_movimientos', 0);
 });
 

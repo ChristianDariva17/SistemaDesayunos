@@ -4,14 +4,39 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Admin;
 
+use App\Models\Producto;
 use App\Support\InventoryLimits;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class StoreStockAdjustmentRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if (! $this->has('motivo')) {
+            return;
+        }
+
+        $value = $this->input('motivo');
+
+        if (! is_string($value)) {
+            return;
+        }
+
+        $value = $this->trimUnicodeWhitespace($value);
+
+        $this->merge([
+            'motivo' => $value === '' ? null : $value,
+        ]);
+    }
+
+    private function trimUnicodeWhitespace(string $value): string
+    {
+        return preg_replace('/^[\s\p{Z}\x{FEFF}]+|[\s\p{Z}\x{FEFF}]+$/u', '', $value) ?? trim($value);
+    }
+
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('updateStock', Producto::class) ?? false;
     }
 
     /**

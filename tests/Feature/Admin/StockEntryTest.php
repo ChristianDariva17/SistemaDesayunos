@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Requests\Admin\StoreStockEntryRequest;
 use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
@@ -22,6 +23,7 @@ it('requires an administrator to access stock entry routes', function (): void {
     $worker = User::factory()->create([
         'rol' => 'trabajador',
     ]);
+    $producto = stockEntryProducto(['stock' => 6]);
 
     $this->get(route('admin.stock-entries.create'))
         ->assertRedirect(route('login', absolute: false));
@@ -34,8 +36,38 @@ it('requires an administrator to access stock entry routes', function (): void {
         ->assertForbidden();
 
     $this->actingAs($worker)
-        ->post(route('admin.stock-entries.store'), [])
+        ->post(route('admin.stock-entries.store'), [
+            'producto_id' => $producto->id,
+            'cantidad' => 3,
+            'motivo' => 'Unauthorized receiving',
+        ])
         ->assertForbidden();
+
+    expect($producto->refresh()->stock)->toBe(6);
+    $this->assertDatabaseCount('stock_movimientos', 0);
+});
+
+it('authorizes stock entries through the updateStock policy', function (string $role, bool $authorized): void {
+    $user = User::factory()->make(['rol' => $role]);
+    $producto = stockEntryProducto();
+    $request = StoreStockEntryRequest::create('/stock-entries', 'POST');
+    $request->setUserResolver(static fn (): User => $user);
+
+    expect($user->can('updateStock', Producto::class))->toBe($authorized)
+        ->and($user->can('updateStock', $producto))->toBe($authorized)
+        ->and($request->authorize())->toBe($authorized);
+})->with([
+    'administrator' => ['administrador', true],
+    'legacy administrator' => ['admin', true],
+    'worker' => ['trabajador', false],
+    'legacy worker' => ['empleado', false],
+]);
+
+it('denies stock entry authorization to guests', function (): void {
+    $request = StoreStockEntryRequest::create('/stock-entries', 'POST');
+    $request->setUserResolver(static fn (): null => null);
+
+    expect($request->authorize())->toBeFalse();
 });
 
 it('renders the stock entry form for administrators', function (): void {

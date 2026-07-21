@@ -37,7 +37,7 @@ final class StoreStockEntryRequest extends FormRequest
 
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('updateStock', Producto::class) ?? false;
     }
 
     /**
