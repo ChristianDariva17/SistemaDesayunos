@@ -630,6 +630,18 @@
                             </form>
                         </div>
 
+                        <div class="col-md-3">
+                            <form action="{{ route('admin.reportes.ventas-por-cliente') }}" method="GET" target="_blank">
+                                <input type="hidden" name="fecha_inicio" value="{{ now()->startOfMonth()->format('Y-m-d') }}">
+                                <input type="hidden" name="fecha_fin" value="{{ now()->format('Y-m-d') }}">
+                                <button type="submit" name="accion" value="ver" class="btn btn-outline-success w-100 py-3">
+                                    <i class="fas fa-users d-block mb-2" style="font-size: 24px;"></i>
+                                    <strong>Ventas por Cliente</strong>
+                                    <small class="d-block text-muted">Mes actual</small>
+                                </button>
+                            </form>
+                        </div>
+
                     </div>
                 </div>
             </div>

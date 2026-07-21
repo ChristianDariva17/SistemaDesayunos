@@ -10,13 +10,17 @@ use App\Models\Producto;
 use App\Models\StockMovimiento;
 use App\Models\User;
 use App\Services\Reporting\DashboardSummaryService;
+use App\Support\MoneyDecimal;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\CarbonImmutable;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ReporteController extends Controller
 {
@@ -92,9 +96,16 @@ class ReporteController extends Controller
      */
     public function inventario(Request $request)
     {
+        $validated = $this->validatePdfRequest($request);
+
         try {
             // 1. OBTENER ACCIÓN (ver o descargar)
-            $accion = $request->input('accion', 'descargar');
+            $accion = $validated['accion'];
+
+            $rowLimit = $this->pdfRowLimit();
+            if (Producto::query()->count() > $rowLimit) {
+                return $this->rowLimitResponse('inventario', $rowLimit);
+            }
 
             // 2. OBTENER TODOS LOS PRODUCTOS
             $productos = Producto::all();
@@ -130,12 +141,15 @@ class ReporteController extends Controller
             } else {
                 return $pdf->download($nombreArchivo);
             }
-        } catch (\Exception $e) {
-            // Log del error
-            Log::error('Error en reporte de inventario: '.$e->getMessage());
-            Log::error('Línea: '.$e->getLine());
+        } catch (Throwable $e) {
+            Log::error('Admin PDF report generation failed.', [
+                'operation_name' => 'admin.reportes.inventario',
+                'report_name' => 'inventario',
+                'user_id' => $request->user()?->getAuthIdentifier(),
+                'exception' => $e,
+            ]);
 
-            return back()->with('error', 'Error al generar el reporte: '.$e->getMessage());
+            return back()->with('error', 'Error al generar el reporte. Por favor intenta nuevamente.');
         }
     }
 
@@ -144,12 +158,20 @@ class ReporteController extends Controller
      */
     public function stockBajo(Request $request)
     {
+        $validated = $this->validatePdfRequest($request);
+
         try {
             // 1. OBTENER ACCIÓN
-            $accion = $request->input('accion', 'descargar');
+            $accion = $validated['accion'];
+
+            $rowLimit = $this->pdfRowLimit();
+            $productosQuery = Producto::stockMinimoBajo();
+            if ((clone $productosQuery)->count() > $rowLimit) {
+                return $this->rowLimitResponse('stock bajo', $rowLimit);
+            }
 
             // 2. OBTENER PRODUCTOS CON STOCK BAJO SEGUN SU MINIMO CONFIGURADO
-            $productos = Producto::stockMinimoBajo()
+            $productos = $productosQuery
                 ->orderBy('stock', 'asc')
                 ->get();
 
@@ -182,12 +204,15 @@ class ReporteController extends Controller
             } else {
                 return $pdf->download($nombreArchivo);
             }
-        } catch (\Exception $e) {
-            // Log del error
-            Log::error('Error en reporte de stock bajo: '.$e->getMessage());
-            Log::error('Línea: '.$e->getLine());
+        } catch (Throwable $e) {
+            Log::error('Admin PDF report generation failed.', [
+                'operation_name' => 'admin.reportes.stock-bajo',
+                'report_name' => 'stock-bajo',
+                'user_id' => $request->user()?->getAuthIdentifier(),
+                'exception' => $e,
+            ]);
 
-            return back()->with('error', 'Error al generar el reporte: '.$e->getMessage());
+            return back()->with('error', 'Error al generar el reporte. Por favor intenta nuevamente.');
         }
     }
 
@@ -332,33 +357,27 @@ class ReporteController extends Controller
      */
     public function ventas(Request $request)
     {
+        $validated = $this->validatePdfRequest($request, withDates: true);
+
         try {
             // ==========================================
             // 1. OBTENER PARÁMETROS DE LA SOLICITUD
             // ==========================================
-            $accion = $request->input('accion', 'descargar');
-
-            // Obtener fechas con valores por defecto
-            $fechaInicio = $request->input('fecha_inicio');
-            $fechaFin = $request->input('fecha_fin');
-
-            // Si no se proporcionan fechas, usar el mes actual
-            if (! $fechaInicio) {
-                $fechaInicio = now()->startOfMonth()->format('Y-m-d');
-            }
-
-            if (! $fechaFin) {
-                $fechaFin = now()->format('Y-m-d');
-            }
+            $accion = $validated['accion'];
+            $fechaInicio = $validated['fecha_inicio'];
+            $fechaFin = $validated['fecha_fin'];
 
             // ==========================================
             // 2. OBTENER PEDIDOS CON FILTRO DE FECHAS
             // ==========================================
-            $pedidos = Pedido::with(['cliente', 'productos'])
-                ->whereBetween('fecha', [
-                    $fechaInicio,
-                    $fechaFin,
-                ])
+            $pedidosQuery = Pedido::query()->whereBetween('fecha', [$fechaInicio, $fechaFin]);
+            $rowLimit = $this->pdfRowLimit();
+            if ((clone $pedidosQuery)->count() > $rowLimit) {
+                return $this->rowLimitResponse('ventas', $rowLimit);
+            }
+
+            $pedidos = $pedidosQuery
+                ->with(['cliente', 'productos'])
                 ->orderBy('fecha', 'desc')
                 ->orderBy('hora', 'desc')
                 ->get();
@@ -448,20 +467,15 @@ class ReporteController extends Controller
             } else {
                 return $pdf->download($nombreArchivo);
             }
-        } catch (\Exception $e) {
-            // ==========================================
-            // 10. MANEJO DE ERRORES CON LOG DETALLADO
-            // ==========================================
-            Log::error('==========================================');
-            Log::error('ERROR EN REPORTE DE VENTAS');
-            Log::error('==========================================');
-            Log::error('Mensaje: '.$e->getMessage());
-            Log::error('Línea: '.$e->getLine());
-            Log::error('Archivo: '.$e->getFile());
-            Log::error('Traza: '.$e->getTraceAsString());
-            Log::error('==========================================');
+        } catch (Throwable $e) {
+            Log::error('Admin PDF report generation failed.', [
+                'operation_name' => 'admin.reportes.ventas',
+                'report_name' => 'ventas',
+                'user_id' => $request->user()?->getAuthIdentifier(),
+                'exception' => $e,
+            ]);
 
-            return back()->with('error', 'Error al generar el reporte de ventas: '.$e->getMessage().' (Línea: '.$e->getLine().')');
+            return back()->with('error', 'Error al generar el reporte. Por favor intenta nuevamente.');
         }
     }
 
@@ -471,10 +485,20 @@ class ReporteController extends Controller
      */
     public function ventasPorCliente(Request $request)
     {
+        $validated = $this->validatePdfRequest($request, withDates: true);
+
         try {
-            $accion = $request->input('accion', 'descargar');
-            $fechaInicio = $request->input('fecha_inicio', now()->startOfMonth()->format('Y-m-d'));
-            $fechaFin = $request->input('fecha_fin', now()->format('Y-m-d'));
+            $accion = $validated['accion'];
+            $fechaInicio = $validated['fecha_inicio'];
+            $fechaFin = $validated['fecha_fin'];
+
+            $rowLimit = $this->pdfRowLimit();
+            $sourcePedidoCount = Pedido::query()
+                ->whereBetween('fecha', [$fechaInicio, $fechaFin])
+                ->count();
+            if ($sourcePedidoCount > $rowLimit) {
+                return $this->rowLimitResponse('ventas por cliente', $rowLimit);
+            }
 
             // Obtener ventas agrupadas por cliente
             $ventasPorCliente = DB::table('pedidos')
@@ -492,12 +516,16 @@ class ReporteController extends Controller
                 ->orderByDesc('total_ventas')
                 ->get();
 
+            $ventasPorCliente->each(function (object $venta): void {
+                $venta->total_ventas = MoneyDecimal::fromCents(MoneyDecimal::toCents($venta->total_ventas));
+            });
+
             $datos = [
                 'ventasPorCliente' => $ventasPorCliente,
                 'fechaInicio' => $fechaInicio,
                 'fechaFin' => $fechaFin,
                 'totalClientes' => $ventasPorCliente->count(),
-                'ventasGenerales' => $ventasPorCliente->sum('total_ventas'),
+                'ventasGenerales' => MoneyDecimal::sum($ventasPorCliente->pluck('total_ventas')),
             ];
 
             $pdf = PDF::loadView('admin.reportes.ventas-por-cliente', $datos);
@@ -511,10 +539,70 @@ class ReporteController extends Controller
             } else {
                 return $pdf->download($nombreArchivo);
             }
-        } catch (\Exception $e) {
-            Log::error('Error en reporte de ventas por cliente: '.$e->getMessage());
+        } catch (Throwable $e) {
+            Log::error('Admin PDF report generation failed.', [
+                'operation_name' => 'admin.reportes.ventas-por-cliente',
+                'report_name' => 'ventas-por-cliente',
+                'user_id' => $request->user()?->getAuthIdentifier(),
+                'exception' => $e,
+            ]);
 
-            return back()->with('error', 'Error al generar el reporte: '.$e->getMessage());
+            return back()->with('error', 'Error al generar el reporte. Por favor intenta nuevamente.');
         }
+    }
+
+    /**
+     * @return array{accion: string, fecha_inicio?: string, fecha_fin?: string}
+     */
+    private function validatePdfRequest(Request $request, bool $withDates = false): array
+    {
+        $input = [
+            'accion' => $request->input('accion', 'descargar'),
+        ];
+        $rules = [
+            'accion' => ['required', 'string', Rule::in(['ver', 'descargar'])],
+        ];
+        $messages = [
+            'accion.in' => 'La acción seleccionada no es válida. Usa ver o descargar.',
+        ];
+
+        if ($withDates) {
+            $input['fecha_inicio'] = $request->input('fecha_inicio') ?: now()->startOfMonth()->format('Y-m-d');
+            $input['fecha_fin'] = $request->input('fecha_fin') ?: now()->format('Y-m-d');
+            $rules['fecha_inicio'] = ['required', 'date_format:Y-m-d'];
+            $rules['fecha_fin'] = ['required', 'date_format:Y-m-d', 'after_or_equal:fecha_inicio'];
+            $messages['fecha_inicio.date_format'] = 'La fecha inicial debe tener el formato AAAA-MM-DD.';
+            $messages['fecha_fin.date_format'] = 'La fecha final debe tener el formato AAAA-MM-DD.';
+            $messages['fecha_fin.after_or_equal'] = 'La fecha final debe ser igual o posterior a la fecha inicial.';
+        }
+
+        /** @var array{accion: string, fecha_inicio?: string, fecha_fin?: string} $validated */
+        $validated = validator($input, $rules, $messages)->validate();
+
+        if ($withDates) {
+            $days = CarbonImmutable::parse($validated['fecha_inicio'])
+                ->diffInDays(CarbonImmutable::parse($validated['fecha_fin'])) + 1;
+            $dayLimit = max(1, (int) config('reportes.pdf_sync_max_days', 31));
+
+            if ($days > $dayLimit) {
+                throw ValidationException::withMessages([
+                    'fecha_fin' => "El rango de fechas no puede superar {$dayLimit} días. Reduce el período seleccionado.",
+                ]);
+            }
+        }
+
+        return $validated;
+    }
+
+    private function pdfRowLimit(): int
+    {
+        return max(1, (int) config('reportes.pdf_sync_max_rows', 250));
+    }
+
+    private function rowLimitResponse(string $reportName, int $rowLimit): RedirectResponse
+    {
+        return back()->withErrors([
+            'reporte' => "El reporte de {$reportName} supera el límite de {$rowLimit} registros. Reduce el período o los datos e inténtalo nuevamente.",
+        ])->withInput();
     }
 }
